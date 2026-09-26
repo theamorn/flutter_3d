@@ -74,3 +74,9 @@ Read it before starting a task; add to it before committing one. Format:
 - **Why it matters:** the time slider looks broken without this (white noon, black 17:45 to 06:15).
 - **Do:** bind `SunLight(sky)` and override its `color`/`intensity` from `evaluateLighting()`. Never render the sky's sun below ~30°: keep its heading, lift its elevation, and let a full moon (−sun) take over at the horizon. Solve `energy = brightness^(2/3) · g_ref / g(y)` so the rendered sky follows a schedule you choose (1 by day, 0.012 at night) wherever the body stands. Log-ease exposure 0.35 → 2.5 over the same span. All of it is pure maths in `skyAt()` and pinned by `sky_test.dart`.
 - **Talk?** yes — "the engine's own day/night recipe goes black at 17:45; the fix was reading the sky shader and inverting its brightness formula".
+
+## "What is that pixel?" Ask the engine: raycast through it via the VM service (Task 13, 2026-09-26)
+- **Found:** a pale band in a look-down screenshot looked like mis-coloured sand. `camera.screenPointToRay(Offset(px/3, py/3), Size(402, 874))` + `scene.raycast(...)` inside `evaluate` named each pixel's node and hit point: it was the chrome top rail 0.5 m from the eye. Add `where: (n) => n.name != 'railing_glass'` to see what's behind glass. Long results come back truncated at 128 characters; re-read them with `getObject(objectId, count: 2000)`.
+- **Also found:** `evaluate` can run at a safepoint in the middle of a paint (`ResolvePass.execute`). A synchronous `ValueNotifier` write there rebuilds the slider during paint and throws, and the listener after it (the sky) never runs, which left exposure stale. Setting a notifier to its current value doesn't notify at all.
+- **Do:** make every state mutation in `evaluate` inside `Future(() { ... })` (or `Future.delayed`), and read state synchronously. Identify pixels by raycast before tuning materials or light.
+- **Talk?** no
