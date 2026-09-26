@@ -1,0 +1,67 @@
+// Rain running down the window glass: sliding drops that refract the scene
+// behind the pane. Worn by the window_glass nodes only while it rains (see
+// lib/features/rain_glass_feature.dart); dry glass keeps its own material.
+material {
+  name: "rain_glass",
+  // engine_inputs need a lit model. Albedo and specular are zeroed below, so
+  // the lighting adds nothing and the pane shows only its emissive.
+  shading_model: lit,
+  blending: alpha,
+  // The viewer inside the room sees the pane's back face (its normal points
+  // out to sea), and the balcony sees the front.
+  culling: none,
+  depth_write: false,
+  engine_inputs: [scene_color],
+  parameters: [
+    { type: float, name: time },
+    { type: float, name: wetness }
+  ]
+}
+
+fragment {
+  float Hash12(vec2 p) {
+    vec3 q = fract(vec3(p.xyx) * 0.1031);
+    q += dot(q, q.yzx + 33.33);
+    return fract((q.x + q.y) * q.z);
+  }
+
+  // One layer of sliding drops: returns xy = refraction offset, z = drop mask.
+  vec3 DropLayer(vec2 uv, float t, float scale) {
+    vec2 grid = vec2(6.0, 2.0) * scale;
+    vec2 st = uv * grid;
+    float col = floor(st.x);
+    float speed = 0.2 + Hash12(vec2(col, scale)) * 0.3;
+    // UV v runs down the pane (v = 0 at the top edge), so the pattern moves
+    // toward larger v, i.e. down, when st.y decreases.
+    st.y -= t * speed;
+    vec2 id = floor(st);
+    vec2 f = fract(st) - 0.5;
+    float h = Hash12(id + scale);
+    vec2 c = vec2((h - 0.5) * 0.6, (fract(h * 7.0) - 0.5) * 0.6);
+    vec2 d = (f - c) * vec2(1.0, 2.0);
+    float r = length(d);
+    float mask = 1.0 - smoothstep(0.08, 0.14, r);
+    return vec3(d * mask * 0.5, mask);
+  }
+
+  void Surface(inout MaterialInputs material) {
+    vec2 uv = GetUV0();
+    float t = material_params.time;
+    float wet = material_params.wetness;
+    vec3 a = DropLayer(uv, t, 1.0);
+    vec3 b = DropLayer(uv + 0.37, t, 2.3);
+    vec2 offset = (a.xy + b.xy * 0.6) * 0.03 * wet;
+    float m = max(a.z, b.z) * wet;
+    vec3 behind = GetSceneColor(offset);
+    // GetSceneColor is exactly black only in a pass that has no scene
+    // snapshot (a planar-reflection capture, say). Draw nothing there
+    // instead of a black pane.
+    float have_scene = any(greaterThan(behind, vec3(0.0))) ? 1.0 : 0.0;
+    // base_color alpha is straight; the framework premultiplies. Alpha 1
+    // replaces what is behind with the refracted copy of it.
+    material.base_color = vec4(0.0, 0.0, 0.0, have_scene);
+    material.emissive = behind * mix(1.0, 0.85, m);
+    material.specular = 0.0;
+    material.roughness = 0.05;
+  }
+}
