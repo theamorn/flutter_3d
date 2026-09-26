@@ -23,11 +23,11 @@ _Updated 2026-09-26. Step boxes below are ticked for finished tasks._
 | 12 Sky, time of day, IBL | Done | `b8ae86a` |
 | 13 Ocean and beach | Done | `f06486d` |
 | 14 Post-effect toggles | Done | `bc7211e` |
-| 15 Shadows and MSAA toggles | **In progress** | — |
+| 15 Shadows and MSAA toggles | Done | `b869aaa` |
 | 16–26, 29 (Wave D) | Not started | — |
 | 27–28 (Wave E) | Not started (28 blocked on the real `.glb`) | — |
 
-Tasks 9–15 are on branch `hotel-tour/wave-c`, which isn't merged yet. Where the code departs from this plan (sky exposure and moon, bloom threshold, window layout, and so on), the reason is recorded in `learning.md`, and each decision is logged in the local ledger `.superpowers/sdd/2026-09-26-hotel-3d-tour/progress.md`.
+Tasks 9–15 (Wave C) are on branch `hotel-tour/wave-c`: done, now in final review, not merged yet. Where the code departs from this plan (sky exposure and moon, bloom threshold, window layout, and so on), the reason is recorded in `learning.md`, and each decision is logged in the local ledger `.superpowers/sdd/2026-09-26-hotel-3d-tour/progress.md`.
 
 ## Global Constraints
 
@@ -1985,12 +1985,12 @@ Mapping: `tone_mapping` → `look.toneMapping`, `fog` → `look.fog`, `bloom` �
 
 **Files:** Replace `lib/features/render_features.dart`.
 
-- [ ] **Step 1:** `grep -n "castsShadow\|shadowMapSize\|cascade" ~/.pub-cache/hosted/pub.dev/flutter_scene-0.23.0/lib/src/light.dart | head -20` and `sed -n 110,130p .../scene.dart` (the `AntiAliasingMode` values).
-- [ ] **Step 2: Implement.**
+- [x] **Step 1:** `grep -n "castsShadow\|shadowMapSize\|cascade" ~/.pub-cache/hosted/pub.dev/flutter_scene-0.23.0/lib/src/light.dart | head -20` and `sed -n 110,130p .../scene.dart` (the `AntiAliasingMode` values).
+- [x] **Step 2: Implement.**
   - `ShadowsFeature.mount`: `ctx.look.sunLight?.castsShadow = true` with shadow map size 2048 and 2 cascades, if those fields exist. Then `applyLook()`. `unmount` sets it false. If the sky feature is off (`sunLight == null`), mount is a no-op. It also re-applies when Task 12 creates the light: Task 12 creates the light with `castsShadow: ctx.look.sunShadows`. Add `bool sunShadows = false` to `LookState`; **this is the one allowed edit to `lib/hotel/look.dart`**. Set it here, and Task 12 reads it.
   - `MsaaFeature.mount`: `ctx.scene.antiAliasingMode = AntiAliasingMode.msaa`. `unmount` sets `AntiAliasingMode.none`.
-- [ ] **Step 3: Verify.** At 15:00 there are furniture shadows on the floor; toggle off and they're gone. With MSAA, the bed edges are smooth (zoom into the screenshot).
-- [ ] **Step 4: Commit**: `git add lib/features/render_features.dart lib/hotel/look.dart && git commit -m "feat: shadow and MSAA toggles"`
+- [x] **Step 3: Verify.** At 15:00 there are furniture shadows on the floor; toggle off and they're gone. With MSAA, the bed edges are smooth (zoom into the screenshot).
+- [x] **Step 4: Commit**: `git add lib/features/render_features.dart lib/hotel/look.dart && git commit -m "feat: shadow and MSAA toggles"`
 
 ---
 
