@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_scene/scene.dart' show PerspectiveCamera;
 import 'package:vector_math/vector_math.dart';
 import 'package:flutter_3d/math/picking.dart';
 
@@ -24,5 +25,18 @@ void main() {
   test('nearest hit wins', () {
     expect(nearest([null, 3.0, 1.5, 2.0]), 2);
     expect(nearest([null, null]), isNull);
+  });
+
+  test('matches the engine camera ray (facing +Z, screen-right is +X)', () {
+    final cam = PerspectiveCamera(
+        position: eye, target: target, up: up, fovRadiansY: 60 * degrees2Radians);
+    for (final pt in const [Offset(350, 400), Offset(50, 100), Offset(200, 700)]) {
+      final mine = screenRay(screen: pt, viewport: vp,
+          eye: eye, target: target, up: up, fovY: 60 * degrees2Radians).direction;
+      final engine = cam.screenPointToRay(pt, vp).direction.normalized();
+      expect(mine.x, closeTo(engine.x, 1e-4), reason: '$pt');
+      expect(mine.y, closeTo(engine.y, 1e-4), reason: '$pt');
+      expect(mine.z, closeTo(engine.z, 1e-4), reason: '$pt');
+    }
   });
 }

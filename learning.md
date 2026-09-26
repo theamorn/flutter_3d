@@ -44,3 +44,9 @@ Read it before starting a task; add to it before committing one. Format:
 - **Why it matters:** any test asserting a computed Vector component to 1e-9 fails unless the value is exactly representable (0, 1, −2, …).
 - **Do:** use `1e-6` tolerances for anything that passes through a `Vector2`/`Vector3`. Plain `double` maths (yaw, pitch, schedulers) keeps full precision.
 - **Talk?** no
+
+## flutter_scene's view basis: facing +Z, screen-RIGHT is +X (plan Tasks 4/5 were mirrored) (Final review, 2026-09-26)
+- **Found:** `camera.dart` `_matrix4LookAt` builds `right = up.cross(forward)` and `up = forward.cross(right)`, and the projection doesn't flip x. So with +Y up and facing +Z, world +X is on the right of the screen. The plan's Task 4/5 maths assumed right = −X (`fwd.cross(up)`, `right = (-fwd.y, fwd.x)`, `yaw - dx`), so taps picked the mirror-image point, strafe-right went left, and drag-right turned left. This contradicts the plan; the code now follows the engine.
+- **Why it matters:** a mirrored pick ray hits nothing, or the wrong object, on the other half of the screen (Review Focus 5). Anything "inverse of Task 5" (Task 24's `projectToScreen`) inherits the mirror.
+- **Do:** `right = up.cross(fwd)`, `camUp = fwd.cross(right)`; strafe right = `(fwd.y, -fwd.x)`; drag right = `yaw + dx·k`. Prefer the engine's own `camera.screenPointToRay(offset, size)` and `camera.worldToScreen(point, size)`. They're pure maths and run in `flutter test` with no GPU, so pin hand-rolled projection against them (see `picking_test.dart`, `fp_movement_test.dart`).
+- **Talk?** yes — "the plan's maths was confidently mirrored; a 10-line test against the engine's own projection caught it".

@@ -25,13 +25,15 @@ Vector2 desiredStep(FpState s, Offset stick, double dt) {
   var v = Vector2(stick.dx, stick.dy);
   if (v.length > 1) v = v.normalized();
   final fwd = Vector2(math.sin(s.yaw), math.cos(s.yaw));
-  final right = Vector2(-fwd.y, fwd.x); // facing +Z (yaw 0) → right is −X
+  // flutter_scene's view basis is right = up × forward: facing +Z (yaw 0),
+  // screen-right is +X.
+  final right = Vector2(fwd.y, -fwd.x);
   return s.xz + (fwd * v.y + right * v.x) * (kWalkSpeed * dt);
 }
 
 /// Drag right → turn right; drag up → look up.
 FpState applyLook(FpState s, Offset d) => FpState(
       s.xz,
-      s.yaw - d.dx * kLookSensitivity,
+      s.yaw + d.dx * kLookSensitivity, // +yaw turns toward +X = screen-right
       (s.pitch - d.dy * kLookSensitivity).clamp(-kMaxPitch, kMaxPitch).toDouble(),
     );
