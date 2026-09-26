@@ -40,7 +40,8 @@ const _mirror = Finish(0.95, 0.95, 0.95, roughness: 0.02, metallic: 1);
 const _porcelain = Finish(0.95, 0.95, 0.95, roughness: 0.2);
 const _shadeFabric = Finish(0.95, 0.88, 0.72, roughness: 0.9);
 const _curtainFabric = Finish(0.70, 0.62, 0.50, roughness: 0.95);
-const _windowGlass = Finish(0.85, 0.92, 0.95, roughness: 0.05, alpha: 0.15);
+const _windowGlass = Finish(0.85, 0.92, 0.95, roughness: 0.03, alpha: 0.05);
+const _railingGlass = Finish(0.85, 0.95, 1.0, roughness: 0.02, alpha: 0.03);
 const _showerGlass = Finish(0.85, 0.92, 0.95, roughness: 0.05, alpha: 0.2);
 const _books = [
   Finish(0.55, 0.08, 0.06), Finish(0.08, 0.25, 0.55), Finish(0.10, 0.40, 0.15),
@@ -293,7 +294,7 @@ RoomNode _walls() {
   ], children: [
     RoomNode('railing_glass', castsShadows: false, parts: [
       QuadPart(Vector3((railBox.minX + railBox.maxX) / 2, 0.55, (railBox.minZ + railBox.maxZ) / 2),
-          Vector3(0, 0, 1), railBox.maxX - railBox.minX, 0.9, _windowGlass),
+          Vector3(0, 0, -1), railBox.maxX - railBox.minX, 0.9, _railingGlass),
     ]),
   ]);
 }
@@ -404,7 +405,7 @@ List<RoomNode> _fixtures() {
       // Two panes either side of the open balcony doorway.
       for (final (x0, x1) in [(windowX0, -3.6), (-2.4, windowX1)])
         QuadPart(Vector3((x0 + x1) / 2, _windowTop / 2, FloorPlan.roomDepth + FloorPlan.wallT / 2),
-            Vector3(0, 0, 1), x1 - x0, _windowTop, _windowGlass),
+            Vector3(0, 0, -1), x1 - x0, _windowTop, _windowGlass),
     ]),
     // Curtains: 1.4 m panels bunched open (x-scale 0.25) at the window
     // edges; Task 18 eases the scale to 1 to close them.

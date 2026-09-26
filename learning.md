@@ -188,3 +188,9 @@ Read it before starting a task; add to it before committing one. Format:
 - **Why it matters:** Shader compilation fails at build time, preventing the iOS/Android app from launching.
 - **Do:** Avoid naming variables with GLSL reserved keywords like `flat`, `smooth`, `noperspective`, `sample`, etc. Use `flat_arc` or descriptive alternatives.
 - **Talk?** no.
+
+## Glass quad normal orientation and transparency in flutter_scene PBR (2026-09-26)
+- **Found:** (1) In `flutter_scene`'s `material_lighting.glsl`, `n_dot_v = max(dot(normal, camera_normal), 0.0)`. When a single-sided quad's normal points *away* from the camera (e.g. `Vector3(0, 0, 1)` viewed from the $-Z$ side), `dot(normal, camera_normal) < 0` is clamped to `0.0`. In `FresnelSchlickRoughness(n_dot_v, ...)`, $(1 - n\_dot\_v)^5 = 1.0$, triggering 100% total specular Fresnel reflection! With `alpha: 0.15`, this reflected the sky at maximum HDR intensity, making the glass balustrade appear like an opaque grey/black solid barrier. (2) Setting the quad normal toward the viewer (`Vector3(0, 0, -1)`) ensures $n \cdot v > 0$ so Fresnel drops to the physically realistic dielectric base reflectance (~4%). (3) Dedicated `_railingGlass` finish with `alpha: 0.03` and `roughness: 0.02` renders crystal-clear glass that lets the beach and props below show through cleanly while retaining a sleek physical glass sheen.
+- **Why it matters:** Inverted normals on translucent PBR materials cause false 100% Fresnel reflection, blinding the view through windows and railings.
+- **Do:** Orient glass quad normals toward the camera's viewpoint, and tune balustrade glass alpha to `0.02 - 0.03`.
+- **Talk?** yes — "inverted glass normals clamp n_dot_v to 0 in PBR, causing 100% grazing Fresnel reflection and making thin glass look like an opaque wall".

@@ -72,11 +72,11 @@ class DebugTour {
     // 3. balcony looking down, 12:00
     TourStop(
       name: 'balcony looking down, 12:00',
-      xz: Vector2(-3.0, 6.8),
+      xz: Vector2(-3.0, 7.3),
       yaw: 0.0,
-      pitch: -0.4,
+      pitch: -1.15,
       timeOfDay: 12.0,
-      lookDelta: const Offset(0, 80),
+      lookDelta: const Offset(0, 160),
     ),
     // 4. bathroom mirror, 21:00
     TourStop(
