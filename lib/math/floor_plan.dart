@@ -1,0 +1,1 @@
+enum RoomId { a, b }
