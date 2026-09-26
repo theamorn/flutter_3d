@@ -17,17 +17,11 @@ _Updated 2026-09-26. Step boxes below are ticked for finished tasks._
 | Task | Status | Commit |
 |---|---|---|
 | 1–8 (Waves A–B): setup, core framework, floor plan, movement, picking, PokéAPI, schedulers, presets | Done, merged to `main` | `698fc86` … `8185dc9` |
-| 9 Rooms (placeholder geometry, mirrored Room B) | Done | `a434e8e` |
-| 10 First-person player | Done | `b7fa2e6` |
-| 11 Tap-to-interact | Done | `3b3d03f` |
-| 12 Sky, time of day, IBL | Done | `b8ae86a` |
-| 13 Ocean and beach | Done | `f06486d` |
-| 14 Post-effect toggles | Done | `bc7211e` |
-| 15 Shadows and MSAA toggles | Done | `b869aaa` |
-| 16–26, 29 (Wave D) | Done, on branch `hotel-tour/wave-d` | `6efd91a` … `97eac30` |
-| 27–28 (Wave E) | Not started (28 blocked on the real `.glb`) | — |
+| 9–15 (Wave C): rooms, player, interact, sky/IBL, ocean, post-fx, shadows/MSAA | Done, merged to `main` | `a434e8e` … `b869aaa` |
+| 16–26, 29 (Wave D): lamps, door, curtains, water, rain, glass, lightning, reflections, screens, books, instancing, booking | Done, merged to `main` | `6efd91a` … `97eac30` |
+| 27–28 (Wave E) | In progress (Task 27 next; 28 blocked on the real `.glb`) | — |
 
-Tasks 9–15 (Wave C) are on branch `hotel-tour/wave-c`: done and reviewed, not merged yet. The review's hand-offs to Wave D are written into Tasks 17, 20, 23 and 24 as **Wave C notes**. Where the code departs from this plan (sky exposure and moon, bloom threshold, window layout, and so on), the reason is recorded in `learning.md`, and each decision is logged in the local ledger `.superpowers/sdd/2026-09-26-hotel-3d-tour/progress.md`.
+Waves A–D are merged to `main`. The review's hand-offs to Wave D were written into Tasks 17, 20, 23 and 24 as **Wave C notes**. Where the code departs from this plan (sky exposure and moon, bloom threshold, window layout, and so on), the reason is recorded in `learning.md`, and each decision is logged in the local ledger `.superpowers/sdd/2026-09-26-hotel-3d-tour/progress.md`.
 
 ## Global Constraints
 
