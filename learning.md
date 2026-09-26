@@ -38,3 +38,9 @@ Read it before starting a task; add to it before committing one. Format:
 - **Why it matters:** the Effects button, time label and weather toggle look broken on the simulator.
 - **Do:** unverified on a physical device. If it reproduces there, swap them for Material `Icons` (tune, schedule, water_drop / wb_sunny).
 - **Talk?** no
+
+## vector_math (non-_64) vectors are float32 — 1e-9 tolerances fail (Task 4, 2026-09-26)
+- **Found:** `package:vector_math/vector_math.dart` stores `Vector2/3` in `Float32List`, so `Vector2(0, 1.4).y == 1.399999976158142`. The plan's `closeTo(kWalkSpeed, 1e-9)` failed by 2.4e-8.
+- **Why it matters:** any test asserting a computed Vector component to 1e-9 fails unless the value is exactly representable (0, 1, −2, …).
+- **Do:** use `1e-6` tolerances for anything that passes through a `Vector2`/`Vector3`. Plain `double` maths (yaw, pitch, schedulers) keeps full precision.
+- **Talk?** no
