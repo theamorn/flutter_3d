@@ -102,3 +102,9 @@ Read it before starting a task; add to it before committing one. Format:
 - **Why it matters:** a closed door in Room B would disappear and stop being pickable, leaving a collision barrier with no visible door.
 - **Do:** move the shared leaf to `Scene.root` after Rooms mounts. Clone its `globalTransform` before detaching, then assign that world transform after reparenting; the engine recalculates the needed local transform. Portal visibility must follow the current hinge angle, not the requested open/close target, so the far room remains drawn until the leaf seats at angle zero.
 - **Talk?** yes
+
+## Scene construction also needs Impeller in widget tests (Task 29, 2026-09-26)
+- **Found:** `Scene()` itself requests `GpuContext` and throws in `flutter test`; a widget test cannot create a `HotelContext(Scene())` just to exercise a feature overlay.
+- **Why it matters:** the GPU boundary starts before geometry. Tests of booking controls and quote maths can run in Flutter's test runner, while the feature's live scene integration needs a device run.
+- **Do:** keep entrance distance and quote calculations in pure files, test the booking route without `HotelScene`, and record the scene transition as unverified when no simulator run is authorized.
+- **Talk?** no
