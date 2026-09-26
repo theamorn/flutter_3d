@@ -1,0 +1,48 @@
+// A planar-reflection surface (Task 23): the bathroom mirrors and the sea.
+//
+// flutter_scene's PhysicallyBasedMaterial never samples a
+// PlanarReflectorComponent's capture; only a `.fmat` that declares the
+// `planar_reflection` engine input does. The engine also rejects that input
+// on an `unlit` material, so this is `lit` and gets "unlit" by zeroing
+// everything the lights would add: black base colour, specular 0, and the
+// capture in emissive.
+//
+// GetPlanarReflection().a is 1 while a capture is bound and 0 otherwise
+// (inside another reflector's capture, or before the first capture). At 0
+// the surface falls back to its own PBR look, copied from the material it
+// replaced.
+material {
+  name: "Mirror",
+  shading_model: lit,
+  engine_inputs: [ planar_reflection ],
+  parameters: [
+    // The fallback look (linear base colour, like baseColorFactor).
+    { type: vec4, name: base_color, default: [0.95, 0.95, 0.95, 1.0] },
+    { type: float, name: metallic_factor, default: 1.0 },
+    { type: float, name: roughness_factor, default: 0.02 },
+    // Share of the capture shown head-on: 1 is a perfect mirror.
+    { type: float, name: reflectivity, default: 1.0 },
+    // 0: reflectivity at every angle (a mirror). 1: Schlick Fresnel from
+    // reflectivity head-on up to 1 at grazing angles (water, F0 0.02).
+    { type: float, name: fresnel_mix, default: 0.0 },
+  ],
+}
+
+fragment {
+  void Surface(inout MaterialInputs material) {
+    vec4 reflection = GetPlanarReflection();
+    float f0 = material_params.reflectivity;
+    // Clamped to [0, 1], so pow never sees a negative base.
+    float cos_theta = clamp(dot(GetWorldNormal(), GetViewDirection()), 0.0, 1.0);
+    float schlick = f0 + (1.0 - f0) * pow(1.0 - cos_theta, 5.0);
+    float k = mix(f0, schlick, material_params.fresnel_mix) * reflection.a;
+
+    material.base_color = vec4(material_params.base_color.rgb * (1.0 - k), 1.0);
+    material.metallic = material_params.metallic_factor * (1.0 - reflection.a);
+    material.roughness = material_params.roughness_factor;
+    // The capture replaces the specular reflection instead of adding to it.
+    material.specular = 1.0 - reflection.a;
+    material.emissive = reflection.rgb * k;
+    PrepareMaterial(material);
+  }
+}
