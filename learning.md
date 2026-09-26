@@ -96,3 +96,9 @@ Read it before starting a task; add to it before committing one. Format:
 - **Found:** (1) `Scene.antiAliasingMode` defaults to `auto`, which resolves to MSAA where offscreen MSAA is supported (it is on the iOS simulator). A default-off msaa feature that has never mounted therefore leaves MSAA on. (2) A `SkyEnvironment` IBL has no occlusion, so the sun's shadow only removes the sun's small direct term, and a room under a ceiling reads as lit as the sunny balcony. `SunLight.shadowAmbientStrength` (0 by default) also darkens the IBL in shadow. The A/B chose 0.5: at 0 the shadows barely show, and 0.8 is moody-dark. (3) A new `SunLight` (the sky remounted) comes back with the engine defaults (1024 map, 4 cascades, 150 m), so a shadows toggle has to re-apply its settings to whatever sun appears. (4) God rays march the shadow map and only show where sunlight streams through gaps into shade. In this south-facing room at 15:00 they changed ≤ 2% of pixels, even at 4× intensity.
 - **Do:** set `AntiAliasingMode.none` when the context is created, and let the feature own the mode. Configure shadows via `SunShadows.sync()` every frame (an identity check). Keep the shadow range tight (25 m) so 2 cascades × 2048 cover the rooms. Judge MSAA on a 3× crop of an edge: whole-frame diffs barely register it.
 - **Talk?** yes. "Shadows on" did nothing visible until the ambient term went in.
+
+## Even an empty Scene requires the GPU (Task 16, 2026-09-26)
+- **Found:** `Scene()` constructs a GPU context in `flutter test`, and `Scene` is a base class so it cannot be replaced by an implements-based fake.
+- **Why it matters:** lifecycle tests for plain nodes and lights still fail if they create the GPU-owning context.
+- **Do:** replace only the HotelContext boundary in these tests; exercise real nodes, components, interactions and teardown. Verify rendering in the simulator.
+- **Talk?** no
