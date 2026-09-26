@@ -251,6 +251,23 @@ void main() {
       }
     });
 
+    test('room B screens still read left-to-right: u runs to the viewer\'s right', () {
+      // Room B is room A under scale.x = −1. A texture mapped in room A's UVs
+      // would show mirrored there (Task 24 binds a poster to tv_screen).
+      final tv = QuadPart(Vector3(-6.7, 1.3, 2.68), Vector3(0, 0, 1), 1.2, 0.675, f);
+      for (final mirrored in [false, true]) {
+        final d = partsMeshData([tv], mirrored: mirrored);
+        final ps = vecs(d.positions), uv = d.texCoords!;
+        // World x of each vertex (room B negates x), and the face normal in
+        // world space: +Z either way, so the viewer's right is n × up = −X.
+        double worldX(int i) => mirrored ? -ps[i].x : ps[i].x;
+        final byU = [for (var i = 0; i < ps.length; i++) (uv[i * 2], worldX(i))]
+          ..sort((a, b) => a.$1.compareTo(b.$1));
+        expect(byU.last.$2, lessThan(byU.first.$2),
+            reason: mirrored ? 'room B' : 'room A');
+      }
+    });
+
     test('every node in the room winds its triangles toward its normals', () {
       for (final (n, _) in placed(room)) {
         if (n.parts.isNotEmpty) expectWindingMatchesNormals(n.parts, n.name);

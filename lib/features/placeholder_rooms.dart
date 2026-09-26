@@ -69,7 +69,8 @@ class BoxPart extends Part {
 
 /// A single-sided vertical rectangle facing [normal] (±X or ±Z). [width]
 /// runs along the viewer's right, [height] along +Y; UV (0, 0) is the
-/// viewer's top-left, the glTF convention.
+/// viewer's top-left (the glTF convention) in both rooms: room B's copy is
+/// built with u flipped (see [partsMeshData]).
 class QuadPart extends Part {
   QuadPart(this.center, this.normal, this.width, this.height, super.finish)
       : assert(normal.y == 0 && (normal.length - 1).abs() < 1e-9);
@@ -213,7 +214,11 @@ class _Arrays {
 
 /// One mesh's vertex data for [parts] (flat normals on boxes and quads,
 /// smooth sides on cylinders). Pure CPU: no GPU needed.
-MeshData partsMeshData(List<Part> parts) {
+///
+/// [mirrored]: the mesh will sit under a scale.x = −1 parent (room B). The
+/// engine flips the winding there, but not the UVs, so u is flipped here to
+/// keep textures (Task 24's screen poster) reading left to right.
+MeshData partsMeshData(List<Part> parts, {bool mirrored = false}) {
   final a = _Arrays();
   for (final p in parts) {
     switch (p) {
@@ -223,6 +228,11 @@ MeshData partsMeshData(List<Part> parts) {
         a.face(p.center, p.normal, Vector3(0, 1, 0), p.width / 2, p.height / 2);
       case CylinderPart():
         a.cylinder(p);
+    }
+  }
+  if (mirrored) {
+    for (var i = 0; i < a.uvs.length; i += 2) {
+      a.uvs[i] = 1 - a.uvs[i];
     }
   }
   return MeshData(
@@ -448,7 +458,7 @@ PhysicallyBasedMaterial _material(Finish f) {
 
 /// Builds [spec] into nodes: one primitive per finish, a fresh material per
 /// node (so features can restyle one node without touching another).
-Node _build(RoomNode spec) {
+Node _build(RoomNode spec, bool mirrored) {
   final node = Node(name: spec.name, localTransform: spec.localTransform)
     ..castsShadows = spec.castsShadows;
   if (spec.parts.isNotEmpty) {
@@ -458,15 +468,17 @@ Node _build(RoomNode spec) {
     }
     node.mesh = Mesh.primitives(primitives: [
       for (final MapEntry(key: f, value: parts) in byFinish.entries)
-        MeshPrimitive(MeshGeometry.fromMeshData(partsMeshData(parts)), _material(f)),
+        MeshPrimitive(
+            MeshGeometry.fromMeshData(partsMeshData(parts, mirrored: mirrored)), _material(f)),
     ]);
   }
   for (final c in spec.children) {
-    node.add(_build(c));
+    node.add(_build(c, mirrored));
   }
   return node;
 }
 
 /// Room A's node tree (needs the GPU: call after
-/// `Scene.initializeStaticResources()`).
-Node buildRoomA() => _build(roomASpec());
+/// `Scene.initializeStaticResources()`). Pass [mirrored] for the copy that
+/// becomes room B under a scale.x = −1 parent.
+Node buildRoomA({bool mirrored = false}) => _build(roomASpec(), mirrored);

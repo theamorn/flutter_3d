@@ -21,7 +21,7 @@ class RoomsFeature extends HotelFeature {
   Future<void> mount(HotelContext ctx) async {
     final a = buildRoomA()..name = 'room_a';
     final b = Node(name: 'room_b', localTransform: Matrix4.diagonal3Values(-1, 1, 1))
-      ..add(buildRoomA());
+      ..add(buildRoomA(mirrored: true));
     ctx.scene.add(a);
     ctx.scene.add(b);
     ctx.rooms[RoomId.a] = a;
