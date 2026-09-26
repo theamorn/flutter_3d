@@ -10,8 +10,7 @@ double approach(double current, double target, double dt,
 
 /// When lightning strikes, and how bright each strike's flash is over time.
 class LightningScheduler {
-  LightningScheduler({required math.Random random, this.minGap = 4.5, this.maxGap = 12})
-      : _random = random {
+  LightningScheduler({required this._random, this.minGap = 4.5, this.maxGap = 12}) {
     _untilNext = _nextGap();
   }
 
