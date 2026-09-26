@@ -28,10 +28,16 @@ class _HotelPageState extends State<HotelPage> {
         // non-positioned children would collapse to 0x0 and hide everything.
         builder: (context, snap) => Stack(fit: StackFit.expand, children: [
           Positioned.fill(
-            child: SceneView(
-              hotel.scene,
-              camera: hotel.ctx.camera,
-              onTick: (_, dt) => hotel.tick(dt),
+            child: TickerMode(
+              enabled: ModalRoute.of(context)?.isCurrent ?? true,
+              child: RepaintBoundary(
+                key: EntranceFeature.scenePreviewKey,
+                child: SceneView(
+                  hotel.scene,
+                  camera: hotel.ctx.camera,
+                  onTick: (_, dt) => hotel.tick(dt),
+                ),
+              ),
             ),
           ),
           // Feature overlays. Interactions (full-screen tap layer, crosshair)
