@@ -177,3 +177,10 @@ Read it before starting a task; add to it before committing one. Format:
 - **Why it matters:** lifecycle tests for plain nodes and lights still fail if they create the GPU-owning context.
 - **Do:** replace only the HotelContext boundary in these tests; exercise real nodes, components, interactions and teardown. Verify rendering in the simulator.
 - **Talk?** no
+
+## .fmat vertex displacement: map object deltas through world tangent/normal (Task 25, 2026-09-26)
+- **Found:** In flutter_scene 0.23.0, `.fmat` vertex hooks have signature `void Vertex(inout VertexInputs vertex)` where `vertex.world_position` (not `vertex.position`) is projected to clip space. `GetModelTransform()` does not exist in shader headers. Object-space displacement `delta = p - vertex.position` maps to world space via `vertex.world_tangent` (+X), `vertex.world_normal` (+Z), and `up = cross(normal, tangent)`. Also, parameters in the vertex stage are accessed via `material_params.<name>`, matching the fragment stage.
+- **Why it matters:** calling non-existent `GetModelTransform()` breaks compilation; displacing `vertex.position` alone has zero visual effect.
+- **Do:** apply basis-aware world displacement to `vertex.world_position += delta.x * right + delta.y * up + delta.z * normal;` when tangent is valid, and fall back to `vertex.world_position += delta;`.
+- **Talk?** yes — "how to deform meshes in .fmat when GetModelTransform doesn't exist".
+
