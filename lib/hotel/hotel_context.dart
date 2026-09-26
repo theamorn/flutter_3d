@@ -8,7 +8,12 @@ import 'look.dart';
 
 /// Shared state handed to every feature.
 class HotelContext {
-  HotelContext(this.scene);
+  HotelContext(this.scene) {
+    // The msaa feature owns anti-aliasing. The engine default (auto) already
+    // means MSAA where supported, so "MSAA off" would be a lie until the
+    // feature first mounts and unmounts.
+    scene.antiAliasingMode = AntiAliasingMode.none;
+  }
   final Scene scene;
   final PerspectiveCamera camera = PerspectiveCamera(
     position: Vector3(-4, 1.6, 3),
