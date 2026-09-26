@@ -56,3 +56,9 @@ Read it before starting a task; add to it before committing one. Format:
 - **Why it matters:** a back-facing quad is invisible from the front (trap 13). Any hand-written face generator (screens, glass, mirrors, book pages) has to agree with the engine's handedness.
 - **Do:** build vertex arrays as `MeshData` (pure CPU, runs in `flutter test`), then use `MeshGeometry.fromMeshData` on the GPU side. To pin winding, compare your normals with `MeshData.build(positions:, indices:)` (normals omitted). The engine derives those from the winding (e1 × e2), so a dot product < 0 means the triangle is inside out. See `placeholder_rooms_test.dart`.
 - **Talk?** yes. It's the same handedness surprise as the picking maths, this time caught by a unit test before it reached the screen.
+
+## No tap tool? Drive input through the VM service's `evaluate` (Task 10, 2026-09-26)
+- **Found:** the simulator has no tap or drag tool, and the app has no flutter_driver extension. The Dart MCP `vm_service` tool can connect to the `ws://…/ws` URI that `flutter run` prints. Then `callMethod evaluate` with `targetId` = the library id (found in `getIsolate` → libraries, e.g. `package:flutter_3d/features/player_feature.dart`) runs an expression inside the live app: `PlayerFeature.stick.value = const Offset(0, 1)` walks forward, and `PlayerFeature.pendingLook = const Offset(314.16, 0)` turns 90° right. A statement block works when wrapped in an IIFE: `(){ …; return 0; }()`.
+- **Why it matters:** you can check the joystick/look wiring, collisions and camera on the device with no temporary code to revert.
+- **Do:** keep input in static notifiers (as `PlayerFeature` does) so it can be driven this way. `getIsolate` output is ~200 KB, so grep it for the library id rather than reading it.
+- **Talk?** no
