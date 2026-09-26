@@ -26,8 +26,14 @@ class FeatureRegistry extends ChangeNotifier {
     if (!on && !f.toggleable) return Future.value();
     on ? _wanted.add(id) : _wanted.remove(id);
     notifyListeners();
-    final next = (_chain[id] ?? Future.value()).then((_) => _reconcile(f));
-    _chain[id] = next;
+    return _enqueue(f);
+  }
+
+  /// Runs a reconcile after any pending one for [f]. [_reconcile] never
+  /// throws, so one failure can't poison the chain for later toggles.
+  Future<void> _enqueue(HotelFeature f) {
+    final next = (_chain[f.id] ?? Future.value()).then((_) => _reconcile(f));
+    _chain[f.id] = next;
     return next;
   }
 
@@ -39,19 +45,47 @@ class FeatureRegistry extends ChangeNotifier {
     final dynamic feature = f;
     final want = _wanted.contains(f.id);
     final have = _mounted.contains(f.id);
-    if (want && !have) {
-      await feature.mount(ctx);
-      _mounted.add(f.id);
-    } else if (!want && have) {
-      feature.unmount(ctx);
-      _mounted.remove(f.id);
+    try {
+      if (want && !have) {
+        try {
+          await feature.mount(ctx);
+        } catch (_) {
+          // Undo whatever the failed mount attached, and show the switch off.
+          _wanted.remove(f.id);
+          try {
+            feature.unmount(ctx);
+          } catch (_) {}
+          rethrow;
+        }
+        _mounted.add(f.id);
+      } else if (!want && have) {
+        feature.unmount(ctx);
+        _mounted.remove(f.id);
+      }
+    } catch (e, st) {
+      FlutterError.reportError(FlutterErrorDetails(
+        exception: e,
+        stack: st,
+        library: 'hotel feature registry',
+        context: ErrorDescription(
+            'while ${want ? 'mounting' : 'unmounting'} feature "${f.id}"'),
+      ));
     }
     notifyListeners();
   }
 
+  /// Mounts the default features in catalog order. All of them are marked
+  /// wanted up front, so a toggle the user makes while loading is kept
+  /// instead of being switched back when its turn comes.
   Future<void> mountDefaults() async {
-    for (final f in features) {
-      if (f.defaultOn || !f.toggleable) await setEnabled(f.id, true);
+    final defaults = [
+      for (final f in features)
+        if (f.defaultOn || !f.toggleable) f
+    ];
+    _wanted.addAll(defaults.map((f) => f.id));
+    notifyListeners();
+    for (final f in defaults) {
+      await _enqueue(f);
     }
   }
 

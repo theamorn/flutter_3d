@@ -50,6 +50,37 @@ void main() {
     expect(f.mounts - f.unmounts, 1);
   });
 
+  test('a throwing mount does not poison later toggles', () async {
+    final f = _Flaky('a');
+    final r = FeatureRegistry([f], mountContext: null);
+    await r.setEnabled('a', true); // fails; must not throw to the caller
+    expect(r.isEnabled('a'), false); // the switch falls back to off
+    expect(r.isMounted('a'), false);
+    expect(f.unmounts, 1); // whatever mount attached is cleaned up
+    await r.setEnabled('a', true); // a retry still reaches mount
+    expect(r.isMounted('a'), true);
+    expect(f.mounts, 1);
+  });
+
+  test('mountDefaults carries on past a failing feature', () async {
+    final bad = _Flaky('bad'), ok = _Fake('ok');
+    final r = FeatureRegistry([bad, ok], mountContext: null);
+    await r.mountDefaults();
+    expect(r.isMounted('ok'), true);
+  });
+
+  test('a toggle made while defaults are still mounting is kept', () async {
+    final slow = _Fake('slow', delay: const Duration(milliseconds: 30));
+    final fog = _Fake('fog');
+    final r = FeatureRegistry([slow, fog], mountContext: null);
+    final boot = r.mountDefaults();
+    await Future.delayed(const Duration(milliseconds: 5));
+    await r.setEnabled('fog', false); // user switches fog off during loading
+    await boot;
+    expect(r.isEnabled('fog'), false);
+    expect(fog.mounts - fog.unmounts, 0);
+  });
+
   test('non-toggleable feature cannot be disabled', () async {
     final f = _Base();
     final r = FeatureRegistry([f], mountContext: null);
@@ -62,4 +93,16 @@ void main() {
 class _Base extends _Fake {
   _Base() : super('base');
   @override bool get toggleable => false;
+}
+
+/// Mount throws on the first attempt only.
+class _Flaky extends _Fake {
+  _Flaky(super.id);
+  int attempts = 0;
+  @override
+  Future<void> mount(Object? ctx) async {
+    attempts++;
+    if (attempts == 1) throw StateError('asset failed to load');
+    mounts++;
+  }
 }
