@@ -19,8 +19,8 @@ vertex {
     if (x > axis) {
       float arc = x - axis;
       float theta = min(arc / r, 3.14159265);
-      float flat = max(arc - 3.14159265 * r, 0.0);
-      p.x = axis + r * sin(theta) - flat;
+      float flat_arc = max(arc - 3.14159265 * r, 0.0);
+      p.x = axis + r * sin(theta) - flat_arc;
       p.z = vertex.position.z + r * (1.0 - cos(theta));
     }
     vec3 delta = p - vertex.position;

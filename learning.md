@@ -183,4 +183,8 @@ Read it before starting a task; add to it before committing one. Format:
 - **Why it matters:** calling non-existent `GetModelTransform()` breaks compilation; displacing `vertex.position` alone has zero visual effect.
 - **Do:** apply basis-aware world displacement to `vertex.world_position += delta.x * right + delta.y * up + delta.z * normal;` when tangent is valid, and fall back to `vertex.world_position += delta;`.
 - **Talk?** yes — "how to deform meshes in .fmat when GetModelTransform doesn't exist".
-
+## `flat` is a reserved GLSL keyword in .fmat shaders (Task 25/27, 2026-09-26)
+- **Found:** In GLSL (and Impeller's shader stage compiler), `flat` is a reserved keyword for interpolation qualifiers (`flat in ...`). Declaring a variable named `flat` (e.g. `float flat = max(...)` in vertex calculations) fails Xcode shader compilation with `syntax error, unexpected FLAT, expecting COMMA or SEMICOLON`.
+- **Why it matters:** Shader compilation fails at build time, preventing the iOS/Android app from launching.
+- **Do:** Avoid naming variables with GLSL reserved keywords like `flat`, `smooth`, `noperspective`, `sample`, etc. Use `flat_arc` or descriptive alternatives.
+- **Talk?** no.
