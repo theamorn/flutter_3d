@@ -33,4 +33,18 @@ void main() {
     expect(day.bloomThreshold * 0.35, closeTo(1.0, 1e-9));
     expect(night.bloomThreshold * 2.5, closeTo(1.0, 1e-9));
   });
+
+  test('weather exposure multiplies sky exposure and adjusts bloom threshold', () {
+    final look = LookState()
+      ..exposure = 0.35
+      ..weatherExposureScale = 0.65;
+    final day = composeLook(look);
+    expect(day.exposure, closeTo(0.2275, 1e-9));
+    expect(day.bloomThreshold * day.exposure, closeTo(1.0, 1e-9));
+
+    look.exposure = 2.5;
+    final night = composeLook(look);
+    expect(night.exposure, closeTo(1.625, 1e-9));
+    expect(night.bloomThreshold * night.exposure, closeTo(1.0, 1e-9));
+  });
 }
