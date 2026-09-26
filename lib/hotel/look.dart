@@ -14,6 +14,10 @@ class LookState {
   Skybox? skybox; // Task 12 sets
   SkyEnvironment? skyEnvironment; // Task 12 sets
   SunLight? sunLight; // Task 12 sets
+
+  /// Whether the sun casts shadows. Task 15's toggle writes it; Task 12 builds
+  /// its SunLight with it, so the switch survives the sky being remounted.
+  bool sunShadows = false;
 }
 
 /// The ONLY place an EnvironmentSettings literal is built (engine rule 1).
