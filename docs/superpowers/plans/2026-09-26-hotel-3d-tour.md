@@ -24,7 +24,7 @@ _Updated 2026-09-26. Step boxes below are ticked for finished tasks._
 | 13 Ocean and beach | Done | `f06486d` |
 | 14 Post-effect toggles | Done | `bc7211e` |
 | 15 Shadows and MSAA toggles | Done | `b869aaa` |
-| 16–26, 29 (Wave D) | Not started | — |
+| 16–26, 29 (Wave D) | Done, on branch `hotel-tour/wave-d` | `6efd91a` … `97eac30` |
 | 27–28 (Wave E) | Not started (28 blocked on the real `.glb`) | — |
 
 Tasks 9–15 (Wave C) are on branch `hotel-tour/wave-c`: done and reviewed, not merged yet. The review's hand-offs to Wave D are written into Tasks 17, 20, 23 and 24 as **Wave C notes**. Where the code departs from this plan (sky exposure and moon, bloom threshold, window layout, and so on), the reason is recorded in `learning.md`, and each decision is logged in the local ledger `.superpowers/sdd/2026-09-26-hotel-3d-tour/progress.md`.
@@ -2000,14 +2000,14 @@ Mapping: `tone_mapping` → `look.toneMapping`, `fog` → `look.fog`, `bloom` �
 
 **Files:** Replace `lib/features/lamps_feature.dart`.
 
-- [ ] **Step 1:** `sed -n 516,560p ~/.pub-cache/hosted/pub.dev/flutter_scene-0.23.0/lib/src/light.dart` (the `PointLight` fields), and check the `PointLightComponent(this.light)` usage.
-- [ ] **Step 2: Implement.** For each node in `ctx.nodesNamed('lamp_bedside')` + `ctx.nodesNamed('lamp_floor')`:
+- [x] **Step 1:** `sed -n 516,560p ~/.pub-cache/hosted/pub.dev/flutter_scene-0.23.0/lib/src/light.dart` (the `PointLight` fields), and check the `PointLightComponent(this.light)` usage.
+- [x] **Step 2: Implement.** For each node in `ctx.nodesNamed('lamp_bedside')` + `ctx.nodesNamed('lamp_floor')`:
   - add a child node at `+0.3 y` with `PointLightComponent(PointLight(color: warm 2700K ≈ (1.0, 0.78, 0.55), intensity: 8, range: 6))`;
   - register an `Interactable(node: lamp, label: 'Lamp on/off', onTap: toggle)`. Toggling flips the light's intensity between 0 and 8 and the shade's emissive colour, which gives bloom something to find.
 
   The feature toggle off removes all light nodes and unregisters the interactables. That shows the cost of 4 point lights (2 per room).
-- [ ] **Step 3: Verify.** At 22:00 with the lamps on, there are warm pools of light. Tap one: it goes off. Turn the feature off: the room is lit only by the IBL.
-- [ ] **Step 4: Commit**: `git add lib/features/lamps_feature.dart && git commit -m "feat: tappable lamps with point lights"`
+- [x] **Step 3: Verify.** At 22:00 with the lamps on, there are warm pools of light. Tap one: it goes off. Turn the feature off: the room is lit only by the IBL.
+- [x] **Step 4: Commit**: `git add lib/features/lamps_feature.dart && git commit -m "feat: tappable lamps with point lights"`
 
 ### Task 17: Connecting door and portal culling
 
@@ -2029,7 +2029,7 @@ List<Box2> doorColliders(double angle);
 Set<RoomId> visibleRooms({required RoomId cameraRoom, required bool doorOpen, required bool cullingEnabled});
 ```
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```dart
 // test/math/portal_test.dart
@@ -2080,43 +2080,43 @@ void main() {
 }
 ```
 
-- [ ] **Step 2:** Run `fvm flutter test test/math/door_hinge_test.dart test/math/portal_test.dart`. Expected: FAIL.
-- [ ] **Step 3: Implement the maths** (straightforward from the interfaces), then run the tests. Expected: PASS.
-- [ ] **Step 4: Implement the features.**
+- [x] **Step 2:** Run `fvm flutter test test/math/door_hinge_test.dart test/math/portal_test.dart`. Expected: FAIL.
+- [x] **Step 3: Implement the maths** (straightforward from the interfaces), then run the tests. Expected: PASS.
+- [x] **Step 4: Implement the features.**
   - `DoorFeature` (non-toggleable): registers an interactable on `ctx.nodesNamed('door_connect').first` with the label "Open door" or "Close door", which flips `ctx.doorOpen`. `tick` does the following:
     - steps the hinge;
     - sets the door node's rotation about Y, at the hinge;
     - writes `ctx.dynamicColliders['door'] = doorColliders(angle)`;
     - after the player's collision, pushes the player out of a closing door. This happens naturally because `moveCircle` pushes out (Task 3 test).
   - `PortalCullingFeature` (toggleable, default on): `tick` computes `visibleRooms(...)` with `cameraRoom = FloorPlan.roomOf(ctx.playerXZ)` and sets `ctx.rooms[id]!.visible` for each room. `unmount` sets both rooms visible.
-- [ ] **Step 5: Verify.**
+- [x] **Step 5: Verify.**
   - The door closed blocks walking.
   - Tap it: it swings open (about 0.6 s), and you walk through.
   - With culling on and the door closed, the HUD triangle and mesh counts halve compared with culling off.
   - Stand in the doorway while the door closes: you get pushed out, not stuck.
-- [ ] **Step 6: Commit**: `git add lib/features/door_feature.dart lib/math/door_hinge.dart lib/math/portal.dart test/math/door_hinge_test.dart test/math/portal_test.dart && git commit -m "feat: connecting door with hinge collider and portal culling"`
+- [x] **Step 6: Commit**: `git add lib/features/door_feature.dart lib/math/door_hinge.dart lib/math/portal.dart test/math/door_hinge_test.dart test/math/portal_test.dart && git commit -m "feat: connecting door with hinge collider and portal culling"`
 
 ### Task 18: Curtains
 
 **Files:** Replace `lib/features/curtains_feature.dart`.
 
-- [ ] **Step 1: Implement.** For each room, register an interactable on both `curtain_left` and `curtain_right`, labelled "Open curtains" or "Close curtains". A tap toggles that room's curtains. `tick` eases each panel's x-scale between 0.25 (bunched at the side, open) and 1.0 (closed), anchoring at the outer edge by also moving its x-position. Use `approach()` from Task 7 with a fade of 0.8 s.
-- [ ] **Step 2: Verify.** At 15:00, close the curtains: the room darkens noticeably, since direct sun and sky are blocked (with shadows on). Open them again.
-- [ ] **Step 3: Commit**: `git add lib/features/curtains_feature.dart && git commit -m "feat: tappable curtains"`
+- [x] **Step 1: Implement.** For each room, register an interactable on both `curtain_left` and `curtain_right`, labelled "Open curtains" or "Close curtains". A tap toggles that room's curtains. `tick` eases each panel's x-scale between 0.25 (bunched at the side, open) and 1.0 (closed), anchoring at the outer edge by also moving its x-position. Use `approach()` from Task 7 with a fade of 0.8 s.
+- [x] **Step 2: Verify.** At 15:00, close the curtains: the room darkens noticeably, since direct sun and sky are blocked (with shadows on). Open them again.
+- [x] **Step 3: Commit**: `git add lib/features/curtains_feature.dart && git commit -m "feat: tappable curtains"`
 
 ### Task 19: Faucet and shower particles
 
 **Files:** Replace `lib/features/water_fx_feature.dart`.
 
-- [ ] **Step 1:** Read the particle section of `.claude/skills/flutter_scene-idioms/SKILL.md`. Check `ParticleSystem({maxParticles, shape, spawner, modules, lifetime, startSpeed, startSize, startColor, gravity, ...})` (verified in `particles/particle_system.dart:48`), `Spawner({rate, bursts})` (with `rate` mutable), the emitter shapes in `particles/emitter_shape.dart`, and how a system is attached (`particle_emitter_component.dart`).
-- [ ] **Step 2: Implement.** Per room:
+- [x] **Step 1:** Read the particle section of `.claude/skills/flutter_scene-idioms/SKILL.md`. Check `ParticleSystem({maxParticles, shape, spawner, modules, lifetime, startSpeed, startSize, startColor, gravity, ...})` (verified in `particles/particle_system.dart:48`), `Spawner({rate, bursts})` (with `rate` mutable), the emitter shapes in `particles/emitter_shape.dart`, and how a system is attached (`particle_emitter_component.dart`).
+- [x] **Step 2: Implement.** Per room:
   - **Faucet**: a cone emitter at `faucet_spout`, pointing −Y. 180/s, lifetime 0.35 s, speed 0.6, size 0.012, gravity −9.8, alpha 0.6 light blue, `velocityStretched`. Add a tiny splash burst at the basin, y = 0.85.
   - **Shower**: a disk emitter of radius 0.12 at `shower_head`. 600/s, lifetime 0.6 s, speed 1.0.
   - **Steam** while the shower is on: 12/s large soft puffs rising at 0.15 m/s, lifetime 4 s, alpha 0.12. Give the sprites a soft-dot texture (a radial gradient from `Texture2D.fromPixels`); without one a sprite is a hard square.
   - Register interactables: `faucet_spout` "Water on/off" and `shower_head` "Shower on/off". They set `Spawner.rate` between 0 and the value above.
   - The feature toggle off unmounts every system and unregisters the interactables.
-- [ ] **Step 3: Verify.** Tap the faucet: a stream falls into the basin. Tap the shower: rain plus steam. Watch the HUD UI ms rise, since particles are CPU-stepped.
-- [ ] **Step 4: Commit**: `git add lib/features/water_fx_feature.dart && git commit -m "feat: faucet and shower particles with steam"`
+- [x] **Step 3: Verify.** Tap the faucet: a stream falls into the basin. Tap the shower: rain plus steam. Watch the HUD UI ms rise, since particles are CPU-stepped.
+- [x] **Step 4: Commit**: `git add lib/features/water_fx_feature.dart && git commit -m "feat: faucet and shower particles with steam"`
 
 ### Task 20: Rain outside (and the weather level)
 
@@ -2125,7 +2125,7 @@ void main() {
 > **Wave C note (final review):** `ctx.look.exposure` belongs to the sky feature (Task 12). It sets exposure from the time of day on every slider change and restores its own base on unmount. So don't multiply or restore `look.exposure` here. Dragging the slider would wipe out the rain darkening, and restoring a stored base leaves the wrong exposure once the time has changed. Instead, add `double exposureScale = 1.0` to `LookState` (this task's one allowed `look.dart` edit). Set it to `1 - 0.35 * weather` and reset it to 1 on unmount. Make `composeLook` use `exposure * exposureScale`, including the bloom threshold `1 / (exposure * exposureScale)`.
 **Consumes:** `approach()` (Task 7), `ctx.rainRequested`, `ctx.weather`.
 
-- [ ] **Step 1: Implement.**
+- [x] **Step 1: Implement.**
   - The feature owns the weather: `tick` does `ctx.weather = approach(ctx.weather, ctx.rainRequested.value ? 1 : 0, dt)`.
   - Rain particles: a box emitter 30 × 30 m at x ∈ [−15, 15], z ∈ [6.5, 36.5], 15 m above the balcony, **outside only**, so none fall inside the room. Speed 11 m/s, width 0.014–0.024, `velocityStretched`, alpha 0.55, and `spawner.rate = 1500 * ctx.weather`.
   - Tint by daylight: rain colour × `clamp(sunIntensity, 0.15, 1)`, so it doesn't glow white at night.
@@ -2134,15 +2134,15 @@ void main() {
     - `ctx.look.exposure *= (1 - 0.35 * weather)`. Store the base value in `mount` and restore it in `unmount`.
   - Balcony splashes: a burst module at y = 0 for the balcony floor, at 10% of the rain rate (playbook: fewer ground splashes).
   - Off: set the rate to 0. Unmount once no particles remain (`ParticleSystem` alive count, or after 3 s).
-- [ ] **Step 2: Verify.** Tap 🌧: rain fades in over about 2.5 s, visible past the window and on the balcony, never indoors. Fog thickens over the sea. Tap ☀️: it fades out.
-- [ ] **Step 3: Commit**: `git add lib/features/rain_feature.dart && git commit -m "feat: rain outside with weather fade"`
+- [x] **Step 2: Verify.** Tap 🌧: rain fades in over about 2.5 s, visible past the window and on the balcony, never indoors. Fog thickens over the sea. Tap ☀️: it fades out.
+- [x] **Step 3: Commit**: `git add lib/features/rain_feature.dart && git commit -m "feat: rain outside with weather fade"`
 
 ### Task 21: Rain on the window glass (refraction shader)
 
 **Files:** Create `assets/materials/rain_glass.fmat`. Replace `lib/features/rain_glass_feature.dart`.
 
-- [ ] **Step 1:** Read `.claude/skills/flutter_scene-idioms/` for the `.fmat` reference and engine rule 2 above.
-- [ ] **Step 2: Write the shader.**
+- [x] **Step 1:** Read `.claude/skills/flutter_scene-idioms/` for the `.fmat` reference and engine rule 2 above.
+- [x] **Step 2: Write the shader.**
 
 ```glsl
 material {
@@ -2200,17 +2200,17 @@ fragment {
 
 Check the `MaterialInputs` field names (`base_color`, `emissive`, `specular`, `roughness`) and how parameters are accessed (`material.time`, or bare `time`) against the idioms reference before building. The playbook table says `base_color` has straight alpha and `emissive` is added after lighting.
 
-- [ ] **Step 3: Build.** Run `fvm flutter run --enable-flutter-gpu …` (a full rebuild; hot restart won't pick up `.fmat` files). Then run `grep -n "keeping the previous shaders" run.log`. Expected: no match. Check `flutter_scene_generated/material.*.index.json` for `rain_glass`.
-- [ ] **Step 4: Implement the feature.** Load it with `loadFmatMaterial('assets/materials/rain_glass.fmat')`. On mount, swap the material of both `window_glass` nodes, keeping the old material to restore on unmount. `tick` sets `time += dt` and `wetness = ctx.weather` through `material.parameters.setFloat(...)` (check the exact API in the idioms skill).
-- [ ] **Step 5: Verify on the iOS simulator AND the Android emulator.** With rain on, the window shows drops refracting the view outside. With rain off, the glass is clear. On the emulator: no black or transparent glass.
-- [ ] **Step 6: Commit**: `git add assets/materials/rain_glass.fmat lib/features/rain_glass_feature.dart && git commit -m "feat: rain-on-glass refraction shader"`
+- [x] **Step 3: Build.** Run `fvm flutter run --enable-flutter-gpu …` (a full rebuild; hot restart won't pick up `.fmat` files). Then run `grep -n "keeping the previous shaders" run.log`. Expected: no match. Check `flutter_scene_generated/material.*.index.json` for `rain_glass`.
+- [x] **Step 4: Implement the feature.** Load it with `loadFmatMaterial('assets/materials/rain_glass.fmat')`. On mount, swap the material of both `window_glass` nodes, keeping the old material to restore on unmount. `tick` sets `time += dt` and `wetness = ctx.weather` through `material.parameters.setFloat(...)` (check the exact API in the idioms skill).
+- [x] **Step 5: Verify on the iOS simulator AND the Android emulator.** With rain on, the window shows drops refracting the view outside. With rain off, the glass is clear. On the emulator: no black or transparent glass.
+- [x] **Step 6: Commit**: `git add assets/materials/rain_glass.fmat lib/features/rain_glass_feature.dart && git commit -m "feat: rain-on-glass refraction shader"`
 
 ### Task 22: Lightning over the sea
 
 **Files:** Replace `lib/features/lightning_feature.dart`.
 **Consumes:** `LightningScheduler` (Task 7), `ctx.weather`.
 
-- [ ] **Step 1: Implement.**
+- [x] **Step 1: Implement.**
   - Strikes only when `ctx.weather > 0.7`.
   - A strike builds a bolt by midpoint displacement: 6 passes, kick 0.26 × segment length, from (x, 300, z) to the sea (y = −90), with x in [−80, 80] and z in [120, 220], in front of the window.
   - The bolt geometry is `TubeGeometry(PolylinePath(points), radius: 0.4, radialSegments: 5, caps: false)` with an HDR `UnlitMaterial` (colour × 12). Grep `TubeGeometry` and `PolylinePath` in `lib/src/geometry` first.
@@ -2218,8 +2218,8 @@ Check the `MaterialInputs` field names (`base_color`, `emissive`, `specular`, `r
   - Flash light: a shadowless `DirectionalLight` from the bolt, intensity = `envelope × 4 × darkness`. Add a room-light boost as `ctx.look.environmentIntensity += envelope * 0.8 * darkness`, restored after the strike. Here `darkness` = 0.3 by day and 1.0 at night.
   - Don't rebake the IBL during a flash.
   - A debug hold: `const bool kHoldLightning = bool.fromEnvironment('HOLD_LIGHTNING')`. When set, freeze the envelope at its peak for 2 s. Log `debugPrint('lightning strike')`.
-- [ ] **Step 2: Verify.** Run with `--dart-define=HOLD_LIGHTNING=true` and rain on. When `lightning strike` appears in the log, take a screenshot. Expected: a bolt over the sea and a lit room.
-- [ ] **Step 3: Commit**: `git add lib/features/lightning_feature.dart && git commit -m "feat: lightning strikes during storms"`
+- [x] **Step 2: Verify.** Run with `--dart-define=HOLD_LIGHTNING=true` and rain on. When `lightning strike` appears in the log, take a screenshot. Expected: a bolt over the sea and a lit room.
+- [x] **Step 3: Commit**: `git add lib/features/lightning_feature.dart && git commit -m "feat: lightning strikes during storms"`
 
 ### Task 23: Planar reflections (bathroom mirror and sea)
 
@@ -2227,13 +2227,13 @@ Check the `MaterialInputs` field names (`base_color`, `emissive`, `specular`, `r
 
 > **Wave C note:** `sea` is a scene-level node (Task 13). Find it among `ctx.scene.root.children`, because `ctx.nodesNamed` only searches the two rooms.
 
-- [ ] **Step 1:** Read the `PlanarReflectorComponent({resolutionScale, layerMask, reflectionGroupId, clipBias, localNormal})` docs (`components/planar_reflector_component.dart`), including how a material samples `planar_reflection`. Check whether the default PBR material uses the capture automatically or needs an `.fmat` with `engine_inputs: [planar_reflection]`.
-- [ ] **Step 2: Implement.**
+- [x] **Step 1:** Read the `PlanarReflectorComponent({resolutionScale, layerMask, reflectionGroupId, clipBias, localNormal})` docs (`components/planar_reflector_component.dart`), including how a material samples `planar_reflection`. Check whether the default PBR material uses the capture automatically or needs an `.fmat` with `engine_inputs: [planar_reflection]`.
+- [x] **Step 2: Implement.**
   - `MirrorFeature`: add `PlanarReflectorComponent(resolutionScale: 0.5, localNormal: Vector3(1, 0, 0))` to each `mirror` node. If a custom material is needed, the fmat is `mirror.fmat`: unlit, `emissive = GetPlanarReflection().rgb`, `specular = 0`. In that case, **add `assets/materials/mirror.fmat` to this task's files**. Unmount removes the component and restores the material.
   - `SeaReflectionFeature`: the same on the node named `sea` (Task 13) with `localNormal` +Y and resolution 0.5. Its `layerMask` excludes the sea's own layer (playbook §7 "free win"): put the sea on layer bit 2 and use `layerMask = 0xFFFFFFFF & ~(1 << 2)`.
   - Room B's mirror sits under a negative-scale parent, so its world normal flips automatically. Verify it.
-- [ ] **Step 3: Verify.** In the bathroom, the mirror shows the room and **you**. There's no player body, so it shows the room behind you. Check both rooms' mirrors are the right way round. Check that turning on the mirror raises raster ms noticeably in the HUD.
-- [ ] **Step 4: Commit**: `git add lib/features/reflection_features.dart assets/materials/ && git commit -m "feat: planar reflections for bathroom mirror and sea"`
+- [x] **Step 3: Verify.** In the bathroom, the mirror shows the room and **you**. There's no player body, so it shows the room behind you. Check both rooms' mirrors are the right way round. Check that turning on the mirror raises raster ms noticeably in the HUD.
+- [x] **Step 4: Commit**: `git add lib/features/reflection_features.dart assets/materials/ && git commit -m "feat: planar reflections for bathroom mirror and sea"`
 
 ### Task 24: TV and PC WebViews on the 3D screens
 
@@ -2260,7 +2260,7 @@ Design (engine rule 7): a WebView is a platform view and can't become a mesh tex
 
 **Stretch goal (only after the above works):** keep the WebView attached while walking by applying a `Matrix4` perspective `Transform` from the 4 projected corners. Test it on a real iPhone; if platform-view transforms glitch, leave it out and say so in the talk.
 
-- [ ] **Step 1:** Write `projectToScreen` plus a unit test in `test/ui/screen_overlay_test.dart`: the target point projects to the viewport centre, and a point behind the camera returns null.
+- [x] **Step 1:** Write `projectToScreen` plus a unit test in `test/ui/screen_overlay_test.dart`: the target point projects to the viewport centre, and a point behind the camera returns null.
 
 ```dart
 import 'dart:ui';
@@ -2281,26 +2281,26 @@ void main() {
 ```
 
 Run it, check it fails, implement it (the inverse of Task 5: project onto camera right/up/forward, divide by forward depth times tan(fov/2)), and run it again to check it passes.
-- [ ] **Step 2:** Implement the feature and overlay as described. `overlay(ctx)` returns a `ValueListenableBuilder` on a static `ValueNotifier<_Focus?>`.
-- [ ] **Step 3: Verify on the iOS simulator and the Android emulator.** Tap the TV: the camera glides in, and YouTube loads and plays with audio. ✕ glides back. Same for the PC with Facebook. The HUD shows the platform-view composite cost.
-- [ ] **Step 4: Commit**: `git add lib/features/screens_feature.dart lib/ui/screen_overlay.dart test/ui/screen_overlay_test.dart && git commit -m "feat: TV and PC WebViews aligned to 3D screens"`
+- [x] **Step 2:** Implement the feature and overlay as described. `overlay(ctx)` returns a `ValueListenableBuilder` on a static `ValueNotifier<_Focus?>`.
+- [x] **Step 3: Verify on the iOS simulator and the Android emulator.** Tap the TV: the camera glides in, and YouTube loads and plays with audio. ✕ glides back. Same for the PC with Facebook. The HUD shows the platform-view composite cost.
+- [x] **Step 4: Commit**: `git add lib/features/screens_feature.dart lib/ui/screen_overlay.dart test/ui/screen_overlay_test.dart && git commit -m "feat: TV and PC WebViews aligned to 3D screens"`
 
 ### Task 25: Pokémon books (API → 3D pages, page curl)
 
 **Files:** Replace `lib/features/books_feature.dart`. Create `lib/features/book_page.dart` and `assets/materials/page_curl.fmat`.
 **Consumes:** `PokeApiClient`, `kBookPokemon`, `PokemonLoaded` / `PokemonLoadFailure` (Task 6); `WidgetComponent` (engine rule 7).
 
-- [ ] **Step 1: `book_page.dart`**: `class BookPage extends StatelessWidget` taking a `PokemonResult?`:
+- [x] **Step 1: `book_page.dart`**: `class BookPage extends StatelessWidget` taking a `PokemonResult?`:
   - `null`: shows "Loading…".
   - `PokemonLoadFailure`: shows "Couldn't load — tap to retry" (the whole page is a `GestureDetector`; `onRetry` callback).
   - `PokemonLoaded`: shows `Image.network(artworkUrl)` (with `errorBuilder` to a Pokéball icon), `#025 Pikachu`, type chips, 6 stat bars (`LinearProgressIndicator(value: stat / 255)`) and height/weight, on a cream paper background, fixed at 512 × 700 logical px.
-- [ ] **Step 2: Interaction.** Register each `book_N` node as "Read book". On tap:
+- [x] **Step 2: Interaction.** Register each `book_N` node as "Read book". On tap:
   - Hide the shelf book and spawn an open-book node 0.45 m in front of the camera, facing it. The open book is two quads (left and right page) on a thin cover box.
   - The left page is a `WidgetComponent(child: BookPage(result), size: Size(512, 700), pixelRatio: 2, update: WidgetUpdatePolicy.everyFrame while loading, then manual, input: WidgetInput.automatic)`.
   - The right page shows the next Pokémon in `kBookPokemon`, so the book is a Pokédex.
   - Swipe left or right on the look pad while a book is open to turn the page. A tap outside the book closes it.
   - Fetch with `PokeApiClient.fetch(id)`; rebuild the widget on result, then call `controller.requestCapture()`.
-- [ ] **Step 3: Page-curl shader** (`page_curl.fmat`). The turning page is a subdivided quad (24 × 1 segments) with a vertex block. Pages bend around a cylinder of radius 0.05 m whose axis sweeps across the page as `progress` goes 0 → 1.
+- [x] **Step 3: Page-curl shader** (`page_curl.fmat`). The turning page is a subdivided quad (24 × 1 segments) with a vertex block. Pages bend around a cylinder of radius 0.05 m whose axis sweeps across the page as `progress` goes 0 → 1.
 
 ```glsl
 material {
@@ -2342,22 +2342,22 @@ fragment {
 **Before building, check** how the vertex stage gets the model transform: `vertex.world_position` may already be in world space, with object space in `vertex.position`. Check the vertex-stage reference in the idioms skill and replace `GetModelTransform()` with the real accessor. If the page texture has to come from a `WidgetComponent`, use its `bind:` callback to call `material.parameters.setTexture('page_tex', tex, …)`.
 
 Build and grep for `keeping the previous shaders` (expect none). Test on the Android emulator (GLES).
-- [ ] **Step 4: Verify.**
+- [x] **Step 4: Verify.**
   - Tap a book: it opens with Bulbasaur's real data and artwork.
   - Swipe: the page curls over and Charmander appears.
   - Turn Wi-Fi off in the simulator (network link conditioner, or airplane mode on a device) and open a new book: "Couldn't load — tap to retry". Wi-Fi back on, tap: it loads.
-- [ ] **Step 5: Commit**: `git add lib/features/books_feature.dart lib/features/book_page.dart assets/materials/page_curl.fmat && git commit -m "feat: Pokédex books — PokéAPI data on WidgetComponent pages with page-curl shader"`
+- [x] **Step 5: Commit**: `git add lib/features/books_feature.dart lib/features/book_page.dart assets/materials/page_curl.fmat && git commit -m "feat: Pokédex books — PokéAPI data on WidgetComponent pages with page-curl shader"`
 
 ### Task 26: Instanced beach props
 
 **Files:** Replace `lib/features/instancing_feature.dart`.
 
-- [ ] **Step 1:** Grep `InstancedMesh` and `InstancedMeshComponent` in `lib/src/instanced_mesh.dart` and `components/instanced_mesh_component.dart` for the API.
-- [ ] **Step 2: Implement.** On the beach (y = −90, z ∈ [5, 35], x ∈ [−120, 120]), place 400 palm trees (a cylinder trunk plus a cone of leaves) and 300 umbrellas (a cone on a pole) on a jittered grid seeded with `Random(7)`. Draw them as **2 instanced meshes** (one per prop type).
+- [x] **Step 1:** Grep `InstancedMesh` and `InstancedMeshComponent` in `lib/src/instanced_mesh.dart` and `components/instanced_mesh_component.dart` for the API.
+- [x] **Step 2: Implement.** On the beach (y = −90, z ∈ [5, 35], x ∈ [−120, 120]), place 400 palm trees (a cylinder trunk plus a cone of leaves) and 300 umbrellas (a cone on a pole) on a jittered grid seeded with `Random(7)`. Draw them as **2 instanced meshes** (one per prop type).
 
   For the talk comparison, add `const bool kNaiveProps = bool.fromEnvironment('NAIVE_PROPS')`. When it's true, build the same 700 props as individual nodes instead. The HUD mesh count and UI ms show the difference.
-- [ ] **Step 3: Verify.** From the balcony, the beach is dotted with palms and umbrellas. Profile both modes on a device and note the UI ms in the commit message body.
-- [ ] **Step 4: Commit**: `git add lib/features/instancing_feature.dart && git commit -m "feat: instanced palms and umbrellas on the beach"`
+- [x] **Step 3: Verify.** From the balcony, the beach is dotted with palms and umbrellas. Profile both modes on a device and note the UI ms in the commit message body.
+- [x] **Step 4: Commit**: `git add lib/features/instancing_feature.dart && git commit -m "feat: instanced palms and umbrellas on the beach"`
 
 ---
 
@@ -2404,7 +2404,7 @@ String formatThb(int v); // "฿10,900"
 
 The prices are demo values. Put them at the top of `booking.dart` as named constants so the user can change them.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```dart
 // test/math/entrance_zone_test.dart
@@ -2462,38 +2462,38 @@ void main() {
 }
 ```
 
-- [ ] **Step 2:** Run `fvm flutter test test/math/entrance_zone_test.dart test/data/booking_test.dart`. Expected: FAIL.
+- [x] **Step 2:** Run `fvm flutter test test/math/entrance_zone_test.dart test/data/booking_test.dart`. Expected: FAIL.
 
-- [ ] **Step 3: Implement the maths and the model.**
+- [x] **Step 3: Implement the maths and the model.**
   - `EntranceZone.update`: distance to the nearer of (kEntranceX, kEntranceZ) and (−kEntranceX, kEntranceZ). If not inside, enter when `d < 1.2`; if inside, leave when `d > 1.5`.
   - `BookingQuote`: straightforward from the interface. Use `.round()` for service and VAT. `checkOut` is `DateTime(checkIn.year, checkIn.month, checkIn.day + nights)`, which avoids DST drift.
   - `formatThb`: insert commas every 3 digits from the right.
 
   Run the tests. Expected: PASS.
 
-- [ ] **Step 4: `booking_page.dart`.** A normal `Scaffold` route, `BookingPage({required BookingQuote initial})`:
+- [x] **Step 4: `booking_page.dart`.** A normal `Scaffold` route, `BookingPage({required BookingQuote initial})`:
   - A header image: a screenshot of the current 3D view. Before pushing, capture a still with `RenderRepaintBoundary.toImage` around the `SceneView`, and pass it as `ui.Image?`. Fall back to a gradient if it's null.
   - A `SegmentedButton<RoomOption>`: "Family Room" / "Family Suite (2 connected rooms)". The initial selection is **Suite if the connecting door was open (`ctx.doorOpen.value`) when the player reached the entrance**, and Room otherwise. That's the second piece of 3D state flowing into the app.
   - A check-in date row (`showDatePicker`, from today up to +365 days), a nights stepper (1–30), adults (1–4) and children (0–4) steppers.
   - The price breakdown: `nightly × nights`, service 10%, VAT 7%, and the **total** in bold, all via `formatThb`.
   - A "Confirm booking" `FilledButton` that shows a `SnackBar("Demo only — no booking made")` and pops back to the scene.
 
-- [ ] **Step 5: `EntranceFeature`** (non-toggleable, id `entrance`):
+- [x] **Step 5: `EntranceFeature`** (non-toggleable, id `entrance`):
   - `static final ValueNotifier<bool> showBookNow = ValueNotifier(false);`
   - `tick`: `showBookNow.value = _zone.update(ctx.playerXZ)`.
   - `static Widget overlay(HotelContext ctx)`: a `ValueListenableBuilder` that animates (`AnimatedSlide` + `AnimatedOpacity`, 250 ms) a bottom-centre `FilledButton.icon(icon: Icon(Icons.hotel), label: Text('Book now'))`, placed above the time slider.
   - The press handler is `onBookNow(BuildContext context, HotelContext ctx)`. It builds the initial `BookingQuote` (check-in = tomorrow, 2 nights, 2 adults, 2 children, option from `ctx.doorOpen`) and calls `Navigator.of(context).push(MaterialPageRoute(builder: (_) => BookingPage(initial: quote, preview: image)))`.
   - When the route pops, move the player 0.6 m back into the room (so the button doesn't reappear straight away) by setting `ctx.playerXZ.y += 0.6`.
 
-- [ ] **Step 6: Pause the scene under the route** (engine rule 5). In `hotel_page.dart`, wrap the `SceneView` in `TickerMode(enabled: ModalRoute.of(context)?.isCurrent ?? true, child: …)`. The scene then stops rendering while the booking page covers it: no hidden GPU cost, and the frame chart proves it.
+- [x] **Step 6: Pause the scene under the route** (engine rule 5). In `hotel_page.dart`, wrap the `SceneView` in `TickerMode(enabled: ModalRoute.of(context)?.isCurrent ?? true, child: …)`. The scene then stops rendering while the booking page covers it: no hidden GPU cost, and the frame chart proves it.
 
-- [ ] **Step 7: Verify on the simulator.**
+- [x] **Step 7: Verify on the simulator.**
   - Walk to the entrance: **Book now** slides up; walk away and it hides.
   - Tap it: the booking page shows the price, and changing nights or the option updates the total.
   - With the connecting door opened beforehand, the page pre-selects "Family Suite".
   - Back: the scene resumes, and the HUD shows ~0 ms while the page was open. Check `run.log` for no errors.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add lib/math/entrance_zone.dart lib/data/booking.dart lib/ui/booking_page.dart lib/features/entrance_feature.dart lib/ui/hotel_page.dart test/math/entrance_zone_test.dart test/data/booking_test.dart learning.md
