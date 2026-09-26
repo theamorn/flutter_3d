@@ -19,7 +19,8 @@ _Updated 2026-09-26. Step boxes below are ticked for finished tasks._
 | 1–8 (Waves A–B): setup, core framework, floor plan, movement, picking, PokéAPI, schedulers, presets | Done, merged to `main` | `698fc86` … `8185dc9` |
 | 9–15 (Wave C): rooms, player, interact, sky/IBL, ocean, post-fx, shadows/MSAA | Done, merged to `main` | `a434e8e` … `b869aaa` |
 | 16–26, 29 (Wave D): lamps, door, curtains, water, rain, glass, lightning, reflections, screens, books, instancing, booking | Done, merged to `main` | `6efd91a` … `97eac30` |
-| 27–28 (Wave E) | In progress (Task 27 next; 28 blocked on the real `.glb`) | — |
+| 27 Debug tour and screenshot capture (Wave E) | Done, merged to `main` | `f4854bf` |
+| 28 Real hotel `.glb` import (Wave E) | Blocked (awaiting real `.glb` asset) | — |
 
 Waves A–D are merged to `main`. The review's hand-offs to Wave D were written into Tasks 17, 20, 23 and 24 as **Wave C notes**. Where the code departs from this plan (sky exposure and moon, bloom threshold, window layout, and so on), the reason is recorded in `learning.md`, and each decision is logged in the local ledger `.superpowers/sdd/2026-09-26-hotel-3d-tour/progress.md`.
 
@@ -2502,7 +2503,7 @@ git commit -m "feat: entrance Book now → booking page with price, scene paused
 
 **Files:** Create `lib/hotel/debug_tour.dart` and `tool/capture_tour.sh`. Modify `lib/hotel/hotel_scene.dart` (one call in `start()`).
 
-- [ ] **Step 1: Implement.** `debug_tour.dart` reads `bool.fromEnvironment('HOTEL_TOUR')` and `String.fromEnvironment('HOTEL_PRESET')`. When the tour is on (debug builds only; assert `kDebugMode`), it steps through fixed stops every 8 s, setting `ctx.playerXZ`, `playerYaw` and `timeOfDay`, and toggling rain. At each stop it logs `hotel tour: <stop name>`. Stops:
+- [x] **Step 1: Implement.** `debug_tour.dart` reads `bool.fromEnvironment('HOTEL_TOUR')` and `String.fromEnvironment('HOTEL_PRESET')`. When the tour is on (debug builds only; assert `kDebugMode`), it steps through fixed stops every 8 s, setting `ctx.playerXZ`, `playerYaw` and `timeOfDay`, and toggling rain. At each stop it logs `hotel tour: <stop name>`. Stops:
   1. room A window, 15:00
   2. room A window, 19:00
   3. balcony looking down, 12:00
@@ -2513,7 +2514,7 @@ git commit -m "feat: entrance Book now → booking page with price, scene paused
   8. entrance with Book now showing, 15:00
 
   If `HOTEL_PRESET` names a preset, apply it after load.
-- [ ] **Step 2: Capture script** (`tool/capture_tour.sh`), from playbook §6:
+- [x] **Step 2: Capture script** (`tool/capture_tour.sh`), from playbook §6:
 
 ```zsh
 #!/bin/zsh
@@ -2535,8 +2536,8 @@ done
 kill $(cat /tmp/hotel.pid)
 ```
 
-- [ ] **Step 3: Verify.** Run `chmod +x tool/capture_tour.sh && tool/capture_tour.sh /tmp/hotel_tour`. Expected: 8 PNGs. Read each one and check that none is all-black or all-white.
-- [ ] **Step 4: Commit**: `git add lib/hotel/debug_tour.dart lib/hotel/hotel_scene.dart tool/capture_tour.sh && git commit -m "chore: debug tour and screenshot capture script"`
+- [x] **Step 3: Verify.** Run `chmod +x tool/capture_tour.sh && tool/capture_tour.sh /tmp/hotel_tour`. Expected: 8 PNGs. Read each one and check that none is all-black or all-white.
+- [x] **Step 4: Commit**: `git add lib/hotel/debug_tour.dart lib/hotel/hotel_scene.dart tool/capture_tour.sh && git commit -m "chore: debug tour and screenshot capture script"`
 
 ### Task 28: Real hotel `.glb` import (BLOCKED until the user supplies the asset)
 
