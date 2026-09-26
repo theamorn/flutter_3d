@@ -27,7 +27,7 @@ _Updated 2026-09-26. Step boxes below are ticked for finished tasks._
 | 16–26, 29 (Wave D) | Not started | — |
 | 27–28 (Wave E) | Not started (28 blocked on the real `.glb`) | — |
 
-Tasks 9–15 (Wave C) are on branch `hotel-tour/wave-c`: done, now in final review, not merged yet. Where the code departs from this plan (sky exposure and moon, bloom threshold, window layout, and so on), the reason is recorded in `learning.md`, and each decision is logged in the local ledger `.superpowers/sdd/2026-09-26-hotel-3d-tour/progress.md`.
+Tasks 9–15 (Wave C) are on branch `hotel-tour/wave-c`: done and reviewed, not merged yet. The review's hand-offs to Wave D are written into Tasks 17, 20, 23 and 24 as **Wave C notes**. Where the code departs from this plan (sky exposure and moon, bloom threshold, window layout, and so on), the reason is recorded in `learning.md`, and each decision is logged in the local ledger `.superpowers/sdd/2026-09-26-hotel-3d-tour/progress.md`.
 
 ## Global Constraints
 
@@ -2013,6 +2013,8 @@ Mapping: `tone_mapping` → `look.toneMapping`, `fog` → `look.fog`, `bloom` �
 
 **Files:** Replace `lib/features/door_feature.dart`. Create `lib/math/door_hinge.dart` and `lib/math/portal.dart`. Tests: `test/math/door_hinge_test.dart`, `test/math/portal_test.dart`.
 
+> **Wave C note (final review):** `door_connect` lives in room A's subtree, and room B has a hidden, mirrored copy. Portal culling that hides room A while the player is in room B (door closed) also hides the only visible leaf. Room B then shows a hole in its wall, and the door can't be tapped (hidden nodes aren't pickable) while its collider still blocks the player. Fix it in this task: each tick, show the copy in the camera's room and hide the other one. Drive room B's copy with local angle −θ; mirroring conjugates the rotation, so its world pose matches A's leaf. Register both copies as interactables.
+
 **Interfaces (Produces):**
 
 ```dart
@@ -2119,6 +2121,8 @@ void main() {
 ### Task 20: Rain outside (and the weather level)
 
 **Files:** Replace `lib/features/rain_feature.dart`.
+
+> **Wave C note (final review):** `ctx.look.exposure` belongs to the sky feature (Task 12). It sets exposure from the time of day on every slider change and restores its own base on unmount. So don't multiply or restore `look.exposure` here. Dragging the slider would wipe out the rain darkening, and restoring a stored base leaves the wrong exposure once the time has changed. Instead, add `double exposureScale = 1.0` to `LookState` (this task's one allowed `look.dart` edit). Set it to `1 - 0.35 * weather` and reset it to 1 on unmount. Make `composeLook` use `exposure * exposureScale`, including the bloom threshold `1 / (exposure * exposureScale)`.
 **Consumes:** `approach()` (Task 7), `ctx.rainRequested`, `ctx.weather`.
 
 - [ ] **Step 1: Implement.**
@@ -2221,6 +2225,8 @@ Check the `MaterialInputs` field names (`base_color`, `emissive`, `specular`, `r
 
 **Files:** Replace `lib/features/reflection_features.dart`.
 
+> **Wave C note:** `sea` is a scene-level node (Task 13). Find it among `ctx.scene.root.children`, because `ctx.nodesNamed` only searches the two rooms.
+
 - [ ] **Step 1:** Read the `PlanarReflectorComponent({resolutionScale, layerMask, reflectionGroupId, clipBias, localNormal})` docs (`components/planar_reflector_component.dart`), including how a material samples `planar_reflection`. Check whether the default PBR material uses the capture automatically or needs an `.fmat` with `engine_inputs: [planar_reflection]`.
 - [ ] **Step 2: Implement.**
   - `MirrorFeature`: add `PlanarReflectorComponent(resolutionScale: 0.5, localNormal: Vector3(1, 0, 0))` to each `mirror` node. If a custom material is needed, the fmat is `mirror.fmat`: unlit, `emissive = GetPlanarReflection().rgb`, `specular = 0`. In that case, **add `assets/materials/mirror.fmat` to this task's files**. Unmount removes the component and restores the material.
@@ -2232,6 +2238,8 @@ Check the `MaterialInputs` field names (`base_color`, `emissive`, `specular`, `r
 ### Task 24: TV and PC WebViews on the 3D screens
 
 **Files:** Replace `lib/features/screens_feature.dart`. Create `lib/ui/screen_overlay.dart`.
+
+> **Wave C note:** room B's screen quads are built with u flipped (commit `d63cf81`), so a texture reads left to right from the front in both rooms. Bind the same poster to both.
 **Consumes:** `webview_flutter` `WebViewController` / `WebViewWidget`.
 
 URLs (constants at the top of the file; **the user will confirm them**):
