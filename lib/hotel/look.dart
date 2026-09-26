@@ -9,6 +9,12 @@ class LookState {
       godRays = false,
       ssr = false;
   double exposure = 1.0;
+
+  /// Multiplies [exposure] in [composeLook]. Task 20 (rain) darkens the sky
+  /// as weather builds (`1 - 0.35 * weather`) without touching [exposure]
+  /// itself, which the sky feature (Task 12) owns and rewrites on every
+  /// time-of-day change. Reset to 1.0 when rain unmounts.
+  double weatherExposureScale = 1.0;
   double environmentIntensity = 1.0;
   double fogDensity = 0.004;
   Skybox? skybox; // Task 12 sets
@@ -21,18 +27,21 @@ class LookState {
 }
 
 /// The ONLY place an EnvironmentSettings literal is built (engine rule 1).
-EnvironmentSettings composeLook(LookState s) => EnvironmentSettings(
+EnvironmentSettings composeLook(LookState s) {
+  final exposure = s.exposure * s.weatherExposureScale;
+  return EnvironmentSettings(
       skybox: s.skybox,
       skyEnvironment: s.skyEnvironment,
       sunLight: s.sunLight,
       // `linear` is the engine's "no tone curve" mode (there is no `none`).
       toneMapping: s.toneMapping ? ToneMappingMode.aces : ToneMappingMode.linear,
-      exposure: s.exposure,
+      exposure: exposure,
       environmentIntensity: s.environmentIntensity,
       bloomEnabled: s.bloom,
       // The engine thresholds linear radiance before exposure; keep the
-      // threshold at 1.0 on screen whatever the exposure (the sky runs 0.35).
-      bloomThreshold: 1.0 / s.exposure,
+      // threshold at 1.0 on screen whatever the exposure (the sky runs 0.35,
+      // and rain further scales it by weatherExposureScale).
+      bloomThreshold: 1.0 / exposure,
       lensFlareEnabled: s.bloom,
       lensFlareHaloIntensity: 0.3,
       ambientOcclusionEnabled: s.ao,
@@ -48,3 +57,4 @@ EnvironmentSettings composeLook(LookState s) => EnvironmentSettings(
       godRaysDensity: 0.18,
       screenSpaceReflectionsEnabled: s.ssr,
     );
+}
