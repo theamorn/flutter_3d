@@ -34,9 +34,10 @@ class _HotelPageState extends State<HotelPage> {
               onTick: (_, dt) => hotel.tick(dt),
             ),
           ),
-          // Feature overlays (joystick, look pad, crosshair, screens, Book now).
-          PlayerFeature.overlay(hotel.ctx),
+          // Feature overlays. Interactions (full-screen tap layer, crosshair)
+          // sits BELOW the player's joystick and look pad (Task 11).
           InteractionsFeature.overlay(hotel.ctx),
+          PlayerFeature.overlay(hotel.ctx),
           ScreensFeature.overlay(hotel.ctx),
           EntranceFeature.overlay(hotel.ctx),
           Positioned(top: 48, left: 12, child: Hud(scene: hotel.scene)),
