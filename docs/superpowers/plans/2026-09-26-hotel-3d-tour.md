@@ -10,6 +10,25 @@
 
 **Spec:** This document's **Design** section below (from the brainstorming conversation, 2026-09-26). Supporting reference: the user's "Flutter 3D playbook (`flutter_scene`)" notes, whose rules are summarised in *Engine rules* below.
 
+## Progress
+
+_Updated 2026-09-26. Step boxes below are ticked for finished tasks._
+
+| Task | Status | Commit |
+|---|---|---|
+| 1–8 (Waves A–B): setup, core framework, floor plan, movement, picking, PokéAPI, schedulers, presets | Done, merged to `main` | `698fc86` … `8185dc9` |
+| 9 Rooms (placeholder geometry, mirrored Room B) | Done | `a434e8e` |
+| 10 First-person player | Done | `b7fa2e6` |
+| 11 Tap-to-interact | Done | `3b3d03f` |
+| 12 Sky, time of day, IBL | Done | `b8ae86a` |
+| 13 Ocean and beach | Done | `f06486d` |
+| 14 Post-effect toggles | Done | `bc7211e` |
+| 15 Shadows and MSAA toggles | **In progress** | — |
+| 16–26, 29 (Wave D) | Not started | — |
+| 27–28 (Wave E) | Not started (28 blocked on the real `.glb`) | — |
+
+Tasks 9–15 are on branch `hotel-tour/wave-c`, which isn't merged yet. Where the code departs from this plan (sky exposure and moon, bloom threshold, window layout, and so on), the reason is recorded in `learning.md`, and each decision is logged in the local ledger `.superpowers/sdd/2026-09-26-hotel-3d-tour/progress.md`.
+
 ## Global Constraints
 
 - Run Flutter as `fvm flutter …` and Dart as `fvm dart …`. Never use bare `flutter`.
@@ -232,7 +251,7 @@ Each parallel agent should work in its own git worktree (`superpowers:using-git-
 
 **Interfaces:** Produces a project that builds with `fvm flutter run --enable-flutter-gpu`.
 
-- [ ] **Step 1: Create a nested git repo**
+- [x] **Step 1: Create a nested git repo**
 
 ```bash
 cd /Users/pikmin/Documents/flutter_3d
@@ -246,7 +265,7 @@ Also add `flutter_3d/` to the parent repo's ignore rules, locally only, so the p
 echo "flutter_3d/" >> /Users/pikmin/Documents/.git/info/exclude
 ```
 
-- [ ] **Step 2: Dependencies.** Replace the `dependencies:` block of `pubspec.yaml` with:
+- [x] **Step 2: Dependencies.** Replace the `dependencies:` block of `pubspec.yaml` with:
 
 ```yaml
 dependencies:
@@ -272,7 +291,7 @@ flutter:
 
 Create the folder: `mkdir -p assets/materials && touch assets/materials/.gitkeep`
 
-- [ ] **Step 3: GPU flags.** Add the following to `ios/Runner/Info.plist`, inside the top-level `<dict>`:
+- [x] **Step 3: GPU flags.** Add the following to `ios/Runner/Info.plist`, inside the top-level `<dict>`:
 
 ```xml
 <key>FLTEnableFlutterGPU</key>
@@ -287,7 +306,7 @@ Add the following to `android/app/src/main/AndroidManifest.xml`, inside `<applic
 
 Also add `<uses-permission android:name="android.permission.INTERNET"/>` inside `<manifest>`, for PokéAPI and the WebViews.
 
-- [ ] **Step 3b: Create `learning.md`** with this header. It's the shared learning log; see Global Constraints.
+- [x] **Step 3b: Create `learning.md`** with this header. It's the shared learning log; see Global Constraints.
 
 ```markdown
 # Learnings — Hotel 3D Tour
@@ -414,7 +433,7 @@ class InteractionRegistry extends ChangeNotifier {
 }
 ```
 
-- [ ] **Step 1: Write the failing registry test** (`test/hotel/feature_registry_test.dart`)
+- [x] **Step 1: Write the failing registry test** (`test/hotel/feature_registry_test.dart`)
 
 ```dart
 import 'dart:async';
@@ -484,12 +503,12 @@ class _Base extends _Fake {
 }
 ```
 
-- [ ] **Step 2: Run it and check it fails**
+- [x] **Step 2: Run it and check it fails**
 
 Run: `fvm flutter test test/hotel/feature_registry_test.dart`
 Expected: FAIL (compile error: `feature_registry.dart` not found).
 
-- [ ] **Step 3: Implement `feature.dart` and `feature_registry.dart`**
+- [x] **Step 3: Implement `feature.dart` and `feature_registry.dart`**
 
 ```dart
 // lib/hotel/feature.dart
@@ -576,12 +595,12 @@ class FeatureRegistry extends ChangeNotifier {
 
 `HotelFeature.mount` takes a non-null `HotelContext`. The test fakes widen that parameter to `Object?`, which is a legal override, so the `null` passed through `dynamic` is accepted. Real features never see `null`, because `HotelScene` always passes a context.
 
-- [ ] **Step 4: Run the tests and check they pass**
+- [x] **Step 4: Run the tests and check they pass**
 
 Run: `fvm flutter test test/hotel/feature_registry_test.dart`
 Expected: 4 tests PASS.
 
-- [ ] **Step 5: Write the failing look test** (`test/hotel/look_test.dart`)
+- [x] **Step 5: Write the failing look test** (`test/hotel/look_test.dart`)
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
@@ -617,7 +636,7 @@ Before writing it, check the enum member names:
 `grep -n "enum AmbientOcclusionMethod\|enum ToneMappingMode" -A8 ~/.pub-cache/hosted/pub.dev/flutter_scene-0.23.0/lib/src/*.dart`
 If GTAO or "none" is spelled differently, use the real names in both the test and the implementation.
 
-- [ ] **Step 6: Implement `look.dart`**
+- [x] **Step 6: Implement `look.dart`**
 
 ```dart
 import 'package:flutter_scene/scene.dart';
@@ -663,7 +682,7 @@ EnvironmentSettings composeLook(LookState s) => EnvironmentSettings(
 
 Run: `fvm flutter test test/hotel/look_test.dart`. Expected: PASS.
 
-- [ ] **Step 7: Minimal shared math types**, so that Task 2 compiles. Task 3 extends these same files.
+- [x] **Step 7: Minimal shared math types**, so that Task 2 compiles. Task 3 extends these same files.
 
 ```dart
 // lib/math/floor_plan.dart
@@ -681,7 +700,7 @@ class Box2 {
 }
 ```
 
-- [ ] **Step 8: Context, interaction registry, scene, catalog, stubs**
+- [x] **Step 8: Context, interaction registry, scene, catalog, stubs**
 
 ```dart
 // lib/features/interaction_registry.dart
@@ -855,7 +874,7 @@ Check the `SceneView.onTick` signature before wiring it:
 `grep -n "onTick" ~/.pub-cache/hosted/pub.dev/flutter_scene-0.23.0/lib/src/widgets/scene_view.dart | head`
 Adapt `hotel_page.dart` so the callback receives dt in seconds.
 
-- [ ] **Step 9: UI shell**
+- [x] **Step 9: UI shell**
 
 ```dart
 // lib/ui/hotel_page.dart
@@ -1046,9 +1065,9 @@ void main() => runApp(const MaterialApp(
 
 Delete `test/widget_test.dart`. It tests the counter template.
 
-- [ ] **Step 10: Verify.** Run `fvm flutter analyze` and expect no errors. Run `fvm flutter test` and expect everything to pass. Then run `fvm flutter run --enable-flutter-gpu -d "iPhone 17 Pro"`. Expected: a black scene with the HUD, the Effects button (the sheet lists every toggle grouped by tier), and the time slider. Toggling doesn't crash.
+- [x] **Step 10: Verify.** Run `fvm flutter analyze` and expect no errors. Run `fvm flutter test` and expect everything to pass. Then run `fvm flutter run --enable-flutter-gpu -d "iPhone 17 Pro"`. Expected: a black scene with the HUD, the Effects button (the sheet lists every toggle grouped by tier), and the time slider. Toggling doesn't crash.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add -A
@@ -1091,7 +1110,7 @@ class Box2 { const Box2(minX,minZ,maxX,maxZ); Box2 mirrored(); bool contains(Vec
 Vector2 moveCircle(Vector2 from, Vector2 to, double radius, Iterable<Box2> boxes);
 ```
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```dart
 // test/math/colliders_test.dart
@@ -1194,9 +1213,9 @@ void main() {
 
 Add `Box2.toString()` so failures print readably.
 
-- [ ] **Step 2:** Run `fvm flutter test test/math/`. Expected: FAIL (`moveCircle` and `FloorPlan` undefined).
+- [x] **Step 2:** Run `fvm flutter test test/math/`. Expected: FAIL (`moveCircle` and `FloorPlan` undefined).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```dart
 // lib/math/colliders.dart
@@ -1285,9 +1304,9 @@ static const Map<String, Box2> furnitureA = {
 
 `staticColliders()` returns room A's walls and furniture **plus** `.mirrored()` of each, **without** duplicating the boxes that lie on x = 0. The shared-wall pieces are added only once: make them symmetric, x ∈ [−0.06, 0.06], and skip them in the mirroring step.
 
-- [ ] **Step 4:** Run `fvm flutter test test/math/`. Expected: all PASS.
+- [x] **Step 4:** Run `fvm flutter test test/math/`. Expected: all PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/math/floor_plan.dart lib/math/colliders.dart test/math/floor_plan_test.dart test/math/colliders_test.dart
@@ -1314,7 +1333,7 @@ Vector2 desiredStep(FpState s, Offset stick, double dt);
 FpState applyLook(FpState s, Offset dragDelta);  // drag right → turn right; drag up → look up
 ```
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```dart
 import 'dart:math' as math;
@@ -1364,9 +1383,9 @@ void main() {
 
 (With +Y up and facing +Z, the viewer's right-hand side is −X. That's why strafe-right and turn-right go toward −X. Confirm on the simulator in Task 10. If the screen shows the mirror image, the camera's handedness differs, so flip the signs in `desiredStep` and `applyLook` **and** these tests together.)
 
-- [ ] **Step 2:** Run `fvm flutter test test/math/fp_movement_test.dart`. Expected: FAIL.
+- [x] **Step 2:** Run `fvm flutter test test/math/fp_movement_test.dart`. Expected: FAIL.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```dart
 import 'dart:math' as math;
@@ -1403,8 +1422,8 @@ FpState applyLook(FpState s, Offset d) => FpState(
 
 Check for yaw 0: `fwd = (0, 1)`, so `right = (-1, 0)` = −X, as the strafe test expects. For `applyLook`, drag right (+dx) decreases yaw, so forward swings from +Z toward −X, which is what the turn-right test expects.
 
-- [ ] **Step 4:** Run the test again. Expected: PASS.
-- [ ] **Step 5: Commit**: `git add lib/math/fp_movement.dart test/math/fp_movement_test.dart && git commit -m "feat(math): first-person movement and look"`
+- [x] **Step 4:** Run the test again. Expected: PASS.
+- [x] **Step 5: Commit**: `git add lib/math/fp_movement.dart test/math/fp_movement_test.dart && git commit -m "feat(math): first-person movement and look"`
 
 ---
 
@@ -1423,7 +1442,7 @@ PickRay screenRay({required Offset screen, required Size viewport,
 int? nearest(List<double?> distances);
 ```
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```dart
 import 'dart:ui';
@@ -1456,8 +1475,8 @@ void main() {
 }
 ```
 
-- [ ] **Step 2:** Run it. Expected: FAIL.
-- [ ] **Step 3: Implement**
+- [x] **Step 2:** Run it. Expected: FAIL.
+- [x] **Step 3: Implement**
 
 ```dart
 import 'dart:math' as math;
@@ -1495,8 +1514,8 @@ int? nearest(List<double?> d) {
 
 `fwd.cross(up)` gives the camera's right vector; for fwd = +Z and up = +Y that's −X. This matches Task 4's convention.
 
-- [ ] **Step 4:** Run it. Expected: PASS.
-- [ ] **Step 5: Commit**: `git add lib/math/picking.dart test/math/picking_test.dart && git commit -m "feat(math): screen-ray picking"`
+- [x] **Step 4:** Run it. Expected: PASS.
+- [x] **Step 5: Commit**: `git add lib/math/picking.dart test/math/picking_test.dart && git commit -m "feat(math): screen-ray picking"`
 
 ---
 
@@ -1525,7 +1544,7 @@ class PokeApiClient {
 const List<int> kBookPokemon = [1, 4, 7, 25, 133, 143]; // book_0..book_5
 ```
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```dart
 import 'dart:async';
@@ -1590,10 +1609,10 @@ void main() {
 }
 ```
 
-- [ ] **Step 2:** Run `fvm flutter test test/data/`. Expected: FAIL.
-- [ ] **Step 3: Implement** a hand-written `fromJson` using the paths shown above. `displayName` capitalises the first letter. `fetch` wraps `client.get(...).timeout(timeout)` in try/catch, returns a failure for non-200, and caches `PokemonLoaded` values in a `Map<int, Pokemon>`. Read nested maps with `as Map<String, dynamic>?` and `?.` so missing keys produce `''` or empty lists, never a throw.
-- [ ] **Step 4:** Run the tests. Expected: 6 PASS.
-- [ ] **Step 5: Commit**: `git add lib/data test/data && git commit -m "feat(data): PokéAPI model and client with failure results"`
+- [x] **Step 2:** Run `fvm flutter test test/data/`. Expected: FAIL.
+- [x] **Step 3: Implement** a hand-written `fromJson` using the paths shown above. `displayName` capitalises the first letter. `fetch` wraps `client.get(...).timeout(timeout)` in try/catch, returns a failure for non-200, and caches `PokemonLoaded` values in a `Map<int, Pokemon>`. Read nested maps with `as Map<String, dynamic>?` and `?.` so missing keys produce `''` or empty lists, never a throw.
+- [x] **Step 4:** Run the tests. Expected: 6 PASS.
+- [x] **Step 5: Commit**: `git add lib/data test/data && git commit -m "feat(data): PokéAPI model and client with failure results"`
 
 ---
 
@@ -1626,7 +1645,7 @@ class RebakeThrottle {
 }
 ```
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```dart
 // test/math/weather_test.dart
@@ -1715,8 +1734,8 @@ void main() {
 }
 ```
 
-- [ ] **Step 2:** Run `fvm flutter test test/math/`. Expected: the new tests FAIL.
-- [ ] **Step 3: Implement.**
+- [x] **Step 2:** Run `fvm flutter test test/math/`. Expected: the new tests FAIL.
+- [x] **Step 3: Implement.**
   - `approach`: `current + (target - current).sign * min(|Δ|, dt / fadeSeconds)`, then clamp to 0..1.
   - `LightningScheduler`: keeps `_untilNext`, initialised to `minGap + r * (maxGap - minGap)`. It counts down only while enabled, returns true once it reaches ≤ 0, then resets.
   - `pulsesForStrike()`: `[0, 0.12 + r * 0.08]`, plus a third at `0.35 + r * 0.1` half the time.
@@ -1724,8 +1743,8 @@ void main() {
   - `RebakeThrottle`: `_dirty`, `_sinceBake` (initially ∞). `tick` adds dt; if `_dirty && _sinceBake >= minInterval`, it bakes, clears dirty and resets `_sinceBake = 0`.
 
   The final bake after the drag ends follows naturally: dirty stays set until the interval allows it.
-- [ ] **Step 4:** Run the tests. Expected: PASS.
-- [ ] **Step 5: Commit**: `git add lib/math/schedulers.dart test/math/*_test.dart && git commit -m "feat(math): weather fade, lightning schedule, rebake throttle"`
+- [x] **Step 4:** Run the tests. Expected: PASS.
+- [x] **Step 5: Commit**: `git add lib/math/schedulers.dart test/math/*_test.dart && git commit -m "feat(math): weather fade, lightning schedule, rebake throttle"`
 
 ---
 
@@ -1748,7 +1767,7 @@ Tiers:
 - **high** = medium + `{bloom, ao, msaa, rain, lightning}`
 - **ultra** = high + `{god_rays, ssr, rain_glass, mirror, sea_reflection}`
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
@@ -1776,10 +1795,10 @@ void main() {
 }
 ```
 
-- [ ] **Step 2:** Run it. Expected: FAIL.
-- [ ] **Step 3: Implement.** Add to `EffectsSheet.build`: if `presetRow` is null, show a `Wrap` of four `ActionChip`s that call `applyPreset(registry, p)`.
-- [ ] **Step 4:** Run it. Expected: PASS.
-- [ ] **Step 5: Commit**: `git add lib/hotel/presets.dart test/hotel/presets_test.dart lib/ui/effects_sheet.dart && git commit -m "feat: Low/Medium/High/Ultra presets"`
+- [x] **Step 2:** Run it. Expected: FAIL.
+- [x] **Step 3: Implement.** Add to `EffectsSheet.build`: if `presetRow` is null, show a `Wrap` of four `ActionChip`s that call `applyPreset(registry, p)`.
+- [x] **Step 4:** Run it. Expected: PASS.
+- [x] **Step 5: Commit**: `git add lib/hotel/presets.dart test/hotel/presets_test.dart lib/ui/effects_sheet.dart && git commit -m "feat: Low/Medium/High/Ultra presets"`
 
 ---
 
@@ -1800,12 +1819,12 @@ Then open the PNG with the Read tool and check the listed "expected" items. Also
 **Files:** Replace `lib/features/rooms_feature.dart`. Create `lib/features/placeholder_rooms.dart`.
 **Consumes:** `FloorPlan`, `Box2` (Task 3). **Produces:** `ctx.rooms[RoomId.a]` and `ctx.rooms[RoomId.b]`, with every node named per the *Node-name contract*.
 
-- [ ] **Step 1: Check the geometry APIs before coding.** Run:
+- [x] **Step 1: Check the geometry APIs before coding.** Run:
 `grep -n "class CuboidGeometry\|class PlaneGeometry\|class BoxGeometry\|class .*Geometry extends" -r ~/.pub-cache/hosted/pub.dev/flutter_scene-0.23.0/lib/src/geometry | head -30`
 `grep -n "class PhysicallyBasedMaterial\|class UnlitMaterial" -A20 -r ~/.pub-cache/hosted/pub.dev/flutter_scene-0.23.0/lib/src/material | grep "this\.\|required" | head -30`
 Also read `.claude/skills/flutter_scene-idioms/SKILL.md` for the idiomatic way to build a mesh node. Use a box geometry and PBR material with the names found.
 
-- [ ] **Step 2: Implement `placeholder_rooms.dart`**: `Node buildRoomA()` returns a node tree in Room A local space (x ∈ [−8, 0]). It contains:
+- [x] **Step 2: Implement `placeholder_rooms.dart`**: `Node buildRoomA()` returns a node tree in Room A local space (x ∈ [−8, 0]). It contains:
   - The floor slab (named `floor`: wood-brown base colour, roughness 0.6), the ceiling (`ceiling`), and wall boxes from the Task 3 wall list, grouped under `walls`.
   - A box per `FloorPlan.furnitureA` entry, 0.45–0.9 m tall, with the bed white and the sofa blue-grey.
   - `door_connect`: a 0.9 × 2.1 × 0.05 box whose **origin is the hinge**. Child mesh offset +0.45 in z; node placed at (0, 0, doorZ0). Only Room A gets a door leaf; hide Room B's copy after mirroring (`nodesNamed('door_connect')[1].visible = false`), so there's one shared door.
@@ -1821,7 +1840,7 @@ Also read `.claude/skills/flutter_scene-idioms/SKILL.md` for the idiomatic way t
 
   Set `castsShadows = true` on every mesh node, individually.
 
-- [ ] **Step 3: Implement `RoomsFeature`**: `id 'rooms'`, `toggleable false`, tier free. `mount` does the following:
+- [x] **Step 3: Implement `RoomsFeature`**: `id 'rooms'`, `toggleable false`, tier free. `mount` does the following:
 
 ```dart
 final a = buildRoomA()..name = 'room_a';
@@ -1835,22 +1854,22 @@ ctx.nodesNamed('door_connect').last.visible = false;
 Check the node constructor and `localTransform` setter names first: `grep -n "Node({\|set localTransform\|bool visible" ~/.pub-cache/hosted/pub.dev/flutter_scene-0.23.0/lib/src/node.dart`.
 `unmount` removes both nodes, clears `ctx.rooms`, and removes them from the scene (`grep -n "void remove" .../scene.dart`).
 
-- [ ] **Step 4: Verify.** Hot restart, then take a screenshot from the default camera at (−4, 1.6, 3), which looks toward +z. Expected:
+- [x] **Step 4: Verify.** Hot restart, then take a screenshot from the default camera at (−4, 1.6, 3), which looks toward +z. Expected:
   - the window wall, bed on the left, sofa on the right;
   - Room B is not visible;
   - furniture reads as boxes with lighting and **not inside-out**. With default studio lighting, faces are lit and not black.
 
   Temporarily set the camera to (4, 1.6, 3) for Room B and check the same (mirrored) layout. That is the mirror check. Revert the camera.
-- [ ] **Step 5: Commit**: `git add lib/features/rooms_feature.dart lib/features/placeholder_rooms.dart && git commit -m "feat: placeholder rooms, Room B mirrored by negative scale"`
+- [x] **Step 5: Commit**: `git add lib/features/rooms_feature.dart lib/features/placeholder_rooms.dart && git commit -m "feat: placeholder rooms, Room B mirrored by negative scale"`
 
 ### Task 10: First-person player (joystick + look pad + collision)
 
 **Files:** Replace `lib/features/player_feature.dart`. Create `lib/ui/look_pad.dart`.
 **Consumes:** `FloorPlan.staticColliders`, `moveCircle`, `ctx.dynamicColliders` (Task 3); `FpState`, `desiredStep`, `applyLook`, `forwardOf` (Task 4); `VirtualJoystick` from `package:flutter_scene/kit.dart`.
 
-- [ ] **Step 1:** Check the joystick callback type: `sed -n 17,50p ~/.pub-cache/hosted/pub.dev/flutter_scene-0.23.0/lib/src/kit/camera/virtual_joystick.dart`. Find what `onChanged` passes and whether up is +y or −y.
+- [x] **Step 1:** Check the joystick callback type: `sed -n 17,50p ~/.pub-cache/hosted/pub.dev/flutter_scene-0.23.0/lib/src/kit/camera/virtual_joystick.dart`. Find what `onChanged` passes and whether up is +y or −y.
 
-- [ ] **Step 2: Implement.** `PlayerFeature` holds a `static final ValueNotifier<Offset> stick` and `static Offset pendingLook`. `tick`:
+- [x] **Step 2: Implement.** `PlayerFeature` holds a `static final ValueNotifier<Offset> stick` and `static Offset pendingLook`. `tick`:
 
 ```dart
 var s = FpState(ctx.playerXZ, ctx.playerYaw, _pitch);
@@ -1872,17 +1891,17 @@ Cache `FloorPlan.staticColliders()` in a field; don't rebuild it every frame.
 
 `LookPad` is a `GestureDetector(onPanUpdate: (d) => onDrag(d.delta), behavior: HitTestBehavior.translucent)`.
 
-- [ ] **Step 3: Verify on the simulator.** Push up: you move toward the window. Drag right: the view turns right (if it's mirrored, go back to Task 4's note). Walk into the bed: you slide along it. Walk to the shared wall at z ≈ 2.45 and through the door gap into Room B. (The door is closed but has no collider until Task 17, so it's expected to pass through.) Walk to the balcony railing: you stop.
-- [ ] **Step 4: Commit**: `git add lib/features/player_feature.dart lib/ui/look_pad.dart && git commit -m "feat: first-person joystick walk with sliding collision"`
+- [x] **Step 3: Verify on the simulator.** Push up: you move toward the window. Drag right: the view turns right (if it's mirrored, go back to Task 4's note). Walk into the bed: you slide along it. Walk to the shared wall at z ≈ 2.45 and through the door gap into Room B. (The door is closed but has no collider until Task 17, so it's expected to pass through.) Walk to the balcony railing: you stop.
+- [x] **Step 4: Commit**: `git add lib/features/player_feature.dart lib/ui/look_pad.dart && git commit -m "feat: first-person joystick walk with sliding collision"`
 
 ### Task 11: Tap-to-interact
 
 **Files:** Replace `lib/features/interactions_feature.dart`.
 **Consumes:** `InteractionRegistry` (Task 2), `screenRay`, `nearest` (Task 5), `Scene.raycast(Ray, {maxDistance, where, includeInvisible})` (signature verified in `scene.dart:349`).
 
-- [ ] **Step 1:** Read `raycast.dart:26-40` for `SceneRaycastHit` fields (node, distance), and check the `Ray` constructor: `grep -n "class Ray" -A10 ~/.pub-cache/hosted/pub.dev/vector_math-*/lib/src/vector_math/ray.dart`. Check that `Node.raycastable` exists (`grep -n raycastable .../node.dart`).
+- [x] **Step 1:** Read `raycast.dart:26-40` for `SceneRaycastHit` fields (node, distance), and check the `Ray` constructor: `grep -n "class Ray" -A10 ~/.pub-cache/hosted/pub.dev/vector_math-*/lib/src/vector_math/ray.dart`. Check that `Node.raycastable` exists (`grep -n raycastable .../node.dart`).
 
-- [ ] **Step 2: Implement.** In `mount`, listen to `ctx.interactions` and set `raycastable = true` on every registered node **and its descendants**. `overlay(ctx)` shows:
+- [x] **Step 2: Implement.** In `mount`, listen to `ctx.interactions` and set `raycastable = true` on every registered node **and its descendants**. `overlay(ctx)` shows:
   - a centre crosshair `Icon(Icons.add, color: Colors.white70)`;
   - a label chip under it with the aimed-at `Interactable.label`, updated every 200 ms with a raycast from the screen centre;
   - a full-screen translucent `GestureDetector(onTapUp: ...)` placed **below** the joystick and look pad in the Stack order, so it doesn't steal drags. Use `onTapUp` only; the look pad handles pans.
@@ -1900,36 +1919,36 @@ if (i != null) i.onTap();
 
 Keep `includeInvisible` false, so that portal-culled rooms (made invisible by Task 17) can't be picked. Limit `maxDistance` to 6 m: you interact within reach, and so it's not possible to click a lamp from across two rooms.
 
-- [ ] **Step 3: Verify.** Temporarily register an interactable on `lamp_bedside` that prints `debugPrint('tap lamp')`. Tap it on the simulator and check `run.log`. Remove the temporary code.
-- [ ] **Step 4: Commit**: `git add lib/features/interactions_feature.dart && git commit -m "feat: tap-to-interact with crosshair label"`
+- [x] **Step 3: Verify.** Temporarily register an interactable on `lamp_bedside` that prints `debugPrint('tap lamp')`. Tap it on the simulator and check `run.log`. Remove the temporary code.
+- [x] **Step 4: Commit**: `git add lib/features/interactions_feature.dart && git commit -m "feat: tap-to-interact with crosshair label"`
 
 ### Task 12: Sky, time of day, IBL
 
 **Files:** Replace `lib/features/sky_feature.dart`.
 **Consumes:** `ctx.look` and `ctx.applyLook()` (Task 2), `RebakeThrottle` (Task 7), `DayNightCycleComponent` (`kit`, fields `timeOfDay`, `latitude`, `sunLightNode`, `skySource`, `targetScene`), `PhysicalSkySource`, `Skybox`, `SkyEnvironment`.
 
-- [ ] **Step 1:** Read `.claude/skills/flutter_scene-looks/SKILL.md` and `.claude/skills/flutter_scene-kit/SKILL.md` (the day/night section). Check the constructors: `grep -n "Skybox(\|SkyEnvironment(\|PhysicalSkySource(" -A12 ~/.pub-cache/hosted/pub.dev/flutter_scene-0.23.0/lib/src/{skybox,sky_environment,sky_sources}.dart | grep "this\.\|required\|refresh"`. Find how to trigger a manual refresh (`invalidate()` or similar).
+- [x] **Step 1:** Read `.claude/skills/flutter_scene-looks/SKILL.md` and `.claude/skills/flutter_scene-kit/SKILL.md` (the day/night section). Check the constructors: `grep -n "Skybox(\|SkyEnvironment(\|PhysicalSkySource(" -A12 ~/.pub-cache/hosted/pub.dev/flutter_scene-0.23.0/lib/src/{skybox,sky_environment,sky_sources}.dart | grep "this\.\|required\|refresh"`. Find how to trigger a manual refresh (`invalidate()` or similar).
 
-- [ ] **Step 2: Implement.**
+- [x] **Step 2: Implement.**
   - `mount`: create a sun `DirectionalLight` with `castsShadow: false` (Task 15 owns shadows). Put `PhysicalSkySource` in `Skybox(sky)` and `SkyEnvironment(sky, refresh: manual, faceResolution: 64, equirectWidth: 256)`. Store them in `ctx.look.skybox`, `.skyEnvironment` and `.sunLight`, then call `ctx.applyLook()`.
   - Add an **unmounted** `DayNightCycleComponent(latitude: 13.7)` to drive the sun direction, colour and intensity from `ctx.timeOfDay.value` (playbook §3 rule 5: `evaluateLighting()` works unmounted). Latitude 13.7° is Bangkok-ish.
   - Listen to `ctx.timeOfDay` and call `throttle.markDirty()`. In `tick`: update the sun direction every frame (cheap). When `throttle.tick(dt)` returns true, invalidate the sky environment (rebake the IBL).
   - Night (sun below the horizon): `ctx.look.environmentIntensity = 0.3` and a cold, dim moon light. Otherwise 1.0. After changing look fields, call `ctx.applyLook()`.
   - `unmount`: null the three look fields and call `applyLook()`. That shows the "no sky" look, which makes a good toggle demo.
 
-- [ ] **Step 3: Verify.**
+- [x] **Step 3: Verify.**
   - At 15:00, looking out the window, the sky is blue, not the app background (sample a sky pixel; it must not be pure black).
   - Drag the slider to 19:00: an orange horizon. At 23:00: dark, with the room still readable.
   - `run.log` shows no NaN warnings.
   - Face the low sun: the frame must not be white (playbook §3 rule 3). If it is, lower `ctx.look.exposure` at low sun elevations.
-- [ ] **Step 4: Commit**: `git add lib/features/sky_feature.dart && git commit -m "feat: physical sky with time-of-day slider and throttled IBL rebake"`
+- [x] **Step 4: Commit**: `git add lib/features/sky_feature.dart && git commit -m "feat: physical sky with time-of-day slider and throttled IBL rebake"`
 
 ### Task 13: Ocean and beach, 90 m below
 
 **Files:** Replace `lib/features/ocean_feature.dart`.
 
-- [ ] **Step 1:** Read `.claude/skills/flutter_scene-procedural/SKILL.md` (ocean and terrain sections), and grep `WaterSurfaceComponent` and `GerstnerWave` in `lib/src/kit/environment/water_surface_component.dart`.
-- [ ] **Step 2: Implement.**
+- [x] **Step 1:** Read `.claude/skills/flutter_scene-procedural/SKILL.md` (ocean and terrain sections), and grep `WaterSurfaceComponent` and `GerstnerWave` in `lib/src/kit/environment/water_surface_component.dart`.
+- [x] **Step 2: Implement.**
   - The sea: a large opaque plane, or the kit water surface, at y = −90 covering z ∈ [40, 800] and x ∈ [−600, 600]. Use a PBR material, dark teal base colour, roughness 0.15, so the sky reflects via IBL. Set `frustumCulled = false` if you displace it on the GPU.
   - The beach: a sand-coloured box strip at y = −90.2, z ∈ [0, 40], plus a sloped quad joining the water.
   - A hotel facade below the balcony: one large box at x ∈ [−30, 30], z ∈ [−20, 6], y ∈ [−90, 0], so you don't see void when looking down.
@@ -1937,15 +1956,15 @@ Keep `includeInvisible` false, so that portal-culled rooms (made invisible by Ta
   - Instanced palms and umbrellas are Task 26; don't add them here.
 
   `unmount` removes everything.
-- [ ] **Step 3: Verify.** Stand on the balcony and look down (pitch −45°). You see the beach, and the sea reaches the horizon. With fog on (Task 14), the far edge fades.
-- [ ] **Step 4: Commit**: `git add lib/features/ocean_feature.dart && git commit -m "feat: ocean and beach backdrop 90 m below"`
+- [x] **Step 3: Verify.** Stand on the balcony and look down (pitch −45°). You see the beach, and the sea reaches the horizon. With fog on (Task 14), the far edge fades.
+- [x] **Step 4: Commit**: `git add lib/features/ocean_feature.dart && git commit -m "feat: ocean and beach backdrop 90 m below"`
 
 ### Task 14: Post-effect toggles
 
 **Files:** Replace `lib/features/post_features.dart` (6 classes).
 **Consumes:** `ctx.look` flags and `ctx.applyLook()`.
 
-- [ ] **Step 1: Implement.** Each class sets its flag in `mount`, clears it in `unmount`, and calls `ctx.applyLook()` in both. Example:
+- [x] **Step 1: Implement.** Each class sets its flag in `mount`, clears it in `unmount`, and calls `ctx.applyLook()` in both. Example:
 
 ```dart
 class BloomFeature extends HotelFeature {
@@ -1959,8 +1978,8 @@ class BloomFeature extends HotelFeature {
 ```
 
 Mapping: `tone_mapping` → `look.toneMapping`, `fog` → `look.fog`, `bloom` → `look.bloom`, `ao` → `look.ao`, `god_rays` → `look.godRays`, `ssr` → `look.ssr`.
-- [ ] **Step 2: Verify.** Toggle each one in the sheet and screenshot before and after. Each makes a visible difference, and the sky stays after every toggle (engine rule 1).
-- [ ] **Step 3: Commit**: `git add lib/features/post_features.dart && git commit -m "feat: post-processing toggles"`
+- [x] **Step 2: Verify.** Toggle each one in the sheet and screenshot before and after. Each makes a visible difference, and the sky stays after every toggle (engine rule 1).
+- [x] **Step 3: Commit**: `git add lib/features/post_features.dart && git commit -m "feat: post-processing toggles"`
 
 ### Task 15: Shadows and MSAA toggles
 
