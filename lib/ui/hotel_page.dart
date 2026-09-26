@@ -55,34 +55,61 @@ class _HotelPageState extends State<HotelPage> {
                   context: context,
                   isScrollControlled: true,
                   builder: (_) => EffectsSheet(registry: hotel.registry)),
-              child: const Text('🎛 Effects'),
+              child: const Text('Effects'),
             ),
           ),
           Positioned(
             left: 16,
             right: 16,
             bottom: 24,
-            child: Row(children: [
-              const Text('🕑', style: TextStyle(fontSize: 20)),
-              Expanded(
-                child: ValueListenableBuilder<double>(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(children: [
+                ValueListenableBuilder<double>(
                   valueListenable: hotel.ctx.timeOfDay,
-                  builder: (_, t, _) => Slider(
+                  builder: (_, t, _) => Text(
+                    'Time: ${t.floor().toString().padLeft(2, '0')}:00',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ValueListenableBuilder<double>(
+                    valueListenable: hotel.ctx.timeOfDay,
+                    builder: (_, t, _) => Slider(
                       min: 0,
                       max: 24,
                       value: t,
                       label: '${t.floor()}:00',
-                      onChanged: (v) => hotel.ctx.timeOfDay.value = v),
+                      onChanged: (v) => hotel.ctx.timeOfDay.value = v,
+                    ),
+                  ),
                 ),
-              ),
-              ValueListenableBuilder<bool>(
-                valueListenable: hotel.ctx.rainRequested,
-                builder: (_, on, _) => IconButton(
-                    icon: Text(on ? '🌧' : '☀️',
-                        style: const TextStyle(fontSize: 22)),
-                    onPressed: () => hotel.ctx.rainRequested.value = !on),
-              ),
-            ]),
+                const SizedBox(width: 8),
+                ValueListenableBuilder<bool>(
+                  valueListenable: hotel.ctx.rainRequested,
+                  builder: (_, on, _) => FilledButton.tonal(
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    onPressed: () => hotel.ctx.rainRequested.value = !on,
+                    child: Text(
+                      on ? 'Rain: ON' : 'Rain: OFF',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                  ),
+                ),
+              ]),
+            ),
           ),
           if (snap.connectionState != ConnectionState.done)
             const Center(child: CircularProgressIndicator()),
