@@ -1,4 +1,5 @@
 import 'package:flutter_scene/scene.dart';
+import 'debug_tour.dart';
 import 'feature_catalog.dart';
 import 'feature_registry.dart';
 import 'hotel_context.dart';
@@ -18,6 +19,7 @@ class HotelScene {
     await Scene.initializeStaticResources();
     ctx.applyLook();
     await registry.mountDefaults();
+    await maybeStartDebugTour(this);
   }
 
   void tick(double dt) => registry.tick(dt);
