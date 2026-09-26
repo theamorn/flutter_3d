@@ -24,4 +24,13 @@ void main() {
     expect(e.skybox, same(s.skybox));
     expect(e.skyEnvironment, same(s.skyEnvironment));
   });
+
+  test('bloom threshold is in display terms: it scales with 1 / exposure', () {
+    // The engine thresholds linear radiance before exposure is applied, so a
+    // fixed 1.0 at exposure 0.35 would bloom everything brighter than 0.35.
+    final day = composeLook(LookState()..exposure = 0.35);
+    final night = composeLook(LookState()..exposure = 2.5);
+    expect(day.bloomThreshold * 0.35, closeTo(1.0, 1e-9));
+    expect(night.bloomThreshold * 2.5, closeTo(1.0, 1e-9));
+  });
 }

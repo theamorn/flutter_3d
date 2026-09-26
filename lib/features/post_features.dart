@@ -1,8 +1,28 @@
-// STUB, replaced by Task 14.
 import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
+import '../hotel/look.dart';
 
-class ToneMappingFeature extends HotelFeature {
+/// A post effect that is one LookState flag: on while mounted, off after.
+/// composeLook() rebuilds the whole EnvironmentSettings, so the sky survives
+/// every toggle (engine rule 1).
+abstract class LookFlagFeature extends HotelFeature {
+  /// Writes this feature's flag.
+  void setFlag(LookState look, bool on);
+
+  @override
+  Future<void> mount(HotelContext ctx) async {
+    setFlag(ctx.look, true);
+    ctx.applyLook();
+  }
+
+  @override
+  void unmount(HotelContext ctx) {
+    setFlag(ctx.look, false);
+    ctx.applyLook();
+  }
+}
+
+class ToneMappingFeature extends LookFlagFeature {
   @override
   String get id => 'tone_mapping';
   @override
@@ -10,12 +30,10 @@ class ToneMappingFeature extends HotelFeature {
   @override
   CostTier get tier => CostTier.free;
   @override
-  Future<void> mount(HotelContext ctx) async {}
-  @override
-  void unmount(HotelContext ctx) {}
+  void setFlag(LookState look, bool on) => look.toneMapping = on;
 }
 
-class FogFeature extends HotelFeature {
+class FogFeature extends LookFlagFeature {
   @override
   String get id => 'fog';
   @override
@@ -23,12 +41,10 @@ class FogFeature extends HotelFeature {
   @override
   CostTier get tier => CostTier.cheap;
   @override
-  Future<void> mount(HotelContext ctx) async {}
-  @override
-  void unmount(HotelContext ctx) {}
+  void setFlag(LookState look, bool on) => look.fog = on;
 }
 
-class BloomFeature extends HotelFeature {
+class BloomFeature extends LookFlagFeature {
   @override
   String get id => 'bloom';
   @override
@@ -38,12 +54,10 @@ class BloomFeature extends HotelFeature {
   @override
   bool get defaultOn => false;
   @override
-  Future<void> mount(HotelContext ctx) async {}
-  @override
-  void unmount(HotelContext ctx) {}
+  void setFlag(LookState look, bool on) => look.bloom = on;
 }
 
-class AoFeature extends HotelFeature {
+class AoFeature extends LookFlagFeature {
   @override
   String get id => 'ao';
   @override
@@ -53,12 +67,10 @@ class AoFeature extends HotelFeature {
   @override
   bool get defaultOn => false;
   @override
-  Future<void> mount(HotelContext ctx) async {}
-  @override
-  void unmount(HotelContext ctx) {}
+  void setFlag(LookState look, bool on) => look.ao = on;
 }
 
-class GodRaysFeature extends HotelFeature {
+class GodRaysFeature extends LookFlagFeature {
   @override
   String get id => 'god_rays';
   @override
@@ -68,12 +80,10 @@ class GodRaysFeature extends HotelFeature {
   @override
   bool get defaultOn => false;
   @override
-  Future<void> mount(HotelContext ctx) async {}
-  @override
-  void unmount(HotelContext ctx) {}
+  void setFlag(LookState look, bool on) => look.godRays = on;
 }
 
-class SsrFeature extends HotelFeature {
+class SsrFeature extends LookFlagFeature {
   @override
   String get id => 'ssr';
   @override
@@ -83,7 +93,5 @@ class SsrFeature extends HotelFeature {
   @override
   bool get defaultOn => false;
   @override
-  Future<void> mount(HotelContext ctx) async {}
-  @override
-  void unmount(HotelContext ctx) {}
+  void setFlag(LookState look, bool on) => look.ssr = on;
 }

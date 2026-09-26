@@ -80,3 +80,14 @@ Read it before starting a task; add to it before committing one. Format:
 - **Also found:** `evaluate` can run at a safepoint in the middle of a paint (`ResolvePass.execute`). A synchronous `ValueNotifier` write there rebuilds the slider during paint and throws, and the listener after it (the sky) never runs, which left exposure stale. Setting a notifier to its current value doesn't notify at all.
 - **Do:** make every state mutation in `evaluate` inside `Future(() { ... })` (or `Future.delayed`), and read state synchronously. Identify pixels by raycast before tuning materials or light.
 - **Talk?** no
+
+## Bloom threshold is compared before exposure (Task 14, 2026-09-26)
+- **Found:** `flutter_scene_bloom_threshold.frag` thresholds un-premultiplied linear HDR radiance, and exposure is applied later in `ResolvePass`. With the sky's day exposure of 0.35, `bloomThreshold: 1.0` bloomed everything brighter than 0.35 on screen: 87% of pixels changed and the room went hazy.
+- **Why it matters:** any look that lowers exposure (a physical sky) makes bloom wash out the frame, and it reads as "bloom is broken".
+- **Do:** set the threshold in display terms, `bloomThreshold: 1.0 / exposure` (done in `composeLook`, pinned by `look_test`). After the fix only the bright window blooms (35% of pixels, mean Δ 7.9 instead of 24.7).
+- **Talk?** yes. One line of maths separates "cinematic glow" from "fog of doom".
+
+## Measuring an effect toggle on a simulator someone else is using (Task 14, 2026-09-26)
+- **Found:** the user was driving the joystick and look pad while I A/B'd effects, so frame diffs mixed camera motion with the effect (a 94% "SSR" diff was mostly a head turn).
+- **Do:** make the toggle in the same `evaluate` via `Future.delayed(1.2 s)`, screenshot before and after, and read `camera.position`/`target` before and after. Keep a pair only if the pose is identical. You can pin a view by writing `ctx.playerXZ`/`ctx.playerYaw` directly (they're mutable). Diff with a grid mean |ΔRGB| and exclude the HUD box (its numbers change every frame).
+- **Talk?** no

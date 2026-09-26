@@ -30,7 +30,9 @@ EnvironmentSettings composeLook(LookState s) => EnvironmentSettings(
       exposure: s.exposure,
       environmentIntensity: s.environmentIntensity,
       bloomEnabled: s.bloom,
-      bloomThreshold: 1.0,
+      // The engine thresholds linear radiance before exposure; keep the
+      // threshold at 1.0 on screen whatever the exposure (the sky runs 0.35).
+      bloomThreshold: 1.0 / s.exposure,
       lensFlareEnabled: s.bloom,
       lensFlareHaloIntensity: 0.3,
       ambientOcclusionEnabled: s.ao,
