@@ -43,4 +43,18 @@ void main() {
     }
     expect(p.y, lessThan(7.8));
   });
+
+  test('staticColliders = room A walls + furniture, their mirrors, and the shared wall', () {
+    expect(FloorPlan.staticColliders().length,
+        2 * (FloorPlan.wallsA.length + FloorPlan.furnitureA.length) + FloorPlan.sharedWall.length);
+  });
+
+  test('the entrance door is clear of furniture', () {
+    // Design: door_entrance on the corridor wall (z = 0), x ∈ [−2.3, −1.3].
+    for (final e in FloorPlan.furnitureA.entries) {
+      final b = e.value;
+      final blocks = b.maxX > FloorPlan.entranceX0 && b.minX < FloorPlan.entranceX1 && b.minZ < 0.6;
+      expect(blocks, false, reason: '${e.key} $b stands in front of the entrance door');
+    }
+  });
 }

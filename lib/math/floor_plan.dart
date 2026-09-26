@@ -20,6 +20,9 @@ class FloorPlan {
   static const double bathX1 = -5.2, bathZ1 = 2.6;
   static const double bathDoorZ0 = 1.2, bathDoorZ1 = 2.0;
 
+  /// Room entrance door span on the corridor wall (z = 0), room A.
+  static const double entranceX0 = -2.3, entranceX1 = -1.3;
+
   static RoomId roomOf(Vector2 xz) => xz.x < 0 ? RoomId.a : RoomId.b;
 
   static Vector2 mirror(Vector2 xz) => Vector2(-xz.x, xz.y);
@@ -30,7 +33,7 @@ class FloorPlan {
     'sofa': Box2(-2.6, 3.6, -0.8, 4.4),
     'desk': Box2(-4.6, 0.0, -3.0, 0.6),
     'tv_unit': Box2(-7.6, 2.66, -5.8, 2.9), // against the bathroom wall, facing the bed
-    'shelf': Box2(-1.6, 0.0, -0.5, 0.4),
+    'shelf': Box2(-1.2, 0.0, -0.5, 0.4), // clear of the entrance door (x ∈ [−2.3, −1.3])
     'basin': Box2(-8.0, 0.0, -7.4, 1.0),
     'shower': Box2(-6.4, 0.0, -5.2, 1.1),
   };
@@ -38,8 +41,9 @@ class FloorPlan {
   static const double _depth = roomDepth; // window wall at z = 6
   static const double _rail = roomDepth + balconyDepth; // railing at z = 7.8
 
-  /// Room A walls, excluding the shared wall on x = 0.
-  static const List<Box2> _wallsA = [
+  /// Room A walls, excluding the shared wall on x = 0. Task 9 builds the
+  /// visible walls from these same boxes, so what you see is what you hit.
+  static const List<Box2> wallsA = [
     Box2(-roomWidth - wallT, -wallT, 0, 0), // corridor wall
     Box2(-roomWidth - wallT, -wallT, -roomWidth, _rail + wallT), // outer side wall
     // Window wall, with a 1.2 m balcony-door gap at x ∈ [−3.6, −2.4].
@@ -54,7 +58,7 @@ class FloorPlan {
   ];
 
   /// The shared wall, symmetric about x = 0, with the connecting-door gap.
-  static const List<Box2> _sharedWall = [
+  static const List<Box2> sharedWall = [
     Box2(-wallT / 2, 0, wallT / 2, doorZ0),
     Box2(-wallT / 2, doorZ1, wallT / 2, _depth),
   ];
@@ -62,7 +66,7 @@ class FloorPlan {
   /// Static wall + furniture boxes for BOTH rooms (room B = mirror of A),
   /// with the connecting-door gap left open. The door leaf is dynamic (Task 17).
   static List<Box2> staticColliders() {
-    final a = [..._wallsA, ...furnitureA.values];
-    return [...a, ...a.map((b) => b.mirrored()), ..._sharedWall];
+    final a = [...wallsA, ...furnitureA.values];
+    return [...a, ...a.map((b) => b.mirrored()), ...sharedWall];
   }
 }
