@@ -58,6 +58,18 @@ class PlayerFeature extends HotelFeature {
   /// Look-pad drag accumulated since the last frame, logical pixels.
   static Offset pendingLook = Offset.zero;
 
+  /// True while another feature owns the camera (a focused screen, Task 24).
+  /// The walk ignores the joystick and look pad; locking and unlocking both
+  /// drop held and queued input, so the camera can't jump on release.
+  static bool get focusLocked => _focusLocked;
+  static set focusLocked(bool locked) {
+    _focusLocked = locked;
+    stick.value = Offset.zero;
+    pendingLook = Offset.zero;
+  }
+
+  static bool _focusLocked = false;
+
   double _pitch = 0;
 
   FpState _state(HotelContext ctx) => FpState(ctx.playerXZ, ctx.playerYaw, _pitch);
@@ -70,6 +82,7 @@ class PlayerFeature extends HotelFeature {
 
   @override
   void tick(HotelContext ctx, double dt) {
+    if (focusLocked) return;
     final s = stepPlayer(_state(ctx),
         stick: stick.value,
         look: pendingLook,
@@ -89,14 +102,18 @@ class PlayerFeature extends HotelFeature {
             left: 24,
             bottom: 90,
             // The joystick reports screen space (up = −y); forward is +y.
-            child: VirtualJoystick(onChanged: (v) => stick.value = Offset(v.x, -v.y)),
+            child: VirtualJoystick(onChanged: (v) {
+              if (!focusLocked) stick.value = Offset(v.x, -v.y);
+            }),
           ),
           Positioned(
             right: 0,
             top: 0,
             bottom: 150,
             width: box.maxWidth / 2,
-            child: LookPad(onDrag: (d) => pendingLook += d),
+            child: LookPad(onDrag: (d) {
+              if (!focusLocked) pendingLook += d;
+            }),
           ),
         ]),
       );
