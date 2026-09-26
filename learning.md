@@ -62,3 +62,9 @@ Read it before starting a task; add to it before committing one. Format:
 - **Why it matters:** you can check the joystick/look wiring, collisions and camera on the device with no temporary code to revert.
 - **Do:** keep input in static notifiers (as `PlayerFeature` does) so it can be driven this way. `getIsolate` output is ~200 KB, so grep it for the library id rather than reading it.
 - **Talk?** no
+
+## Real taps without a tap tool: `handlePointerEvent` through the VM service (Task 11, 2026-09-26)
+- **Found:** `evaluate` (see the Task 10 entry) can inject real pointer events: `WidgetsBinding.instance.handlePointerEvent(PointerDownEvent(pointer: 901, position: c))` followed by a `PointerUpEvent`. They go through hit testing and the gesture arena exactly like a finger. A centre tap on the look pad's half of the screen still reached the tap-to-interact layer underneath: the pan recogniser rejected it on up. Use `WidgetsBinding`, not `GestureBinding`, because the latter isn't in a `material.dart` library's scope. Positions are logical pixels (the iPhone 17 Pro is 402 × 874). Library ids in `evaluate`'s `targetId` change on every hot restart (re-grep `getIsolate`), and so does the isolate id (`getVM`).
+- **Why it matters:** you can verify taps, sheets and buttons end to end on the simulator, with a negative control (a tap on a non-interactive mesh prints nothing).
+- **Do:** check a tap by counting a `debugPrint` in the run log before and after. Beware: someone clicking the Simulator window adds taps you didn't send.
+- **Talk?** no
