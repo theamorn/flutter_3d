@@ -20,8 +20,9 @@ _Updated 2026-09-27. Step boxes below are ticked for finished tasks._
 | 9–15 (Wave C): rooms, player, interact, sky/IBL, ocean, post-fx, shadows/MSAA | Done, merged to `main` | `a434e8e` … `b869aaa` |
 | 16–26, 29 (Wave D): lamps, door, curtains, water, rain, glass, lightning, reflections, screens, books, instancing, booking | Done, merged to `main` | `6efd91a` … `97eac30` |
 | 27 Debug tour and screenshot capture (Wave E) | Done, merged to `main` | `f4854bf` |
-| 28 Real hotel `.glb` import (Wave E) | Blocked (awaiting real `.glb` asset) | — |
+| 28 Real hotel `.glb` import (Wave E) | **Dropped** (2026-09-27): the user keeps the code-built rooms; no `.glb` import | — |
 | Waves D–E review (2026-09-27): rain button, book pages, stale PokéAPI replies, reader walk-off, swipe, portrait spread | Done, merged to `main` | `53d6fd0` … `0529dfd` |
+| Room polish (2026-09-27): photo textures (a material per object), luxury props, lamps −50%, sun and moon rising and setting over the sea, bathroom light and switch, faucet tappable by default | Done, on `main` | `fd00542` … `39bd61f` |
 
 Waves A–D are merged to `main`. The review's hand-offs to Wave D were written into Tasks 17, 20, 23 and 24 as **Wave C notes**. Where the code departs from this plan (sky exposure and moon, bloom threshold, window layout, and so on), the reason is recorded in `learning.md`, and each decision is logged in the local ledger `.superpowers/sdd/2026-09-26-hotel-3d-tour/progress.md`.
 
@@ -97,7 +98,7 @@ Distilled from the user's playbook and verified against `~/.pub-cache/hosted/pub
 - The bathroom is x ∈ [−8, −5.2], z ∈ [0, 2.6]. It has a door opening at x = −5.2, z ∈ [1.2, 2.0].
 - The sea, beach and palms sit at y = −90, from z = 20 to z = 700.
 
-### Node-name contract (placeholder builder and the future real `.glb` must match)
+### Node-name contract (the room builder, `placeholder_rooms.dart`, must match)
 
 | Name | What | Used by |
 |---|---|---|
@@ -105,6 +106,9 @@ Distilled from the user's playbook and verified against `~/.pub-cache/hosted/pub
 | `door_connect` | connecting door leaf (hinge at its local origin) | Task 17 |
 | `lamp_bedside`, `lamp_floor` | lamp bodies; the light is attached at `+0.3 y` | Task 16 |
 | `faucet_spout` | basin faucet; water emits from its origin, −Y | Task 19 |
+| `faucet_lever` | child of `faucet_spout`; lifts while the water runs | room polish (water_fx) |
+| `bath_light`, `bath_light_diffuser` | bathroom ceiling light; the diffuser glows while on | room polish (lamps) |
+| `bath_switch`, `bath_switch_rocker` | its wall switch by the bathroom door, bedroom side; the rocker tips | room polish (lamps) |
 | `shower_head` | emits from its origin, −Y | Task 19 |
 | `shower_glass` | glass door | Task 21 (steam) |
 | `mirror` | bathroom mirror plane, normal +X in Room A local space | Task 23 |
@@ -155,7 +159,7 @@ Door, curtains, TV/PC, books and the entrance **Book now** flow are interactions
 ### Out of scope for this plan
 
 - **Native add-to-app host** (a native iOS booking screen embedding this tour, and a native slider driving the time). Separate plan, once this app runs.
-- **Real hotel `.glb`.** Task 28 defines the import contract. It is blocked until the user supplies the asset.
+- **Real hotel `.glb`.** Dropped on 2026-09-27: the user chose to keep the code-built rooms (Task 28).
 
 ---
 
@@ -2540,7 +2544,9 @@ kill $(cat /tmp/hotel.pid)
 - [x] **Step 3: Verify.** Run `chmod +x tool/capture_tour.sh && tool/capture_tour.sh /tmp/hotel_tour`. Expected: 8 PNGs. Read each one and check that none is all-black or all-white.
 - [x] **Step 4: Commit**: `git add lib/hotel/debug_tour.dart lib/hotel/hotel_scene.dart tool/capture_tour.sh && git commit -m "chore: debug tour and screenshot capture script"`
 
-### Task 28: Real hotel `.glb` import (BLOCKED until the user supplies the asset)
+### Task 28: Real hotel `.glb` import (DROPPED)
+
+> **Dropped 2026-09-27.** The user decided to keep the code-built rooms and not import a `.glb` floor plan. The steps below are kept for the record only; do not execute them.
 
 **Files:** Create `lib/features/glb_rooms.dart`. Modify `lib/features/rooms_feature.dart` (choose the GLB when `assets/models/room.glb` exists; keep the placeholder as fallback).
 

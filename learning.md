@@ -200,3 +200,38 @@ Read it before starting a task; add to it before committing one. Format:
 - **Why it matters:** the open Pokédex book showed only its cover, with no error and every capture still counting up. Flipping the node alone fixes visibility but leaves the page mirrored and the left page on the reader's right.
 - **Do:** point the surface node's +Z *along* the view (`lookAt(pos + cameraForward)`), then mirror it in x (`scaleByVector3(Vector3(-1, 1, 1))`). The encoder flips winding on the negative determinant, so it stays visible and reads left to right. Or pass your own `geometry:`. Check the text on screen, not just `captureCount`.
 - **Talk?** yes — "it's rendering" (captures tick) versus "it's visible" (culled): the probe-quad bisection took three screenshots.
+
+## The physical sky's sun disk can't be switched off; cover it instead (Room polish, 2026-09-27)
+- **Found:** `flutter_scene_sky_physical.frag` draws its disk as `smoothstep(cos(w), cos(w/2), cos_theta)`. `w = 0` makes both edges 1.0 (a 0/0 at the sun's own pixel, a NaN risk that bloom would spread), and any small `w` still leaves a few-pixel HDR dot. The Task 12 lift (sky light raised to ≥ 30°) therefore put a second "sun" in the sky whenever the real one was lower. But the shader's `sun_energy = (1 − e^−elevation) · 60 · energy`, and `skyAt()` already solves energy so that product stays on schedule, so the sky can follow the real sun down to ~0.6° without going dark.
+- **Why it matters:** to show the sun and moon rising and setting you need your own discs, and the sky's disk has to be kept behind them.
+- **Do:** lift only to `kMinSkyElevation = 0.01`, keep the day/night fade on its own 30° span (`kDayFadeElevation`), shrink `sunAngularRadius`, and draw discs with radius ≥ sky radius + lift. `sky_test` pins "the sky's own disk always hides behind the drawn sun or moon".
+- **Talk?** yes. You can't delete the engine's sun, so you hide it behind your own.
+
+## The flat sea ends 6.6° below the horizon: a setting sun floated in front of "the sea" (Room polish, 2026-09-27)
+- **Found:** the sea plane (y = −90, out to z = 800) ends 6.6° below eye level. Between −6.6° and 0° you see the sky's ground fade, which reads as the sea but hides nothing, so a sun disc at −5° hung in front of it. Separately, fog (density 0.004) erased anything drawn 900 m out.
+- **Why it matters:** "the sun sets into the sea" needs something at the horizon that occludes it.
+- **Do:** raise the sea's far and side edges to eye level (`kSeaHorizon`, three thin boxes in the sea material, fogged like the far sea). Draw celestial discs past `EnvironmentSettings.fogCutoffDistance` (895 m; discs at 898 m, still inside the 900 m far plane). `ocean_test` checks rays at ±0.3° over ±70° of heading from every standing point, and `sky_test` checks the farthest sea corner stays inside the cutoff.
+- **Talk?** yes. The horizon was 6.6° lower than it looked.
+
+## A tap owned by a default-off feature silently doesn't exist (Room polish, 2026-09-27)
+- **Found:** "the faucet can't be clicked". Its `Interactable` was registered by `water_fx`, which was `defaultOn => false`, so until the Effects sheet enabled it there was nothing to tap: no label, no error.
+- **Why it matters:** an effect toggle quietly removed a basic interaction.
+- **Do:** a feature that owns an interaction the user expects must be default-on, or the interaction must live in a base feature. `water_fx` is now default-on (it costs nothing until the water runs), pinned by `water_fx_test`.
+- **Talk?** no
+
+## Poly Haven texture names don't tell you what you'll get (Room polish, 2026-09-27)
+- **Found:** `marble_01` is beige stone pavers, `wool_boucle` is a plaid tweed, `rough_linen` is light blue, and the walnut and oak veneers are raw grey wood. `api.polyhaven.com` returns 403 to urllib's default user agent.
+- **Why it matters:** picking by name gives the wrong room.
+- **Do:** fetch thumbnails (`cdn.polyhaven.com/asset_img/thumbs/<id>.png`) and look at a contact sheet before choosing. Ship fabrics as neutral grey (desaturate, normalise the mean) and tint per object through `Finish`, so one weave serves several colours. Tile at the asset's real `dimensions` (mm) with UVs in metres. At 1K/512 px and ffmpeg `-q:v 3–4`, 37 maps come to 1.4 MB. Send a User-Agent header.
+- **Talk?** no
+
+## The blue cast on whites comes from the sky IBL, not the materials (Room polish, 2026-09-27)
+- **Found:** warming the wall and linen tints (e.g. 1.0, 0.95, 0.88 → 0.95, 0.88, 0.78) barely changed a paired A/B frame. The physical sky's IBL lights the room pale blue by day.
+- **Why it matters:** tint tweaks can't make a room read warm.
+- **Do:** if a warmer look is wanted, use `EnvironmentSettings` colour grading (`colorGradingEnabled`, `temperature`, `tint`). It is global, so it also shifts the sky and sea; decide with the user.
+- **Talk?** no
+
+## Hot restart without DTD: call flutter run's `hotRestart` service over the VM service (Room polish, 2026-09-27)
+- **Found:** the Dart MCP `hot_restart` needs a DTD connection. `flutter run` also registers `hotRestart` as a VM-service service: after `streamListen('Service')`, the `ServiceRegistered` events name its method (e.g. `s0.hotRestart`), and calling it restarts the app.
+- **Do:** a 20-line Node script (Node has a global `WebSocket`) that calls it, plus an `evaluate` in `hotel_page.dart`'s scope that finds `_HotelPageState` by walking `WidgetsBinding.instance.rootElement`, gives you pose + time + screenshot with no app changes.
+- **Talk?** no
