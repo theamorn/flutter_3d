@@ -74,15 +74,9 @@ class EntranceFeature extends HotelFeature {
       _bookingInProgress = false;
       return;
     }
-    final now = DateTime.now();
-    final quote = BookingQuote(
-      option: _doorOpenAtEntry
-          ? RoomOption.familySuiteConnected
-          : RoomOption.familyRoom,
-      checkIn: DateTime(now.year, now.month, now.day + 1),
-      nights: 2,
-      adults: 2,
-      children: 2,
+    final quote = BookingQuote.standard(
+      _doorOpenAtEntry ? RoomOption.familySuiteConnected : RoomOption.familyRoom,
+      now: DateTime.now(),
     );
     try {
       await Navigator.of(context).push(

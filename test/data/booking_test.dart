@@ -27,4 +27,14 @@ void main() {
     expect(formatThb(38488), '฿38,488');
     expect(formatThb(900), '฿900');
   });
+
+  test('the standard quote starts tomorrow: 2 nights, 2 adults, 2 children', () {
+    final q = BookingQuote.standard(
+      RoomOption.familyRoom,
+      now: DateTime(2026, 12, 31, 23, 30),
+    );
+    expect(q.option, RoomOption.familyRoom);
+    expect(q.checkIn, DateTime(2027, 1, 1));
+    expect((q.nights, q.adults, q.children), (2, 2, 2));
+  });
 }

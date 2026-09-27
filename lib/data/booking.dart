@@ -13,6 +13,17 @@ class BookingQuote {
     required this.children,
   });
 
+  /// The quote every Book button opens with: check-in tomorrow, 2 nights,
+  /// 2 adults and 2 children.
+  factory BookingQuote.standard(RoomOption option, {required DateTime now}) =>
+      BookingQuote(
+        option: option,
+        checkIn: DateTime(now.year, now.month, now.day + 1),
+        nights: 2,
+        adults: 2,
+        children: 2,
+      );
+
   final RoomOption option;
   final DateTime checkIn;
   final int nights, adults, children;
