@@ -18,6 +18,13 @@ import '../features/screens_feature.dart';
 import '../features/books_feature.dart';
 import '../features/instancing_feature.dart';
 import '../features/entrance_feature.dart';
+import '../features/light_probes_feature.dart';
+import '../features/dynamic_gi_feature.dart';
+import '../features/auto_exposure_feature.dart';
+import '../features/static_shadows_feature.dart';
+import '../features/spot_lights_feature.dart';
+import '../features/area_lights_feature.dart';
+import '../features/volumetric_fog_feature.dart';
 import '../features/occlusion_feature.dart';
 
 /// Mount order matters: rooms first (others look nodes up by name), and
@@ -33,5 +40,8 @@ List<HotelFeature> buildCatalog() => [
       WaterFxFeature(), RainFeature(), RainGlassFeature(), LightningFeature(),
       MirrorFeature(), SeaReflectionFeature(),
       ScreensFeature(), BooksFeature(), InstancingFeature(), EntranceFeature(),
+      LightProbesFeature(), DynamicGiFeature(), AutoExposureFeature(), StaticShadowsFeature(),
+      FxaaFeature(), SmaaFeature(), TaaFeature(),
+      SpotLightsFeature(), AreaLightsFeature(), VolumetricFogFeature(),
       OcclusionFeature(),
     ];

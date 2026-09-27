@@ -81,20 +81,71 @@ class ShadowsFeature extends HotelFeature {
   void tick(HotelContext ctx, double dt) => _shadows.sync(ctx.look);
 }
 
-class MsaaFeature extends HotelFeature {
+/// The anti-aliasing modes are one exclusive group: switching one on
+/// switches the others off (FeatureRegistry).
+const String kAaGroup = 'aa';
+
+/// The mode to leave behind when the feature that set [mine] unmounts: off,
+/// unless another mode has already taken over. Per-feature reconcile chains
+/// can mount the new mode before the old one unmounts.
+AntiAliasingMode aaAfterUnmount(AntiAliasingMode current, AntiAliasingMode mine) =>
+    current == mine ? AntiAliasingMode.none : current;
+
+/// One anti-aliasing mode. The context starts at `none` (HotelContext), so
+/// off really is off.
+abstract class AaFeature extends HotelFeature {
+  AaFeature(this.mode);
+  final AntiAliasingMode mode;
+
+  @override
+  bool get defaultOn => false;
+  @override
+  String? get exclusiveGroup => kAaGroup;
+
+  @override
+  Future<void> mount(HotelContext ctx) async => ctx.scene.antiAliasingMode = mode;
+
+  @override
+  void unmount(HotelContext ctx) =>
+      ctx.scene.antiAliasingMode = aaAfterUnmount(ctx.scene.antiAliasingMode, mode);
+}
+
+class MsaaFeature extends AaFeature {
+  MsaaFeature() : super(AntiAliasingMode.msaa);
   @override
   String get id => 'msaa';
   @override
   String get label => 'MSAA anti-aliasing';
   @override
   CostTier get tier => CostTier.mid;
-  @override
-  bool get defaultOn => false;
+}
 
+class FxaaFeature extends AaFeature {
+  FxaaFeature() : super(AntiAliasingMode.fxaa);
   @override
-  Future<void> mount(HotelContext ctx) async =>
-      ctx.scene.antiAliasingMode = AntiAliasingMode.msaa;
+  String get id => 'fxaa';
+  @override
+  String get label => 'FXAA anti-aliasing';
+  @override
+  CostTier get tier => CostTier.cheap;
+}
 
+class SmaaFeature extends AaFeature {
+  SmaaFeature() : super(AntiAliasingMode.smaa);
   @override
-  void unmount(HotelContext ctx) => ctx.scene.antiAliasingMode = AntiAliasingMode.none;
+  String get id => 'smaa';
+  @override
+  String get label => 'SMAA anti-aliasing';
+  @override
+  CostTier get tier => CostTier.mid;
+}
+
+class TaaFeature extends AaFeature {
+  TaaFeature() : super(AntiAliasingMode.taa);
+  @override
+  String get id => 'taa';
+  @override
+  String get label => 'TAA anti-aliasing';
+  @override
+  CostTier get tier => CostTier.mid;
 }
