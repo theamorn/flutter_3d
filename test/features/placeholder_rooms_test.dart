@@ -176,6 +176,76 @@ void main() {
         union(partsUnder(room, 'faucet_lever')).min.x, greaterThanOrEqualTo(0.1));
   });
 
+  group('luxury props', () {
+    test('each prop appears once in room A', () {
+      for (final n in [
+        'bench', 'coffee_table', 'rug_bed', 'rug_lounge', 'art_bed', 'art_sofa',
+        'trim', 'pendant', 'vase', 'orchid', 'towels', 'mirror_frame', 'bath_cladding',
+      ]) {
+        only(room, n);
+      }
+    });
+
+    test('the bench and coffee table are solid: they have colliders', () {
+      expect(FloorPlan.furnitureA.keys, containsAll(['bench', 'coffee_table']));
+    });
+
+    test('rugs lie flat on the floor, clear of the walls', () {
+      for (final name in ['rug_bed', 'rug_lounge']) {
+        final u = union(partsUnder(room, name));
+        expect(u.min.y, closeTo(0, tol), reason: name);
+        expect(u.max.y, lessThanOrEqualTo(0.02), reason: name);
+        for (final w in [...FloorPlan.wallsA, ...sharedHalfA]) {
+          final overlaps = u.min.x < w.maxX && u.max.x > w.minX && u.min.z < w.maxZ && u.max.z > w.minZ;
+          expect(overlaps, false, reason: '$name runs under wall $w');
+        }
+      }
+    });
+
+    test('art hangs flat on a wall, above the bed and the sofa', () {
+      for (final (name, wallFace) in [('art_bed', -8.0), ('art_sofa', -FloorPlan.wallT / 2)]) {
+        final u = union(partsUnder(room, name));
+        final nearWall = math.min((u.min.x - wallFace).abs(), (u.max.x - wallFace).abs());
+        expect(nearWall, lessThan(tol), reason: '$name touches its wall');
+        expect(u.max.x - u.min.x, lessThan(0.05), reason: '$name is flat');
+        expect(u.min.y, greaterThan(1.2), reason: '$name hangs above the furniture');
+      }
+    });
+
+    test('tabletop props rest on their furniture', () {
+      for (final (name, on, top) in [
+        ('vase', 'desk', 0.76),
+        ('orchid', 'basin', 0.85),
+        ('towels', 'basin', 0.85),
+      ]) {
+        final u = union(partsUnder(room, name));
+        expect(u.min.y, closeTo(top, tol), reason: '$name sits on the $on');
+        expect(footprintInside(u, FloorPlan.furnitureA[on]!), true, reason: '$name over the $on');
+      }
+    });
+
+    test('skirting and moulding hug the walls (nothing to trip over)', () {
+      final walls = [...FloorPlan.wallsA, ...sharedHalfA];
+      for (final b in partsUnder(room, 'trim')) {
+        if (b.min.y >= 2.0) {
+          // Moulding: overhead (it runs over door headers, like the walls'
+          // headers), so it only has to be a thin strip under the ceiling.
+          expect(b.max.y, closeTo(FloorPlan.ceiling, tol));
+          expect(math.min(b.max.x - b.min.x, b.max.z - b.min.z), lessThanOrEqualTo(0.045));
+          continue;
+        }
+        final hugs = walls.any((w) =>
+            b.min.x >= w.minX - 0.045 && b.max.x <= w.maxX + 0.045 &&
+            b.min.z >= w.minZ - 0.045 && b.max.z <= w.maxZ + 0.045);
+        expect(hugs, true, reason: 'trim piece ${b.min}–${b.max} stands off the walls');
+      }
+    });
+
+    test('the pendant hangs clear of your head', () {
+      expect(union(partsUnder(room, 'pendant')).min.y, greaterThan(FloorPlan.eyeHeight + 0.3));
+    });
+  });
+
   test('entrance door fills the entrance span on the corridor wall', () {
     final u = union(partsUnder(room, 'door_entrance'));
     expect(u.min.x, closeTo(FloorPlan.entranceX0, tol));

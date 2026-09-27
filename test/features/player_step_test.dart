@@ -26,11 +26,13 @@ void main() {
 
   test('walking diagonally into the bed slides along it and never enters it', () {
     final bed = FloorPlan.furnitureA['bed']!;
-    // Facing between −X (the bed) and +Z (the window).
-    var s = FpState(Vector2(bed.maxX + 0.4, 3.6), -math.pi / 4, 0);
-    s = walk(s, const Offset(0, 1), 1.5);
-    expect(s.xz.x, greaterThanOrEqualTo(bed.maxX + kPlayerRadius - 1e-4));
-    expect(s.xz.y, greaterThan(3.6 + 0.5), reason: 'slid along the bed toward +Z');
+    // On the bed's window side (the bench fills the foot): facing between
+    // −Z (the bed) and −X (the bed head).
+    var s = FpState(Vector2(-6.2, bed.maxZ + 0.3), -3 * math.pi / 4, 0);
+    // 0.9 s keeps the walk alongside the bed, short of its head.
+    s = walk(s, const Offset(0, 1), 0.9);
+    expect(s.xz.y, greaterThanOrEqualTo(bed.maxZ + kPlayerRadius - 1e-4));
+    expect(s.xz.x, lessThan(-6.2 - 0.5), reason: 'slid along the bed toward −X');
   });
 
   test('the look drag is applied before the step', () {

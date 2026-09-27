@@ -36,6 +36,8 @@ class FloorPlan {
     'shelf': Box2(-1.2, 0.0, -0.5, 0.4), // clear of the entrance door (x ∈ [−2.3, −1.3])
     'basin': Box2(-8.0, 0.0, -7.4, 1.0),
     'shower': Box2(-6.4, 0.0, -5.2, 1.1),
+    'bench': Box2(-5.3, 3.55, -4.9, 5.05), // at the foot of the bed
+    'coffee_table': Box2(-2.3, 2.75, -1.1, 3.35), // in front of the sofa
   };
 
   static const double _depth = roomDepth; // window wall at z = 6

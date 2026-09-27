@@ -69,6 +69,30 @@ const _bedFrameWood = Finish(0.85, 0.58, 0.40, roughness: 0.5, texture: _america
 const _deskWood = Finish(0.85, 0.72, 0.60, roughness: 0.45, texture: _teak);
 const _bedsideWood = Finish(1, 1, 1, roughness: 0.2, texture: _cherry);
 const _tvWood = Finish(0.45, 0.38, 0.33, roughness: 0.4, texture: _blackOak);
+const _velvet = TextureRef('velour_velvet', 0.28, 0.27);
+const _jacquard = TextureRef('quatrefoil_jacquard_fabric', 0.28, 0.28);
+const _woolWeave = TextureRef('poly_wool_herringbone', 0.27, 0.28);
+const _leather = TextureRef('fabric_leather_02', 0.5, 0.5);
+const _teddy = TextureRef('curly_teddy_natural', 0.34, 0.33);
+const _jute = TextureRef('hessian_380', 0.27, 0.27);
+const _whiteTiles = TextureRef('long_white_tiles', 1.27, 1.27);
+
+const _headboardVelvet = Finish(0.05, 0.20, 0.22, roughness: 0.95, texture: _velvet);
+const _pillowJacquard = Finish(0.85, 0.70, 0.45, roughness: 0.7, texture: _jacquard);
+const _throwWool = Finish(0.15, 0.15, 0.16, roughness: 0.9, texture: _woolWeave);
+const _benchLeather = Finish(1, 1, 1, roughness: 0.5, texture: _leather);
+const _rugTeddy = Finish(1, 1, 1, roughness: 1, texture: _teddy);
+const _rugJute = Finish(1, 1, 1, roughness: 1, texture: _jute);
+const _bathTilesWall = Finish(1, 1, 1, roughness: 0.15, texture: _whiteTiles);
+const _blackStone = Finish(0.02, 0.02, 0.022, roughness: 0.08);
+const _leafGreen = Finish(0.10, 0.28, 0.08, roughness: 0.6);
+const _bloomPink = Finish(0.95, 0.70, 0.75, roughness: 0.7);
+const _bloomWhite = Finish(0.95, 0.95, 0.96, roughness: 0.6);
+const _canvas = Finish(0.85, 0.80, 0.70, roughness: 0.9);
+const _artTerracotta = Finish(0.60, 0.22, 0.10, roughness: 0.9);
+const _artMustard = Finish(0.75, 0.50, 0.10, roughness: 0.9);
+const _artTeal = Finish(0.05, 0.30, 0.32, roughness: 0.9);
+const _artCharcoal = Finish(0.05, 0.05, 0.05, roughness: 0.9);
 const _shelfWood = Finish(1.0, 0.92, 0.82, roughness: 0.55, texture: _whiteOak);
 const _vanityWood = Finish(1, 1, 1, roughness: 0.45, texture: _walnut);
 const _doorWood = Finish(0.55, 0.42, 0.33, roughness: 0.4, texture: _blackWalnut);
@@ -383,7 +407,43 @@ List<RoomNode> _furnitureNodes() => [
       _furniture('bed', (b) => [
             BoxPart.footprint(b, 0, 0.3, _bedFrameWood),
             BoxPart.footprint(b, 0.3, 0.55, _linen),
-            BoxPart.footprint(Box2(b.minX, b.minZ, b.minX + 0.1, b.maxZ), 0.55, 1.1, _bedFrameWood),
+            // Upholstered headboard with five channel tufts.
+            BoxPart.footprint(Box2(b.minX, b.minZ, b.minX + 0.1, b.maxZ), 0.3, 1.35, _headboardVelvet),
+            for (var i = 0; i < 5; i++)
+              BoxPart.footprint(
+                  Box2(b.minX + 0.1, b.minZ + 0.04 + i * 0.424, b.minX + 0.13,
+                      b.minZ + 0.424 + i * 0.424),
+                  0.62, 1.3, _headboardVelvet),
+            // Two sleeping pillows, two decorative ones in front of them.
+            for (final (z0, z1) in [(b.minZ + 0.15, b.minZ + 1.05), (b.maxZ - 1.05, b.maxZ - 0.15)])
+              BoxPart.footprint(Box2(b.minX + 0.13, z0, b.minX + 0.45, z1), 0.55, 0.7, _linen),
+            for (final (z0, z1) in [(b.minZ + 0.35, b.minZ + 0.95), (b.maxZ - 0.95, b.maxZ - 0.35)])
+              BoxPart.footprint(Box2(b.minX + 0.45, z0, b.minX + 0.57, z1), 0.55, 0.92, _pillowJacquard),
+            // A throw across the foot.
+            BoxPart.footprint(Box2(b.maxX - 0.6, b.minZ, b.maxX, b.maxZ), 0.55, 0.575, _throwWool),
+          ]),
+      _furniture('bench', (b) => [
+            BoxPart.footprint(b, 0.36, 0.46, _benchLeather),
+            for (final (x, z) in [
+              (b.minX + 0.05, b.minZ + 0.05), (b.maxX - 0.05, b.minZ + 0.05),
+              (b.minX + 0.05, b.maxZ - 0.05), (b.maxX - 0.05, b.maxZ - 0.05),
+            ])
+              CylinderPart(Vector3(x, 0, z),
+                  bottomRadius: 0.018, topRadius: 0.018, height: 0.36, finish: _brass),
+          ]),
+      _furniture('coffee_table', (b) => [
+            BoxPart.footprint(b, 0.38, 0.42, _blackStone),
+            for (final (x, z) in [
+              (b.minX + 0.08, b.minZ + 0.08), (b.maxX - 0.08, b.minZ + 0.08),
+              (b.minX + 0.08, b.maxZ - 0.08), (b.maxX - 0.08, b.maxZ - 0.08),
+            ])
+              CylinderPart(Vector3(x, 0, z),
+                  bottomRadius: 0.02, topRadius: 0.02, height: 0.38, finish: _brass),
+            // Two coffee-table books and a brass bowl.
+            BoxPart(Vector3(-2.0, 0.42, 2.9), Vector3(-1.7, 0.45, 3.15), _canvas),
+            BoxPart(Vector3(-1.98, 0.45, 2.93), Vector3(-1.74, 0.475, 3.12), _artTeal),
+            CylinderPart(Vector3(-1.4, 0.42, 3.05),
+                bottomRadius: 0.08, topRadius: 0.12, height: 0.06, finish: _brass),
           ]),
       _furniture('sofa', (b) => [
             BoxPart.footprint(b, 0, 0.45, _sofaFabric),
@@ -413,6 +473,8 @@ List<RoomNode> _furnitureNodes() => [
       _furniture('shower', (b) => [BoxPart.footprint(b, 0, 0.05, _porcelain)]),
       RoomNode('bedside_table', parts: [
         BoxPart(Vector3(-7.95, 0, 5.45), Vector3(-7.45, 0.6, 5.93), _bedsideWood),
+        BoxPart(Vector3(-7.45, 0.33, 5.5), Vector3(-7.44, 0.55, 5.88), _bedsideWood), // drawer
+        BoxPart(Vector3(-7.44, 0.43, 5.66), Vector3(-7.425, 0.45, 5.72), _brass), // pull
       ]),
     ];
 
@@ -504,6 +566,139 @@ List<RoomNode> _fixtures() {
   ];
 }
 
+/// Skirting (walnut, 10 cm) and crown moulding (8 cm) along the bedroom's
+/// walls, each as [x0, z0, x1, z1] on a wall face with the room side given
+/// by its sign. Doorways are left out of the skirting.
+RoomNode _trim() {
+  const t = FloorPlan.wallT;
+  const s = 0.015, m = 0.04; // skirting and moulding depth
+  const top = FloorPlan.ceiling;
+  // (along X?, the face coordinate, room side (+1/−1), spans for skirting, span for moulding)
+  final walls = <(bool, double, double, List<(double, double)>, (double, double))>[
+    // Corridor wall (z = 0), bedroom part, around the entrance door.
+    (true, 0, 1, [(FloorPlan.bathX1, FloorPlan.entranceX0), (FloorPlan.entranceX1, -t / 2)],
+        (FloorPlan.bathX1, -t / 2)),
+    // Window wall (z = 6), either side of the window.
+    (true, FloorPlan.roomDepth, -1, [(-FloorPlan.roomWidth, windowX0), (windowX1, -t / 2)],
+        (-FloorPlan.roomWidth, -t / 2)),
+    // Bathroom wall, bedroom face (z = 2.66).
+    (true, FloorPlan.bathZ1 + 0.06, 1, [(-FloorPlan.roomWidth, FloorPlan.bathX1)],
+        (-FloorPlan.roomWidth, FloorPlan.bathX1)),
+    // Outer wall (x = −8), bedroom part.
+    (false, -FloorPlan.roomWidth, 1, [(FloorPlan.bathZ1 + 0.06, FloorPlan.roomDepth)],
+        (FloorPlan.bathZ1 + 0.06, FloorPlan.roomDepth)),
+    // Bathroom side wall, bedroom face (x = −5.2), around the bathroom door.
+    (false, FloorPlan.bathX1, 1, [(0, FloorPlan.bathDoorZ0), (FloorPlan.bathDoorZ1, FloorPlan.bathZ1 + 0.06)],
+        (0, FloorPlan.bathZ1 + 0.06)),
+    // Shared wall (x = −0.06), around the connecting door.
+    (false, -t / 2, -1, [(0, FloorPlan.doorZ0), (FloorPlan.doorZ1, FloorPlan.roomDepth)],
+        (0, FloorPlan.roomDepth)),
+  ];
+  BoxPart piece(bool alongX, double face, double side, double a, double b, double depth,
+      double y0, double y1, Finish f) {
+    final d0 = side > 0 ? face : face - depth, d1 = side > 0 ? face + depth : face;
+    return alongX
+        ? BoxPart(Vector3(a, y0, d0), Vector3(b, y1, d1), f)
+        : BoxPart(Vector3(d0, y0, a), Vector3(d1, y1, b), f);
+  }
+
+  return RoomNode('trim', parts: [
+    for (final (alongX, face, side, spans, (m0, m1)) in walls) ...[
+      for (final (a, b) in spans) piece(alongX, face, side, a, b, s, 0, 0.1, _vanityWood),
+      piece(alongX, face, side, m0, m1, m, top - 0.08, top, _ceilingPaint),
+    ],
+  ]);
+}
+
+/// A framed abstract canvas on a wall face at x = [face], its room side
+/// toward +X. [blocks] are (z0, y0, z1, y1, finish) colour fields.
+RoomNode _art(String name, double face, double z0, double y0, double z1, double y1,
+        List<(double, double, double, double, Finish)> blocks) =>
+    RoomNode(name, parts: [
+      BoxPart(Vector3(face, y0, z0), Vector3(face + 0.03, y1, z1), _brass), // frame
+      BoxPart(Vector3(face + 0.03, y0 + 0.05, z0 + 0.05), Vector3(face + 0.035, y1 - 0.05, z1 - 0.05),
+          _canvas),
+      for (final (bz0, by0, bz1, by1, f) in blocks)
+        BoxPart(Vector3(face + 0.035, by0, bz0), Vector3(face + 0.038, by1, bz1), f),
+    ]);
+
+List<RoomNode> _props() => [
+      RoomNode('rug_bed', parts: [
+        BoxPart(Vector3(-7.25, 0, 2.98), Vector3(-4.6, 0.012, 5.6), _rugTeddy),
+      ]),
+      RoomNode('rug_lounge', parts: [
+        BoxPart(Vector3(-2.9, 0, 2.35), Vector3(-0.55, 0.012, 4.75), _rugJute),
+      ]),
+      _art('art_bed', -FloorPlan.roomWidth, 3.5, 1.5, 5.1, 2.4, [
+        (3.7, 1.7, 4.2, 2.2, _artTerracotta),
+        (4.3, 1.69, 4.6, 2.0, _artMustard), // clear of the charcoal line
+        (4.4, 2.05, 4.95, 2.28, _artTeal),
+        (3.65, 1.64, 4.95, 1.66, _artCharcoal),
+      ]),
+      // On the shared wall, facing −X: room A's side of x = −0.06.
+      RoomNode('art_sofa', at: Vector3(-FloorPlan.wallT / 2, 0, 0), scale: Vector3(-1, 1, 1), children: [
+        _art('art_sofa_canvas', 0, 3.4, 1.3, 4.6, 2.1, [
+          (3.55, 1.45, 3.95, 1.95, _artTeal),
+          (4.05, 1.4, 4.45, 1.7, _artTerracotta),
+          (4.1, 1.78, 4.4, 1.98, _artMustard),
+        ]),
+      ]),
+      _trim(),
+      RoomNode('pendant', parts: [
+        CylinderPart(Vector3(-1.7, 2.3, 3.05),
+            bottomRadius: 0.006, topRadius: 0.006, height: FloorPlan.ceiling - 2.3, finish: _brass),
+        CylinderPart(Vector3(-1.7, 2.05, 3.05),
+            bottomRadius: 0.25, topRadius: 0.25, height: 0.25, finish: _brass),
+        CylinderPart(Vector3(-1.7, 2.04, 3.05),
+            bottomRadius: 0.23, topRadius: 0.23, height: 0.01, finish: _porcelain),
+      ]),
+      RoomNode('vase', parts: [
+        CylinderPart(Vector3(-3.25, 0.76, 0.32),
+            bottomRadius: 0.055, topRadius: 0.07, height: 0.2, finish: _porcelain),
+        for (final (dx, dz, h) in [(-0.02, 0.0, 0.3), (0.02, 0.015, 0.34), (0.0, -0.02, 0.27)])
+          CylinderPart(Vector3(-3.25 + dx, 0.9, 0.32 + dz),
+              bottomRadius: 0.004, topRadius: 0.004, height: h - 0.14, finish: _leafGreen),
+        for (final (dx, dz, y, f) in [
+          (-0.02, 0.0, 1.06, _bloomPink), (0.02, 0.015, 1.1, _bloomWhite),
+          (0.0, -0.02, 1.03, _bloomPink), (0.045, -0.03, 1.02, _bloomWhite),
+          (-0.05, 0.03, 1.0, _bloomWhite),
+        ])
+          CylinderPart(Vector3(-3.25 + dx, y, 0.32 + dz),
+              bottomRadius: 0.03, topRadius: 0.038, height: 0.04, finish: f),
+      ]),
+      RoomNode('orchid', parts: [
+        CylinderPart(Vector3(-7.8, 0.85, 0.85),
+            bottomRadius: 0.045, topRadius: 0.06, height: 0.1, finish: _porcelain),
+        CylinderPart(Vector3(-7.8, 0.95, 0.85),
+            bottomRadius: 0.004, topRadius: 0.004, height: 0.32, finish: _leafGreen),
+        // Flat blooms facing the room, arching along the stem.
+        for (final (dz, y) in [(0.0, 1.27), (0.03, 1.265), (0.06, 1.25), (0.085, 1.23)]) ...[
+          BoxPart(Vector3(-7.8, y - 0.025, 0.85 + dz - 0.025),
+              Vector3(-7.79, y + 0.025, 0.85 + dz + 0.025), _bloomWhite),
+          BoxPart(Vector3(-7.79, y - 0.008, 0.85 + dz - 0.008),
+              Vector3(-7.785, y + 0.008, 0.85 + dz + 0.008), _bloomPink),
+        ],
+      ]),
+      RoomNode('towels', parts: [
+        for (var i = 0; i < 3; i++)
+          BoxPart(Vector3(-7.92 + i * 0.01, 0.85 + i * 0.05, 0.04 + i * 0.005),
+              Vector3(-7.62 - i * 0.01, 0.9 + i * 0.05, 0.26 - i * 0.005), _linen),
+      ]),
+      // A brass border behind the mirror (x = −7.99), in front of the tiles.
+      RoomNode('mirror_frame', parts: [
+        BoxPart(Vector3(-7.998, 1.05, 0.05), Vector3(-7.994, 2.05, 1.05), _brass),
+      ]),
+      // Tiles on the bathroom's walls: behind the basin, and the shower's two.
+      RoomNode('bath_cladding', parts: [
+        BoxPart(Vector3(-FloorPlan.roomWidth, 0, 0), Vector3(-7.998, 2.4, FloorPlan.bathZ1),
+            _bathTilesWall),
+        BoxPart(Vector3(-FloorPlan.roomWidth, 0, 0), Vector3(FloorPlan.bathX1 - 0.06, 2.4, 0.002),
+            _bathTilesWall),
+        BoxPart(Vector3(FloorPlan.bathX1 - 0.062, 0, 0), Vector3(FloorPlan.bathX1 - 0.06, 2.4,
+            FloorPlan.bathDoorZ0), _bathTilesWall),
+      ]),
+    ];
+
 /// Every texture the parts under [spec] name (repeats included).
 Iterable<TextureRef> textureRefs(RoomNode spec) sync* {
   for (final p in spec.parts) {
@@ -526,6 +721,7 @@ RoomNode roomASpec() => RoomNode('room', children: [
       _walls(),
       ..._furnitureNodes(),
       ..._fixtures(),
+      ..._props(),
     ]);
 
 // ------------------------------------------------------------------ nodes
