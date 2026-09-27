@@ -7,16 +7,24 @@ import 'package:flutter_3d/home/shader_backdrop.dart';
 import 'package:flutter_3d/ui/booking_page.dart';
 
 /// Stands in for the shader backdrops: widget tests can't load shaders. It
-/// prints the look it was handed, so a test can see the drag reach it.
-Widget _plainBackdrop(HomeShader shader, ValueListenable<double> look) =>
+/// prints the look and the wave height it was handed, so a test can see a
+/// drag or a tap reach it.
+Widget _plainBackdrop(HomeShader shader, ValueListenable<SeaInput> sea) =>
     ColoredBox(
       key: Key('backdrop-${shader.name}'),
       color: Colors.blue,
-      child: ValueListenableBuilder<double>(
-        valueListenable: look,
-        builder: (_, yaw, _) => Text('${shader.name} look=${yaw.toStringAsFixed(2)}'),
+      child: ValueListenableBuilder<SeaInput>(
+        valueListenable: sea,
+        builder: (_, input, _) => Column(
+          children: [
+            Text('${shader.name} look=${input.look.toStringAsFixed(2)}'),
+            Text('${shader.name} height=${input.height.toStringAsFixed(2)}'),
+          ],
+        ),
       ),
     );
+
+const String _hint = 'Tap for bigger waves · drag to look around';
 
 Future<void> _pumpHome(WidgetTester tester, {VoidCallback? onTakeTour}) =>
     tester.pumpWidget(
@@ -24,6 +32,11 @@ Future<void> _pumpHome(WidgetTester tester, {VoidCallback? onTakeTour}) =>
         home: HomePage(onTakeTour: onTakeTour ?? () {}, backdrop: _plainBackdrop),
       ),
     );
+
+/// A spot on the sea clear of the title, the tour button and the hint pill.
+Offset _seaSpot(WidgetTester tester) =>
+    tester.getTopLeft(find.byKey(const Key('backdrop-sea'))) +
+    const Offset(20, 60);
 
 void main() {
   testWidgets('the hero shows the hotel name over the sea backdrop', (
@@ -34,18 +47,91 @@ void main() {
     expect(find.byKey(const Key('backdrop-sea')), findsOneWidget);
   });
 
-  testWidgets('dragging the hero sideways turns the sea and hides the hint', (
+  testWidgets('the hero starts on wave level 2 of 5, with the hint', (
     tester,
   ) async {
     await _pumpHome(tester);
-    expect(find.text('Drag to look around'), findsOneWidget);
+    expect(find.bySemanticsLabel('Waves 2 of 5'), findsOneWidget);
+    expect(find.text('sea height=0.30'), findsOneWidget);
+    expect(find.text(_hint), findsOneWidget);
+  });
+
+  testWidgets(
+    'each tap on the hero swells the sea a level, then wraps to calm',
+    (tester) async {
+      await _pumpHome(tester);
+      for (final (level, height) in [
+        (3, '0.50'),
+        (4, '0.75'),
+        (5, '1.00'),
+        (1, '0.10'),
+      ]) {
+        await tester.tapAt(_seaSpot(tester));
+        await tester.pumpAndSettle();
+        expect(find.bySemanticsLabel('Waves $level of 5'), findsOneWidget);
+        expect(find.text('sea height=$height'), findsOneWidget);
+      }
+      expect(find.text('sea look=0.00'), findsOneWidget);
+    },
+  );
+
+  testWidgets('the waves ease to their new height rather than jump', (
+    tester,
+  ) async {
+    await _pumpHome(tester);
+    await tester.tapAt(_seaSpot(tester));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('sea height=0.30'), findsNothing);
+    expect(find.text('sea height=0.50'), findsNothing);
+
+    await tester.pumpAndSettle();
+    expect(find.text('sea height=0.50'), findsOneWidget);
+  });
+
+  testWidgets('the swell waits while the Home tab is hidden', (tester) async {
+    Widget app({required bool ticking}) => MaterialApp(
+      home: TickerMode(
+        enabled: ticking,
+        child: HomePage(onTakeTour: () {}, backdrop: _plainBackdrop),
+      ),
+    );
+    await tester.pumpWidget(app(ticking: false));
+    await tester.tapAt(_seaSpot(tester));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('sea height=0.30'), findsOneWidget);
+
+    await tester.pumpWidget(app(ticking: true));
+    await tester.pumpAndSettle();
+    expect(find.text('sea height=0.50'), findsOneWidget);
+  });
+
+  testWidgets('tapping the hero hides the hint but keeps the wave meter', (
+    tester,
+  ) async {
+    await _pumpHome(tester);
+    await tester.tapAt(_seaSpot(tester));
+    await tester.pumpAndSettle();
+    expect(find.text(_hint), findsNothing);
+    expect(find.bySemanticsLabel('Waves 3 of 5'), findsOneWidget);
+  });
+
+  testWidgets('dragging the hero sideways turns the sea, keeps its waves and '
+      'hides the hint', (tester) async {
+    await _pumpHome(tester);
     expect(find.text('sea look=0.00'), findsOneWidget);
 
-    await tester.drag(find.byKey(const Key('backdrop-sea')), const Offset(-200, 0));
+    await tester.drag(
+      find.byKey(const Key('backdrop-sea')),
+      const Offset(-200, 0),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('sea look=0.00'), findsNothing);
-    expect(find.text('Drag to look around'), findsNothing);
+    expect(find.text('sea height=0.30'), findsOneWidget);
+    expect(find.bySemanticsLabel('Waves 2 of 5'), findsOneWidget);
+    expect(find.text(_hint), findsNothing);
   });
 
   testWidgets('dragging the hero up still scrolls the page, not the sea', (
@@ -54,18 +140,30 @@ void main() {
     await _pumpHome(tester);
     final heroTop = tester.getTopLeft(find.byKey(const Key('backdrop-sea'))).dy;
 
-    await tester.drag(find.byKey(const Key('backdrop-sea')), const Offset(0, -150));
+    await tester.drag(
+      find.byKey(const Key('backdrop-sea')),
+      const Offset(0, -150),
+    );
     await tester.pumpAndSettle();
 
-    expect(tester.getTopLeft(find.byKey(const Key('backdrop-sea'))).dy, lessThan(heroTop));
+    expect(
+      tester.getTopLeft(find.byKey(const Key('backdrop-sea'))).dy,
+      lessThan(heroTop),
+    );
     expect(find.text('sea look=0.00'), findsOneWidget);
+    expect(find.text('sea height=0.30'), findsOneWidget);
   });
 
-  testWidgets('Take the 3D tour calls back', (tester) async {
+  testWidgets('Take the 3D tour calls back and leaves the waves alone', (
+    tester,
+  ) async {
     var taps = 0;
     await _pumpHome(tester, onTakeTour: () => taps++);
     await tester.tap(find.text('Take the 3D tour'));
+    await tester.pumpAndSettle();
     expect(taps, 1);
+    expect(find.bySemanticsLabel('Waves 2 of 5'), findsOneWidget);
+    expect(find.text('sea height=0.30'), findsOneWidget);
   });
 
   testWidgets('room prices come from the booking constants', (tester) async {

@@ -11,6 +11,15 @@ void main() {
     expect(HomeShader.sky.asset, 'shaders/sky.glsl');
   });
 
+  test('the sea has five wave heights, calm to rough, under the camera', () {
+    expect(kSeaLevels, hasLength(5));
+    for (var i = 1; i < kSeaLevels.length; i++) {
+      expect(kSeaLevels[i], greaterThan(kSeaLevels[i - 1]));
+    }
+    // The camera sits at y = 3.5 and crests reach about 2.54 x SEA_HEIGHT.
+    expect(kSeaLevels.last, lessThanOrEqualTo(1.0));
+  });
+
   test('the shaded image covers the box at the render scale', () {
     expect(shadedPixels(const Size(400, 300), 1.5), (600, 450));
     expect(shadedPixels(const Size(100.2, 50.1), 1.5), (151, 76));

@@ -8,18 +8,24 @@ import 'shader_backdrop.dart';
 /// The hotel's name everywhere in the app.
 const String kHotelName = 'Seaside Family Hotel';
 
-/// Builds a backdrop. [look] is the sea's extra heading in radians, from
-/// dragging the hero; the banner's sky gets a still one.
-typedef BackdropBuilder =
-    Widget Function(HomeShader shader, ValueListenable<double> look);
+/// Builds a backdrop. [sea] is the sea's heading and wave height, from
+/// dragging and tapping the hero; the banner's sky gets a still one.
+typedef BackdropBuilder = Widget Function(
+  HomeShader shader,
+  ValueListenable<SeaInput> sea,
+);
 
 /// The real backdrops; tests pass plain boxes instead.
-Widget shaderBackdrop(HomeShader shader, ValueListenable<double> look) =>
-    ShaderBackdrop(shader: shader, look: look);
+Widget shaderBackdrop(HomeShader shader, ValueListenable<SeaInput> sea) =>
+    ShaderBackdrop(shader: shader, sea: sea);
 
 /// Radians the sea turns per logical pixel dragged: a full-width swipe on a
 /// phone turns it about 90 degrees.
 const double _lookPerPixel = 0.004;
+
+/// The hero opens on the second of [kSeaLevels], the sea's look before taps
+/// could change it.
+const int _startLevel = 1;
 
 class _Room {
   const _Room(this.option, this.title, this.blurb, this.nightlyThb);
@@ -130,7 +136,7 @@ class HomePage extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          backdrop(HomeShader.sky, const AlwaysStoppedAnimation(0)),
+          backdrop(HomeShader.sky, kStillSea),
           Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -158,7 +164,8 @@ class HomePage extends StatelessWidget {
 }
 
 /// The sea over a third of the screen, with the hotel's name. Dragging it
-/// sideways turns the camera, which is what shows it's live and not a video.
+/// sideways turns the camera and tapping it swells the waves, which is what
+/// shows it's live and not a video.
 class _Hero extends StatefulWidget {
   const _Hero({required this.backdrop, required this.onTakeTour});
 
@@ -169,20 +176,55 @@ class _Hero extends StatefulWidget {
   State<_Hero> createState() => _HeroState();
 }
 
-class _HeroState extends State<_Hero> {
-  final ValueNotifier<double> _look = ValueNotifier(0);
-  bool _dragged = false;
+class _HeroState extends State<_Hero> with SingleTickerProviderStateMixin {
+  int _level = _startLevel;
+  final ValueNotifier<SeaInput> _sea = ValueNotifier((
+    look: 0.0,
+    height: kSeaLevels[_startLevel],
+  ));
+  final Tween<double> _height = Tween(
+    begin: kSeaLevels[_startLevel],
+    end: kSeaLevels[_startLevel],
+  );
+  // From the mixin, so the swell pauses while the Home tab is hidden.
+  late final AnimationController _swell = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 600),
+  )..addListener(_swellStep);
+  bool _touched = false;
 
   @override
   void dispose() {
-    _look.dispose();
+    _swell.dispose();
+    _sea.dispose();
     super.dispose();
+  }
+
+  void _swellStep() {
+    final t = Curves.easeInOut.transform(_swell.value);
+    _sea.value = (look: _sea.value.look, height: _height.transform(t));
+  }
+
+  // Ease from wherever the waves are, so a quick second tap doesn't jump.
+  void _nextLevel() {
+    setState(() {
+      _level = (_level + 1) % kSeaLevels.length;
+      _touched = true;
+    });
+    _height
+      ..begin = _sea.value.height
+      ..end = kSeaLevels[_level];
+    _swell.forward(from: 0);
   }
 
   // Sideways only, so a vertical drag on the hero still scrolls the page.
   void _drag(DragUpdateDetails d) {
-    _look.value -= d.delta.dx * _lookPerPixel;
-    if (!_dragged) setState(() => _dragged = true);
+    final sea = _sea.value;
+    _sea.value = (
+      look: sea.look - d.delta.dx * _lookPerPixel,
+      height: sea.height,
+    );
+    if (!_touched) setState(() => _touched = true);
   }
 
   @override
@@ -190,13 +232,14 @@ class _HeroState extends State<_Hero> {
     final theme = Theme.of(context);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
+      onTap: _nextLevel,
       onHorizontalDragUpdate: _drag,
       child: SizedBox(
         height: MediaQuery.sizeOf(context).height / 3,
         child: Stack(
           fit: StackFit.expand,
           children: [
-            widget.backdrop(HomeShader.sea, _look),
+            widget.backdrop(HomeShader.sea, _sea),
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -208,10 +251,11 @@ class _HeroState extends State<_Hero> {
             ),
             Positioned(
               top: MediaQuery.paddingOf(context).top + 12,
+              left: 16,
               right: 16,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: _dragged ? const SizedBox.shrink() : const _DragHint(),
+              child: Align(
+                alignment: Alignment.topRight,
+                child: _WavePill(level: _level, hint: !_touched),
               ),
             ),
             Positioned(
@@ -245,25 +289,75 @@ class _HeroState extends State<_Hero> {
   }
 }
 
-class _DragHint extends StatelessWidget {
-  const _DragHint();
+/// The hero's top-right pill: a wave meter that stays, and until the first
+/// tap or drag, a hint at what the hero does.
+class _WavePill extends StatelessWidget {
+  const _WavePill({required this.level, required this.hint});
+
+  /// Index into [kSeaLevels].
+  final int level;
+  final bool hint;
 
   @override
-  Widget build(BuildContext context) => const DecoratedBox(
-    decoration: BoxDecoration(
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: const BoxDecoration(
       color: Colors.black38,
       borderRadius: BorderRadius.all(Radius.circular(16)),
     ),
     child: Padding(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.swipe, size: 18, color: Colors.white),
-          SizedBox(width: 6),
-          Text('Drag to look around', style: TextStyle(color: Colors.white)),
+          const Icon(Icons.waves, size: 16, color: Colors.white),
+          const SizedBox(width: 6),
+          _WaveMeter(level: level),
+          // Flexible, so on a narrow phone the hint wraps instead of overflowing.
+          Flexible(
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              child: hint
+                  ? const Padding(
+                      padding: EdgeInsets.only(left: 8),
+                      child: Text(
+                        'Tap for bigger waves · drag to look around',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ),
         ],
       ),
+    ),
+  );
+}
+
+/// Five bars rising like the waves: the current level and those below it lit.
+class _WaveMeter extends StatelessWidget {
+  const _WaveMeter({required this.level});
+
+  final int level;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    label: 'Waves ${level + 1} of ${kSeaLevels.length}',
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        for (var i = 0; i < kSeaLevels.length; i++)
+          Container(
+            width: 3,
+            height: 6 + 2.0 * i,
+            margin: EdgeInsets.only(left: i == 0 ? 0 : 2),
+            decoration: BoxDecoration(
+              color: i <= level ? Colors.white : Colors.white30,
+              borderRadius: const BorderRadius.all(Radius.circular(1.5)),
+            ),
+          ),
+      ],
     ),
   );
 }

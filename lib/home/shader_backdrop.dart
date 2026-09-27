@@ -21,9 +21,21 @@ enum HomeShader {
   final List<Color> fallback;
 }
 
-/// The sea's wave height (the shader's `SEA_HEIGHT`). flutter_module used
-/// about 0.1 for a calm sea; the original Shadertoy uses 0.6.
-const double kSeaHeight = 0.3;
+/// The sea's wave heights (the shader's `SEA_HEIGHT`), calmest to roughest;
+/// tapping the hero steps through them. flutter_module used about 0.1 for a
+/// calm sea, the original Shadertoy 0.6. Crests reach about 2.54 times this
+/// and the camera sits at 3.5, so above 1.0 it would sink under the waves.
+const List<double> kSeaLevels = [0.1, 0.3, 0.5, 0.75, 1.0];
+
+/// What the sea's shader takes from the hero: `look` is an extra heading for
+/// its camera in radians, `height` its wave height. The sky ignores both.
+typedef SeaInput = ({double look, double height});
+
+/// A sea nothing drives: facing ahead, at the second of [kSeaLevels].
+const AlwaysStoppedAnimation<SeaInput> kStillSea = AlwaysStoppedAnimation((
+  look: 0.0,
+  height: 0.3,
+));
 
 /// Pixels shaded per logical pixel, at most. The sea is soft, so shading it at
 /// half a 3x phone's resolution and stretching the image looks the same for a
@@ -45,14 +57,13 @@ class ShaderBackdrop extends StatefulWidget {
   const ShaderBackdrop({
     super.key,
     required this.shader,
-    this.look = const AlwaysStoppedAnimation(0),
+    this.sea = kStillSea,
     this.loader = ui.FragmentProgram.fromAsset,
   });
 
   final HomeShader shader;
 
-  /// Extra heading for the sea's camera, in radians. The sky ignores it.
-  final ValueListenable<double> look;
+  final ValueListenable<SeaInput> sea;
   final ProgramLoader loader;
 
   static const Key fallbackKey = Key('shader-backdrop-fallback');
@@ -115,7 +126,7 @@ class _ShaderBackdropState extends State<ShaderBackdrop>
           shader,
           widget.shader,
           _seconds,
-          widget.look,
+          widget.sea,
           math.min(kShadeScale, MediaQuery.devicePixelRatioOf(context)),
         ),
         size: Size.infinite,
@@ -125,13 +136,13 @@ class _ShaderBackdropState extends State<ShaderBackdrop>
 }
 
 class _ShaderPainter extends CustomPainter {
-  _ShaderPainter(this.shader, this.kind, this.seconds, this.look, this.scale)
-    : super(repaint: Listenable.merge([seconds, look]));
+  _ShaderPainter(this.shader, this.kind, this.seconds, this.sea, this.scale)
+    : super(repaint: Listenable.merge([seconds, sea]));
 
   final ui.FragmentShader shader;
   final HomeShader kind;
   final ValueNotifier<double> seconds;
-  final ValueListenable<double> look;
+  final ValueListenable<SeaInput> sea;
   final double scale;
 
   @override
@@ -147,8 +158,8 @@ class _ShaderPainter extends CustomPainter {
       ..setFloat(2, seconds.value);
     if (kind == HomeShader.sea) {
       shader
-        ..setFloat(3, kSeaHeight)
-        ..setFloat(4, look.value);
+        ..setFloat(3, sea.value.height)
+        ..setFloat(4, sea.value.look);
     }
     // The cost is per shaded pixel: shade a smaller image, then stretch it.
     final recorder = ui.PictureRecorder();
@@ -167,5 +178,5 @@ class _ShaderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ShaderPainter old) =>
-      old.shader != shader || old.look != look || old.scale != scale;
+      old.shader != shader || old.sea != sea || old.scale != scale;
 }
