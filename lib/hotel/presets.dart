@@ -2,7 +2,7 @@ import 'feature_registry.dart';
 
 enum Preset { low, medium, high, ultra }
 
-const _low = {'sky', 'ocean', 'tone_mapping', 'portal_culling', 'instancing'};
+const _low = {'sky', 'ocean', 'tone_mapping', 'portal_culling', 'occlusion', 'instancing'};
 const _medium = {..._low, 'fog', 'shadows', 'lamps', 'water_fx'};
 const _high = {..._medium, 'bloom', 'ao', 'msaa', 'rain', 'lightning'};
 const _ultra = {..._high, 'god_rays', 'ssr', 'rain_glass', 'mirror', 'sea_reflection'};

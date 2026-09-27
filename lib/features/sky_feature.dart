@@ -6,6 +6,7 @@ import 'package:vector_math/vector_math.dart';
 import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
 import '../math/schedulers.dart';
+import 'reflection_features.dart' show kSeaReflectedLayer;
 
 /// Bangkok-ish. Only sets [kTunedSunHeight]: the sun itself takes the
 /// stylised path of [sunDirectionAt].
@@ -233,7 +234,8 @@ class SkyFeature extends HotelFeature {
     Node disc(String name, UnlitMaterial m) {
       final n = Node(name: name, mesh: Mesh(DiscGeometry(radius: 1, segments: 48), m))
         ..castsShadows = false
-        ..raycastable = false;
+        ..raycastable = false
+        ..layers = kRenderLayerDefault | kSeaReflectedLayer;
       ctx.scene.add(n);
       _discs.add(n);
       return n;

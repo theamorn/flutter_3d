@@ -24,17 +24,15 @@ int _trianglesOf(Geometry g) {
 }
 
 /// Visible mesh nodes under [root] and their triangle count. Hidden subtrees
-/// are skipped.
+/// and hidden primitives (occlusion culling) are skipped.
 SceneCounts countScene(Node root) {
   var meshes = 0, triangles = 0;
   void walk(Node n) {
     if (!n.visible) return;
-    final mesh = n.mesh;
-    if (mesh != null) {
-      meshes++;
-      for (final p in mesh.primitives) {
-        triangles += _trianglesOf(p.geometry);
-      }
+    final shown = n.mesh?.primitives.where((p) => p.visible) ?? const <MeshPrimitive>[];
+    if (shown.isNotEmpty) meshes++;
+    for (final p in shown) {
+      triangles += _trianglesOf(p.geometry);
     }
     for (final c in n.children) {
       walk(c);

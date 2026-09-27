@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter_scene/scene.dart';
 import 'debug_tour.dart';
 import 'feature_catalog.dart';
 import 'feature_registry.dart';
 import 'hotel_context.dart';
+import 'perf_probe.dart';
 
 class HotelScene {
   HotelScene() {
@@ -20,6 +22,7 @@ class HotelScene {
     ctx.applyLook();
     await registry.mountDefaults();
     await maybeStartDebugTour(this);
+    unawaited(maybeRunPerfProbe(this));
   }
 
   void tick(double dt) => registry.tick(dt);

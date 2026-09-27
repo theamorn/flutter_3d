@@ -32,6 +32,21 @@ class TourStop {
   final Offset lookDelta;
 }
 
+/// Poses the player and sets the time, weather and door for [stop].
+void applyTourStop(HotelContext ctx, TourStop stop) {
+  ctx.playerXZ = stop.xz.clone();
+  ctx.playerYaw = stop.yaw;
+  ctx.timeOfDay.value = stop.timeOfDay;
+  ctx.rainRequested.value = stop.rain;
+  ctx.weather = stop.rain ? 1.0 : 0.0;
+  ctx.doorOpen.value = stop.doorOpen;
+
+  if (stop.lookDelta != Offset.zero) {
+    PlayerFeature.pendingLook = stop.lookDelta;
+  }
+  aimCamera(ctx.camera, FpState(stop.xz, stop.yaw, stop.pitch));
+}
+
 /// Matches preset name case-insensitively, or returns null.
 Preset? parsePreset(String name) {
   if (name.isEmpty) return null;
@@ -122,19 +137,7 @@ class DebugTour {
   void applyStop(int index) {
     _currentIndex = index % stops.length;
     final stop = stops[_currentIndex];
-
-    ctx.playerXZ = stop.xz.clone();
-    ctx.playerYaw = stop.yaw;
-    ctx.timeOfDay.value = stop.timeOfDay;
-    ctx.rainRequested.value = stop.rain;
-    ctx.weather = stop.rain ? 1.0 : 0.0;
-    ctx.doorOpen.value = stop.doorOpen;
-
-    if (stop.lookDelta != Offset.zero) {
-      PlayerFeature.pendingLook = stop.lookDelta;
-    }
-    aimCamera(ctx.camera, FpState(stop.xz, stop.yaw, stop.pitch));
-
+    applyTourStop(ctx, stop);
     debugPrint('hotel tour: ${stop.name}');
   }
 

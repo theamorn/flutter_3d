@@ -4,6 +4,7 @@ import 'package:vector_math/vector_math.dart';
 import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
 import '../math/floor_plan.dart';
+import 'reflection_features.dart' show kSeaReflectedLayer;
 
 /// The sea surface, 90 m below the room floor (30th floor).
 const double kSeaLevel = -90;
@@ -70,7 +71,8 @@ class OceanFeature extends HotelFeature {
           water),
     );
     final horizon = [
-      for (final (i, b) in kSeaHorizon.indexed) _box('sea_horizon_$i', b, water),
+      for (final (i, b) in kSeaHorizon.indexed)
+        _box('sea_horizon_$i', b, water)..layers = kRenderLayerDefault | kSeaReflectedLayer,
     ];
     final sand = _pbr(0.76, 0.66, 0.48, 0.9);
     final beach = _box(

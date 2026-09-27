@@ -6,6 +6,7 @@ import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
 import '../math/schedulers.dart';
 import 'ocean_feature.dart' show kSeaLevel;
+import 'reflection_features.dart' show kSeaReflectedLayer;
 import 'sky_feature.dart' show kDayExposure, kNightExposure;
 
 /// Debug hold: freeze the envelope at its peak for 2 s so a screenshot can
@@ -159,7 +160,8 @@ class LightningFeature extends HotelFeature {
       mesh: Mesh(geometry, material),
     )
       ..castsShadows = false
-      ..visible = false;
+      ..visible = false
+      ..layers = kRenderLayerDefault | kSeaReflectedLayer;
     ctx.scene.add(bolt);
 
     // A separate, shadowless flash light aimed down and toward the room

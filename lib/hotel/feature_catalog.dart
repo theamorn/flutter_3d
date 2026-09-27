@@ -18,8 +18,11 @@ import '../features/screens_feature.dart';
 import '../features/books_feature.dart';
 import '../features/instancing_feature.dart';
 import '../features/entrance_feature.dart';
+import '../features/occlusion_feature.dart';
 
-/// Mount order matters: rooms first (others look nodes up by name).
+/// Mount order matters: rooms first (others look nodes up by name), and
+/// occlusion last (it ticks after everything that moves the camera or a
+/// node).
 List<HotelFeature> buildCatalog() => [
       RoomsFeature(), PlayerFeature(), InteractionsFeature(),
       SkyFeature(), OceanFeature(),
@@ -30,4 +33,5 @@ List<HotelFeature> buildCatalog() => [
       WaterFxFeature(), RainFeature(), RainGlassFeature(), LightningFeature(),
       MirrorFeature(), SeaReflectionFeature(),
       ScreensFeature(), BooksFeature(), InstancingFeature(), EntranceFeature(),
+      OcclusionFeature(),
     ];

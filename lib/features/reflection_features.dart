@@ -23,6 +23,13 @@ const int kSeaLayer = 1 << 2;
 /// The sea capture's layer mask: everything but the sea itself.
 const int kSeaCaptureMask = 0xFFFFFFFF & ~(1 << 2);
 
+/// What can show in the sea's reflection (the horizon walls, the sun and
+/// moon, lightning): the eye never leaves the rooms, the sea starts 40 m
+/// out, so every reflected ray leaves the water heading further out and
+/// only things beyond it can appear. Occlusion culling narrows the sea
+/// capture to this layer.
+const int kSeaReflectedLayer = 1 << 4;
+
 /// The reflector for one bathroom mirror. The `mirror` quad faces local +X;
 /// room B's copy sits under a scale.x = -1 parent, and the engine takes the
 /// normal through the inverse transpose, so it faces -X there with no help.
