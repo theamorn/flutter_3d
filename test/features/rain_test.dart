@@ -1,5 +1,24 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_3d/features/rain_feature.dart';
+import 'package:flutter_3d/hotel/feature.dart';
+import 'package:flutter_3d/hotel/feature_registry.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+/// Stands in for the GPU-owning RainFeature in the registry.
+class _Rain extends HotelFeature {
+  @override
+  String get id => 'rain';
+  @override
+  String get label => id;
+  @override
+  CostTier get tier => CostTier.expensive;
+  @override
+  bool get defaultOn => false;
+  @override
+  Future<void> mount(Object? ctx) async {}
+  @override
+  void unmount(Object? ctx) {}
+}
 
 void main() {
   test('rain begins outside the window and moves down at 11 m/s', () {
@@ -38,5 +57,20 @@ void main() {
       expect(s.posZ[i] + splashEmitterZ, inInclusiveRange(6.12, 7.8));
       expect(s.posY[i], greaterThanOrEqualTo(0));
     }
+  });
+
+  test('the rain button switches the rain feature on, and off only fades it', () async {
+    final registry = FeatureRegistry([_Rain()], mountContext: null);
+    final requested = ValueNotifier(false);
+    await registry.mountDefaults();
+    expect(registry.isEnabled('rain'), false); // off in the Effects menu
+
+    await requestRain(registry, requested, true);
+    expect(requested.value, true);
+    expect(registry.isEnabled('rain'), true); // someone now consumes it
+
+    await requestRain(registry, requested, false);
+    expect(requested.value, false);
+    expect(registry.isEnabled('rain'), true); // stays mounted to fade out
   });
 }

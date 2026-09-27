@@ -3,6 +3,7 @@ import 'package:flutter_scene/scene.dart';
 import '../features/entrance_feature.dart';
 import '../features/interactions_feature.dart';
 import '../features/player_feature.dart';
+import '../features/rain_feature.dart';
 import '../features/screens_feature.dart';
 import '../hotel/hotel_scene.dart';
 import 'effects_sheet.dart';
@@ -101,7 +102,7 @@ class _HotelPageState extends State<HotelPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       visualDensity: VisualDensity.compact,
                     ),
-                    onPressed: () => hotel.ctx.rainRequested.value = !on,
+                    onPressed: () => requestRain(hotel.registry, hotel.ctx.rainRequested, !on),
                     child: Text(
                       on ? 'Rain: ON' : 'Rain: OFF',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),

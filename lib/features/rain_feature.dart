@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
 import '../hotel/feature.dart';
+import '../hotel/feature_registry.dart';
 import '../hotel/hotel_context.dart';
 import '../math/floor_plan.dart';
 import '../math/schedulers.dart';
@@ -76,6 +78,14 @@ ParticleSystem createSplashSystem() => ParticleSystem(
     );
 
 double _lerp(double a, double b, double t) => a + (b - a) * t;
+
+/// The HUD's rain button. Rain is off by default in the Effects menu and is
+/// the only consumer of [rainRequested], so asking for rain switches it on.
+/// Stopping leaves it mounted so the weather fades out instead of cutting.
+Future<void> requestRain(FeatureRegistry registry, ValueNotifier<bool> rainRequested, bool on) {
+  rainRequested.value = on;
+  return on && !registry.isEnabled('rain') ? registry.setEnabled('rain', true) : Future.value();
+}
 
 /// Rain outside the rooms, and the weather level it drives. Owns
 /// `ctx.weather` (smoothed from `ctx.rainRequested`) and, while raining,
