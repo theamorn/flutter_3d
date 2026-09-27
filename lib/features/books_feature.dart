@@ -199,6 +199,8 @@ class BooksFeature extends HotelFeature {
   int _leftRequest = 0, _rightRequest = 0;
 
   bool get isBookOpen => _openBookRoot != null;
+  @visibleForTesting
+  Node? get openBookRoot => _openBookRoot;
   int get currentPokemonIndex => _currentIndex;
   ValueNotifier<PokemonResult?> get leftResultNotifier => _leftResult;
   ValueNotifier<PokemonResult?> get rightResultNotifier => _rightResult;
@@ -259,7 +261,10 @@ class BooksFeature extends HotelFeature {
       name: 'open_book_root',
       localTransform: Matrix4.translation(bookPos),
     );
-    root.lookAt(eye, up: ctx.camera.up);
+    // +Z along the view, as the camera looks: a WidgetComponent's quad shows
+    // to a camera looking down its +Z, and +X is then the reader's right.
+    // Nearer the reader is −Z.
+    root.lookAt(bookPos + fwd, up: ctx.camera.up);
     try {
       ctx.scene.root.add(root);
     } catch (_) {
@@ -267,7 +272,12 @@ class BooksFeature extends HotelFeature {
     }
     _openBookRoot = root;
 
-    // Cover box behind pages
+    // Cover box behind pages (its near face at +1 mm)
+    final coverNode = Node(
+      name: 'book_cover',
+      localTransform: Matrix4.translation(Vector3(0, 0, 0.005)),
+    );
+    root.add(coverNode);
     try {
       final coverData = buildCoverBoxMeshData(
         width: kPageWidth * 2 + 0.02,
@@ -278,31 +288,30 @@ class BooksFeature extends HotelFeature {
         ..baseColorFactor = Vector4(0.23, 0.12, 0.12, 1.0)
         ..roughnessFactor = 0.7
         ..metallicFactor = 0.0;
-      final coverNode = Node(
-        name: 'book_cover',
-        localTransform: Matrix4.translation(Vector3(0, 0, -0.005)),
-      );
       coverNode.mesh = Mesh(MeshGeometry.fromMeshData(coverData), coverMat);
-      root.add(coverNode);
     } catch (_) {
       // Without GPU runtime in unit test.
     }
 
-    // Left page node
-    final leftNode = Node(
-      name: 'book_left_page',
-      localTransform: Matrix4.translation(Vector3(-kPageWidth / 2, 0, 0.001)),
-    );
+    // Page nodes, mirrored in x: WidgetComponent's own quad (0.23) is only
+    // front-facing from the side where its u runs right to left. The engine
+    // flips winding under a negative scale, so the mirrored quad stays
+    // visible to the reader and its text reads left to right.
+    Matrix4 page(double x) =>
+        Matrix4.translationValues(x, 0, -0.001)..scaleByVector3(Vector3(-1, 1, 1));
+    final leftNode = Node(name: 'book_left_page', localTransform: page(-kPageWidth / 2));
     root.add(leftNode);
-
-    // Right page node
-    final rightNode = Node(
-      name: 'book_right_page',
-      localTransform: Matrix4.translation(Vector3(kPageWidth / 2, 0, 0.001)),
-    );
+    final rightNode = Node(name: 'book_right_page', localTransform: page(kPageWidth / 2));
     root.add(rightNode);
 
-    // Curling page node
+    // Curling page node, over the right page. page_curl.fmat lifts the page
+    // along its mesh's +Z normal; mirroring z points that at the reader.
+    final curlNode = Node(
+      name: 'book_curling_page',
+      localTransform: Matrix4.translationValues(0, 0, -0.002)..scaleByVector3(Vector3(1, 1, -1)),
+    )..visible = false;
+    root.add(curlNode);
+    _curlingNode = curlNode;
     try {
       final curlData = buildCurlingPageMeshData(
         width: kPageWidth,
@@ -310,14 +319,7 @@ class BooksFeature extends HotelFeature {
         segments: 24,
       );
       final curlMat = _curlMaterial ?? UnlitMaterial();
-      final curlNode = Node(
-        name: 'book_curling_page',
-        localTransform: Matrix4.translation(Vector3(0, 0, 0.002)),
-      );
       curlNode.mesh = Mesh(MeshGeometry.fromMeshData(curlData), curlMat);
-      curlNode.visible = false;
-      root.add(curlNode);
-      _curlingNode = curlNode;
     } catch (_) {
       // Without GPU runtime in unit test.
     }

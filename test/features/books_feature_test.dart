@@ -279,5 +279,47 @@ void main() {
       expect(feature.currentPokemonIndex, 2);
       feature.closeBook(ctx);
     });
+
+    test('the open book faces the reader: pages in front of the cover, left page on the left', () {
+      final bookNode = Node(name: 'book_0');
+      final ctx = _FakeContext(shelfNodes: {'book_0': [bookNode]});
+      final feature = BooksFeature(client: _ScriptedClient());
+
+      feature.openBook(ctx, 0, bookNode);
+      final root = feature.openBookRoot!;
+      Node part(String name) => root.children.firstWhere((c) => c.name == name);
+      Vector3 axisZ(Node n) {
+        final m = n.globalTransform.storage;
+        return Vector3(m[8], m[9], m[10])..normalize();
+      }
+
+      final eye = ctx.camera.position;
+      final fwd = ctx.camera.forward.normalized();
+      final right = ctx.camera.up.cross(fwd)..normalize();
+      double depth(String name) => (part(name).globalTransform.getTranslation() - eye).dot(fwd);
+
+      // A WidgetComponent's quad shows to a camera looking down its node's +Z
+      // and maps u = 0 to its local +X (flutter_scene 0.23), so +X must point
+      // to the reader's left for the page to read left to right.
+      Vector3 axisX(Node n) {
+        final m = n.globalTransform.storage;
+        return Vector3(m[0], m[1], m[2])..normalize();
+      }
+
+      for (final page in ['book_left_page', 'book_right_page']) {
+        expect(axisZ(part(page)).dot(fwd), closeTo(1, 1e-6));
+        expect(axisX(part(page)).dot(right), closeTo(-1, 1e-6));
+      }
+      // In front of the cover's near face (the cover is 8 mm deep).
+      expect(depth('book_left_page'), lessThan(depth('book_cover') - 0.004));
+      expect(depth('book_right_page'), lessThan(depth('book_cover') - 0.004));
+      final leftToRight = part('book_right_page').globalTransform.getTranslation() -
+          part('book_left_page').globalTransform.getTranslation();
+      expect(leftToRight.dot(right), greaterThan(0));
+      // page_curl.fmat lifts the page along its mesh's +Z normal: toward the reader.
+      expect(depth('book_curling_page'), lessThan(depth('book_right_page')));
+      expect(axisZ(part('book_curling_page')).dot(fwd), lessThan(-0.99));
+      feature.closeBook(ctx);
+    });
   });
 }

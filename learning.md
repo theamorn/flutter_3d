@@ -194,3 +194,9 @@ Read it before starting a task; add to it before committing one. Format:
 - **Why it matters:** Inverted normals on translucent PBR materials cause false 100% Fresnel reflection, blinding the view through windows and railings.
 - **Do:** Orient glass quad normals toward the camera's viewpoint, and tune balustrade glass alpha to `0.02 - 0.03`.
 - **Talk?** yes — "inverted glass normals clamp n_dot_v to 0 in PBR, causing 100% grazing Fresnel reflection and making thin glass look like an opaque wall".
+
+## WidgetComponent's own quad is seen from its node's −Z side, mirrored (Task 25, 2026-09-27)
+- **Found:** `WidgetComponent(...)` without a `geometry:` builds a quad whose doc says "facing +Z" and whose u = 0 sits at local +X, but in 0.23 it is back-face culled for a camera on the node's +Z side. It only draws for a camera looking *down* the node's +Z, where its u runs right to left, so text reads mirrored. `Node.lookAt(eye)` (+Z at the viewer, the natural "face the reader" call) makes the pages vanish; a probe with the same transform rotated 180° about Y appeared at once.
+- **Why it matters:** the open Pokédex book showed only its cover, with no error and every capture still counting up. Flipping the node alone fixes visibility but leaves the page mirrored and the left page on the reader's right.
+- **Do:** point the surface node's +Z *along* the view (`lookAt(pos + cameraForward)`), then mirror it in x (`scaleByVector3(Vector3(-1, 1, 1))`). The encoder flips winding on the negative determinant, so it stays visible and reads left to right. Or pass your own `geometry:`. Check the text on screen, not just `captureCount`.
+- **Talk?** yes — "it's rendering" (captures tick) versus "it's visible" (culled): the probe-quad bisection took three screenshots.
