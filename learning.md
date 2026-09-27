@@ -252,3 +252,49 @@ Read it before starting a task; add to it before committing one. Format:
 - **Found:** the eye never leaves the rooms (z ≤ 7.8), the sea starts at z = 40, so every reflected ray leaves the water heading further out to sea. The rooms, facade, beach, props and rain can never appear in the sea's reflection, yet its capture rendered all of them every frame.
 - **Do:** tag what can appear (horizon walls, sun and moon discs, lightning bolt) with `kSeaReflectedLayer` and narrow the capture's `layerMask` to that layer (the occlusion feature does it, and restores `kSeaCaptureMask` when switched off). Screenshots with and without it are identical.
 - **Talk?** yes. The cheapest draw call is the one a bit of geometry proves invisible.
+
+## Spot shadows share the sun's atlas, and it has a width limit (Task 10, 2026-09-27)
+- **Found:** a shadowed `SpotLight` takes a tile at the sun's shadow resolution (2048) in the same atlas as the sun's cascades. Two cascades plus four shadowed reading lights made the atlas 12288 px wide, past the 8192 texture limit. `Texture creation failed` on every paint, and the view through the open door into room B went black.
+- **Why it matters:** it looks like a room-B rendering bug, and it only shows at the one pose where all four spots are in range.
+- **Do:** budget shadowed spots against `(8192 / sunResolution) − cascades` tiles. The spot-lights feature shadows only the camera room's two lights; the other room's are behind a wall.
+- **Talk?** yes. "Four lamps turned the neighbouring room black."
+
+## A reflection probe in the frame-wide cross-fade overrides every material, the sea included (Task 11, 2026-09-27)
+- **Found:** the engine picks one probe by camera position and binds its radiance, SH and blend factor for every draw, whatever a material's own `environment` says. From inside the bedroom, the sea reflected the bedroom, with a hard edge and a dark band below the horizon.
+- **Why it matters:** the spec's fix (pin outdoor materials to the sky) can't hold while the camera is inside a probe box.
+- **Do:** keep probes out of the cross-fade (`weight: 0`) and bind each room surface's material to its own cell's capture (`probeBoxFor(cellOf(bounds centre))`). Outdoor surfaces keep the sky.
+- **Talk?** yes
+
+## A probe capture renders the room lit by the previous capture (Task 13, 2026-09-27)
+- **Found:** `_captureEnvironmentAt` renders the scene normally, so surfaces bound to the last capture light the new one: one extra bounce per capture. Measured at a fixed pose after noon → 21:00: the first re-capture moved the image by a mean of 5.2 (luminance 151 → 148), the next two by about 1.4 each. Separately, portal culling hid the far room during captures, until it learned to honour the occlusion hold (the capture queue now takes the hold a frame early).
+- **Why it matters:** one capture after a big lighting change keeps a few percent of the old light; a culled room captures as empty.
+- **Do:** accept the few percent, or queue two passes if a change must be exact. Anything that hides geometry must honour `occlusionHolds`, or captures bake the hidden state.
+- **Talk?** no
+
+## A shadowed light behind the headboard lights nothing (Task 13, 2026-09-27)
+- **Found:** the reading lights hung 1.45 m up on the wall behind the bed, but the headboard stands 0.6 m off that wall and is 1.35 m tall. The light sat 4 cm below its top and 33 cm behind it, so the shadowed cone landed on the headboard's back. Only the shade's emissive glow changed (A/B mean 0.83). The spec's own 1.6 m and 25 cm arm fail the same way.
+- **Why it matters:** "the light is on" (the shade glows, the unit tests pass) is not "the light lights anything".
+- **Do:** give every shadowed light a pure test that its beam clears the nearest occluder onto its target (`reading_lights_test`: the beam axis passes ≥ 10 cm over the headboard and lands on the pillows). The fixtures now hang at 1.95 m on a 0.5 m arm.
+- **Talk?** yes. The A/B found in one screenshot what the unit tests couldn't.
+
+## Dynamic GI: a world-anchored lattice, dead margins and an injection blind spot (Task 13, 2026-09-27)
+- **Found:** (1) The irradiance grid's probes sit on a lattice through the world origin (`planIrradianceGrid`), so there are always probe planes at x = 0 (inside the shared wall), y = 0 (the floor) and z = 0 (the corridor wall). (2) The field fades to zero across its outermost cell (`boundaryFadeCells = 1`): surfaces on the grid's boundary planes get no GI. With the shipped grid that is the floor, the corridor wall and room B's bed wall. (3) Injection learns only from the rendered frame. Looking out of the bathroom at the far wall, probes near that wall never see what lights it, and the wall reads as a dark smudge. Neither visibility 0.5 nor a padded 15×6×9 grid with no plane inside a wall removed it. (4) Texels no sample reached fall back to the sky SH, so dark means dark samples, not missing ones.
+- **Why it matters:** GI "tuning" can't fix what the camera hasn't seen, and a grid sized to the rooms leaves their boundaries uncovered.
+- **Do:** pad the grid a cell beyond every surface you want covered, and keep planes out of thin walls, at the cost of probes (2.4× here). Keep dynamic GI to ultra and default off; bake it when the engine wires `bakeIrradianceField` into the receiver.
+- **Talk?** yes. "Lumen-lite only knows what you've looked at."
+
+## A/B screenshots of a debug build on the simulator (Task 13, 2026-09-27)
+- **Found:** a debug build runs the hotel at 4–8 fps on the simulator, and auto exposure, dynamic GI and probe re-captures converge in wall-clock seconds. Shot 1.2 s after the perf probe's hold, an A/B of cached static shadows (a pure performance switch) differed by up to 82 % of pixels; shot at 3.2 s, 0.00 %. Running `flutter analyze` and the test suite during a capture slowed the simulator enough that shots landed on the next pose. Profile mode isn't available on the simulator. Concurrent `fvm` commands serialize on `~/fvm/cache.git.lock`, so a background `fvm flutter run` stalls `fvm flutter test` until it starts.
+- **Why it matters:** convergence and timing noise read as a feature's effect or bug.
+- **Do:** `tool/ab_capture.sh` shoots late in the 4 s sample and prints `late shot:` if the probe has moved on. Keep the machine quiet during captures. Establish the noise floor with a no-visual switch (static shadows: dusk stops drift ~5 mean from exposure, the rain stop ~30 % from random lightning). Run tests with the version's own `flutter` binary while an `fvm flutter run` is up.
+- **Talk?** no
+
+## Height fog that matches the plain fog's column looks like the plain fog (Task 13, 2026-09-27)
+- **Found:** the spec's volumetric fog (0.012 at the sea, falloff 0.03) has about the same optical depth down to the sea (≈ 0.9 at 200 m) as the plain 0.004 fog it replaces. Switching it on changed the window view by a mean of 1.4 and the balcony by 0.3. The in-scatter glow and shafts barely register in these south-facing views, which matches the god-ray finding in Task 15.
+- **Why it matters:** "volumetric fog" that looks like the fog already there reads as a broken toggle.
+- **Do:** make height fog dense at its base and steep: 0.03 at the sea, falloff 0.05. The rooms now see about 1 % of the base density, and the sea mist doubles to quintuples in the A/B while the room stops don't change. Compare it against the fog it replaces, not against no fog.
+- **Talk?** no
+
+## Auto exposure, TAA and area lights under the A/B (Task 13, 2026-09-27)
+- **Found:** (1) Auto exposure normalizes: with dynamic GI already brightening the rooms it darkens them (desk luminance 137 → 96) while lifting the 22:00 TV view (53 → 89). "The room gets brighter" only holds for a dim room. (2) TAA averages thin fast particles away: the rain streaks come out fainter and fewer. It stays a manual pick. (3) Area lights read as specified only at the right pose and time. At the TV stop the camera frames the screen, and a rect light emits away from it, so its glow shows at 22:00 on the bed (mean 9.6), not at the TV. The window light brightens the far wall by day (mean 6.8) and is effectively nothing at night. Pick an A/B pose that looks at what the light lands on.
+- **Talk?** no
