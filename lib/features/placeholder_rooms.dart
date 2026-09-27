@@ -4,11 +4,12 @@ import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
 import '../math/colliders.dart';
 import '../math/floor_plan.dart';
+import 'bedding_mesh.dart';
 import 'room_textures.dart';
 
 /// Room A, authored as plain data (`roomASpec`, GPU-free and unit-tested)
 /// and turned into scene nodes by [buildRoomA]. Every mesh is built from
-/// boxes, quads and cylinders in room A space (x ∈ [−8, 0]). These
+/// boxes, quads, cylinders and cloth meshes in room A space (x ∈ [−8, 0]). These
 /// code-built rooms are final: no `.glb` import replaces them (Task 28 was
 /// dropped).
 
@@ -205,6 +206,27 @@ sealed class Part {
   const Part(this.finish);
   final Finish finish;
   Aabb3 get bounds;
+}
+
+/// Smooth procedural fabric, kept in the same material batches as other
+/// room parts. Bounds include every fold for picking and culling.
+class ClothPart extends Part {
+  ClothPart(this.data, super.finish) {
+    final ps = data.positions;
+    final min = Vector3(ps[0], ps[1], ps[2]), max = min.clone();
+    for (var i = 3; i < ps.length; i += 3) {
+      for (var axis = 0; axis < 3; axis++) {
+        min[axis] = math.min(min[axis], ps[i + axis]);
+        max[axis] = math.max(max[axis], ps[i + axis]);
+      }
+    }
+    _bounds = Aabb3.minMax(min, max);
+  }
+
+  final MeshData data;
+  late final Aabb3 _bounds;
+  @override
+  Aabb3 get bounds => Aabb3.copy(_bounds);
 }
 
 /// An axis-aligned box.
@@ -404,6 +426,12 @@ MeshData partsMeshData(List<Part> parts, {bool mirrored = false}) {
         a.face(p.center, p.normal, Vector3(0, 1, 0), p.width / 2, p.height / 2);
       case CylinderPart():
         a.cylinder(p);
+      case ClothPart():
+        final offset = a.vertexCount;
+        a.positions.addAll(p.data.positions);
+        a.normals.addAll(p.data.normals!);
+        a.uvs.addAll(p.data.texCoords!);
+        a.indices.addAll(p.data.indices!.map((i) => i + offset));
     }
   }
   if (mirrored) {
@@ -494,7 +522,9 @@ RoomNode _furniture(String name, List<Part> Function(Box2 b) parts) =>
 List<RoomNode> _furnitureNodes() => [
       _furniture('bed', (b) => [
             BoxPart.footprint(b, 0, 0.3, _bedFrameWood),
-            BoxPart.footprint(b, 0.3, 0.55, _linen),
+            BoxPart.footprint(
+                Box2(b.minX, b.minZ + .1, b.maxX - .1, b.maxZ - .1),
+                0.3, 0.55, _linen),
             // Upholstered headboard with five channel tufts.
             BoxPart.footprint(Box2(b.minX, b.minZ, b.minX + 0.1, b.maxZ), 0.3, 1.35, _headboardVelvet),
             for (var i = 0; i < 5; i++)
@@ -504,11 +534,28 @@ List<RoomNode> _furnitureNodes() => [
                   0.62, 1.3, _headboardVelvet),
             // Two sleeping pillows, two decorative ones in front of them.
             for (final (z0, z1) in [(b.minZ + 0.15, b.minZ + 1.05), (b.maxZ - 1.05, b.maxZ - 0.15)])
-              BoxPart.footprint(Box2(b.minX + 0.13, z0, b.minX + 0.45, z1), 0.55, 0.7, _linen),
+              ClothPart(pillowMesh(
+                  center: Vector3(b.minX + .38, .65, (z0 + z1) / 2),
+                  length: .47, width: z1 - z0, thickness: .2,
+                  textureSize: Vector2(_linenWeave.width, _linenWeave.height),
+                  phase: z0), _linen),
             for (final (z0, z1) in [(b.minZ + 0.35, b.minZ + 0.95), (b.maxZ - 0.95, b.maxZ - 0.35)])
-              BoxPart.footprint(Box2(b.minX + 0.45, z0, b.minX + 0.57, z1), 0.55, 0.92, _pillowJacquard),
-            // A throw across the foot.
-            BoxPart.footprint(Box2(b.maxX - 0.6, b.minZ, b.maxX, b.maxZ), 0.55, 0.575, _throwWool),
+              ClothPart(pillowMesh(
+                  center: Vector3(b.minX + .61, .76, (z0 + z1) / 2),
+                  length: .4, width: z1 - z0, thickness: .18,
+                  textureSize: Vector2(_jacquard.width, _jacquard.height),
+                  upright: true, phase: z0), _pillowJacquard),
+            // Linen duvet and wool throw roll over the inset mattress;
+            // their hems stay inside the existing bed collider footprint.
+            ClothPart(blanketMesh(
+                headX: b.minX + .65, footX: b.maxX - .1,
+                minZ: b.minZ + .1, maxZ: b.maxZ - .1, height: .595,
+                textureSize: Vector2(_linenWeave.width, _linenWeave.height)), _linen),
+            ClothPart(blanketMesh(
+                headX: b.maxX - .67, footX: b.maxX - .085,
+                minZ: b.minZ + .085, maxZ: b.maxZ - .085, height: .614,
+                hanging: .17, thickness: .012,
+                textureSize: Vector2(_woolWeave.width, _woolWeave.height)), _throwWool),
           ]),
       _furniture('bench', (b) => [
             BoxPart.footprint(b, 0.36, 0.46, _benchLeather),
