@@ -153,4 +153,24 @@ void main() {
       expect(faucetSplashLocalYOffset, closeTo(0.85 - 1.05, 1e-9));
     },
   );
+
+  test('on by default: the faucet and shower taps only exist while it is mounted', () {
+    expect(WaterFxFeature().defaultOn, true);
+  });
+
+  group('faucetLeverPose', () {
+    final tip = Vector3(0.12, 0, 0); // the lever points along its local +X
+
+    test('water off: the lever rests where the room builder put it', () {
+      final rest = Matrix4.translationValues(-0.2, 0.15, 0);
+      expect(faucetLeverPose(rest, on: false).transformed3(tip).y, closeTo(0.15, 1e-6));
+    });
+
+    test('water on: the lever tip lifts, the pivot stays put', () {
+      final rest = Matrix4.translationValues(-0.2, 0.15, 0);
+      final on = faucetLeverPose(rest, on: true);
+      expect(on.transformed3(tip).y, greaterThan(0.15 + 0.03));
+      expect(on.transformed3(Vector3.zero()).y, closeTo(0.15, 1e-6));
+    });
+  });
 }

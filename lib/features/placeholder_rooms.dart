@@ -385,10 +385,22 @@ List<RoomNode> _fixtures() {
         ]),
     _lamp('lamp_bedside', Vector3(-7.7, 0.6, 5.6), stem: 0.3, shadeY: 0.22, shadeR: 0.14),
     _lamp('lamp_floor', Vector3(-0.4, 0, 5.6), stem: 1.45, shadeY: 1.3, shadeR: 0.22),
-    // Water leaves each emitter's origin going −Y (Task 19).
+    // Water leaves each emitter's origin going −Y (Task 19): the nozzle's
+    // tip. A basin mixer on the basin top (local y = −0.2), with a lever
+    // that the water feature lifts while the water runs.
     RoomNode('faucet_spout', at: Vector3(-7.7, 1.05, 0.5), parts: [
-      BoxPart(Vector3(-0.22, -0.2, -0.02), Vector3(-0.18, 0.06, 0.02), _chrome),
-      BoxPart(Vector3(-0.18, 0.02, -0.02), Vector3(0.02, 0.06, 0.02), _chrome),
+      CylinderPart(Vector3(-0.2, -0.2, 0),
+          bottomRadius: 0.035, topRadius: 0.035, height: 0.02, finish: _chrome),
+      CylinderPart(Vector3(-0.2, -0.18, 0),
+          bottomRadius: 0.02, topRadius: 0.02, height: 0.36, finish: _chrome),
+      BoxPart(Vector3(-0.2, 0.14, -0.018), Vector3(0.02, 0.18, 0.018), _chrome),
+      BoxPart(Vector3(-0.015, 0, -0.018), Vector3(0.02, 0.14, 0.018), _chrome),
+    ], children: [
+      RoomNode('faucet_lever', at: Vector3(-0.2, 0.18, 0), parts: [
+        CylinderPart(Vector3.zero(),
+            bottomRadius: 0.022, topRadius: 0.022, height: 0.03, finish: _chrome),
+        BoxPart(Vector3(0, 0.01, -0.012), Vector3(0.12, 0.025, 0.012), _chrome),
+      ]),
     ]),
     RoomNode('shower_head', at: Vector3(-5.8, 2.1, 0.55), parts: [
       CylinderPart(Vector3.zero(), bottomRadius: 0.1, topRadius: 0.1, height: 0.03, finish: _chrome),

@@ -162,6 +162,19 @@ void main() {
     expect(only(room, 'mirror').$2.getRotation().isIdentity(), true);
   });
 
+  test('faucet: a mixer standing on the basin with a lever you can tap', () {
+    final basin = FloorPlan.furnitureA['basin']!;
+    final faucet = union(partsUnder(room, 'faucet_spout'));
+    expect(faucet.min.y, closeTo(0.85, tol), reason: 'stands on the basin top');
+    expect(footprintInside(faucet, basin), true);
+    // The lever is a child of the spout, so a tap on it finds the faucet's
+    // interaction (InteractionRegistry.forNode walks up the parents).
+    final lever = placedWithPath(room).where((e) => e.$1.name == 'faucet_lever').single;
+    expect(lever.$3, containsAllInOrder(['faucet_spout', 'faucet_lever']));
+    expect(union(partsUnder(room, 'faucet_lever')).max.x -
+        union(partsUnder(room, 'faucet_lever')).min.x, greaterThanOrEqualTo(0.1));
+  });
+
   test('entrance door fills the entrance span on the corridor wall', () {
     final u = union(partsUnder(room, 'door_entrance'));
     expect(u.min.x, closeTo(FloorPlan.entranceX0, tol));

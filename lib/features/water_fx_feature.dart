@@ -22,8 +22,10 @@ class WaterFxFeature extends HotelFeature {
   String get label => 'Faucet + shower particles';
   @override
   CostTier get tier => CostTier.mid;
-  @override
-  bool get defaultOn => false;
+
+  // On by default: the faucet and shower taps are registered here, so with
+  // this off they can't be tapped at all. It costs nothing until the water
+  // runs (every emitter is paused while off).
 
   final List<_Faucet> _faucets = [];
   final List<_Shower> _showers = [];
@@ -178,6 +180,14 @@ ParticleSystem buildSteamSystem({double rate = 0}) => ParticleSystem(
 
 // ------------------------------------------------------------- room glue
 
+/// How far the faucet lever tilts up while the water runs (≈ 26°).
+const double kLeverLift = 0.45;
+
+/// The lever's transform: [rest] (where the room builder put it) when off,
+/// tilted up about its pivot when [on]. The lever points along local +X.
+Matrix4 faucetLeverPose(Matrix4 rest, {required bool on}) =>
+    on ? rest.multiplied(Matrix4.rotationZ(kLeverLift)) : rest.clone();
+
 class _Faucet {
   _Faucet(this.node, Texture2D waterTexture) {
     stream = ParticleEmitterComponent(
@@ -210,6 +220,13 @@ class _Faucet {
     node.add(streamNode);
     node.add(splashNode);
 
+    for (final child in node.children) {
+      if (child.name == 'faucet_lever') {
+        lever = child;
+        leverRest = child.localTransform.clone();
+      }
+    }
+
     interaction = Interactable(
       node: node,
       label: 'Water on/off',
@@ -226,9 +243,13 @@ class _Faucet {
   late final ParticleEmitterComponent stream;
   late final ParticleEmitterComponent splash;
   late final Interactable interaction;
+  Node? lever;
+  Matrix4? leverRest;
   bool _on = false;
 
   void _apply() {
+    final rest = leverRest;
+    if (rest != null) lever?.localTransform = faucetLeverPose(rest, on: _on);
     stream.system.spawner.rate = _on ? 180 : 0;
     stream.paused = false;
     // The splash is a repeating burst; pausing freezes its system clock too,
@@ -246,6 +267,8 @@ class _Faucet {
   void dispose() {
     node.remove(streamNode);
     node.remove(splashNode);
+    final rest = leverRest;
+    if (rest != null) lever?.localTransform = rest;
   }
 }
 
