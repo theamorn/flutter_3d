@@ -82,7 +82,9 @@ no path edits.
 - In `scene_app.dart`, delete `IslandSceneApp`, the add-to-app `MaterialApp`
   wrapper with its route handling. The tab uses `IslandSceneScreen` directly.
   Its lifecycle observer stays: it also pauses the island when the app is
-  backgrounded.
+  backgrounded. The wrapper's dark, green-seeded theme is kept as
+  `kIslandTheme`, and the shell wraps the island tab in it, so the island's
+  overlay looks as it did in `flutter_module`.
 - **Assets.** Copy the 8 `.glb` models and `CREDITS.txt` to `assets/models/`,
   and the 7 `.fmat` materials to `assets/materials/`. The build hook already
   compiles everything under `assets/`. `assets/models/` needs no `pubspec`
@@ -97,19 +99,24 @@ no path edits.
 
 An ordinary scrolling page:
 
-- **Hero:** about a third of the screen tall, an animated sea under a cloud
-  sky. `shaders/water.glsl` (a ray-marched Shadertoy sea with its own sky) and
-  `shaders/sky.glsl` come from `flutter_module`, loaded with
-  `FragmentProgram.fromAsset` and registered under `flutter: shaders:`.
+- **Shaders:** `shaders/water.glsl` (a ray-marched Shadertoy sea that draws
+  its own sky and moving horizon) and `shaders/sky.glsl` (a cloud sky) come
+  from `flutter_module`. They are loaded with `FragmentProgram.fromAsset` and
+  registered under `flutter: shaders:`.
   - Uniforms, as in the module's `app_screen.dart`: sky takes `iResolution`
     and `iTime`; water takes `iResolution`, `iTime` and `SEA_HEIGHT`.
-  - Layout: sky across the whole hero, water over its lower half.
-  - Over it: the hotel name and a "Take the 3D tour" button.
-  - Until a shader loads, or if it fails, the hero shows a blue gradient.
-  - The animation stops while the tab is hidden, because its ticker sits under
-    the shell's `TickerMode`.
-  - The sea is heavy per pixel. Keeping the hero small is part of the talk's
-    point, not an accident.
+  - Both read `FlutterFragCoord().xy` (from
+    `#include <flutter/runtime_effect.glsl>`) instead of `gl_FragCoord.xy`.
+    That gives widget-local logical pixels, matching the logical
+    `iResolution` passed in. `gl_FragCoord` is in the whole target's
+    physical pixels.
+  - One `ShaderBackdrop` widget draws either shader. Until its shader loads,
+    or if loading fails, it shows a gradient. Its animation stops while the
+    tab is hidden, because its ticker sits under the shell's `TickerMode`.
+- **Hero:** about a third of the screen tall. The sea shader fills it on its
+  own, since it has its own sky; layering the cloud sky over it would leave a
+  seam. Over it: the hotel name and a "Take the 3D tour" button. The sea is
+  heavy per pixel, and keeping the hero small is part of the talk's point.
 - **Room cards:**
   - "Family Room" at `kFamilyRoomNightlyThb` per night.
   - "Family Suite (2 connected rooms)" at `kFamilySuiteConnectedNightlyThb` per
@@ -121,8 +128,10 @@ An ordinary scrolling page:
     tomorrow, 2 nights, 2 adults and 2 children, no preview image.
 - **Amenities:** only what the 3D hotel models: sea-view balcony, beach below,
   connecting rooms, walk-in shower, TV and sofa, bookshelf.
-- **Testability:** `HomePage` takes the hero widget as a parameter (default:
-  the shader hero), so widget tests don't load shaders.
+- **Book banner:** at the bottom of the page, a "Book your stay" banner over
+  the cloud-sky shader. It opens `BookingPage` on the Family Room.
+- **Testability:** `HomePage` takes a backdrop builder as a parameter
+  (default: the shader backdrop), so widget tests don't load shaders.
 
 ## Testing
 
@@ -135,12 +144,14 @@ An ordinary scrolling page:
   - a 3D tab isn't built before its first visit, and is kept after leaving it;
   - "Take the 3D tour" selects Home Demo;
   - Home shows both room prices via `formatThb` from the constants;
-  - Book pushes `BookingPage` with the right room.
+  - Book pushes `BookingPage` with the right room, and the banner pushes it on
+    the Family Room.
 - **Island:** the 11 copied tests pass here unchanged, apart from imports.
 - **Device (iPhone, profile):**
   - Open each tab. Switch Home Demo → Island Demo → Home Demo, and confirm the
-    hidden scene's frames stop (the island's `SCENE_FRAME_STATS` log goes
-    quiet while it is hidden).
+    hidden scene's frames stop. The island's `SCENE_FRAME_STATS` log measures
+    the whole app, so on Home, with the hero scrolled away, its UI and raster
+    times should fall to about 1–2 ms.
   - The island comes back without the red "multiple tickers" screen.
   - The Home hero animates.
   - Run the perf probe again (`HOTEL_PERF=true`) to prove it still opens on
