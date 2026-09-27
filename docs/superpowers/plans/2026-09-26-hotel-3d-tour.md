@@ -21,7 +21,7 @@ _Updated 2026-09-27. Step boxes below are ticked for finished tasks._
 | 16–26, 29 (Wave D): lamps, door, curtains, water, rain, glass, lightning, reflections, screens, books, instancing, booking | Done, merged to `main` | `6efd91a` … `97eac30` |
 | 27 Debug tour and screenshot capture (Wave E) | Done, merged to `main` | `f4854bf` |
 | 28 Real hotel `.glb` import (Wave E) | Blocked (awaiting real `.glb` asset) | — |
-| Waves D–E review (2026-09-27): rain button, book pages, stale PokéAPI replies, reader walk-off, swipe | Fixed on `hotel-tour/wave-de-review` | `53d6fd0` … `31a125b` |
+| Waves D–E review (2026-09-27): rain button, book pages, stale PokéAPI replies, reader walk-off, swipe, portrait spread | Done, merged to `main` | `53d6fd0` … `0529dfd` |
 
 Waves A–D are merged to `main`. The review's hand-offs to Wave D were written into Tasks 17, 20, 23 and 24 as **Wave C notes**. Where the code departs from this plan (sky exposure and moon, bloom threshold, window layout, and so on), the reason is recorded in `learning.md`, and each decision is logged in the local ledger `.superpowers/sdd/2026-09-26-hotel-3d-tour/progress.md`.
 
@@ -2245,7 +2245,7 @@ const kTvUrl = 'https://www.youtube.com/@GoogleDevelopers';       // TODO(user):
 const kPcUrl = 'https://www.facebook.com/GoogleDevelopersThailand'; // TODO(user): replace with the real page
 ```
 
-These two constants are the only placeholders in the plan, and they are user data, not code. Ask the user for the URLs before the task is marked done.
+These two constants are the only placeholders in the plan, and they are user data, not code. Ask the user for the URLs before the task is marked done. **Confirmed by the user on 2026-09-27: keep both URLs as written.**
 
 Design (engine rule 7): a WebView is a platform view and can't become a mesh texture in 0.23.0. So:
 
@@ -2291,7 +2291,7 @@ Run it, check it fails, implement it (the inverse of Task 5: project onto camera
   - `PokemonLoadFailure`: shows "Couldn't load — tap to retry" (the whole page is a `GestureDetector`; `onRetry` callback).
   - `PokemonLoaded`: shows `Image.network(artworkUrl)` (with `errorBuilder` to a Pokéball icon), `#025 Pikachu`, type chips, 6 stat bars (`LinearProgressIndicator(value: stat / 255)`) and height/weight, on a cream paper background, fixed at 512 × 700 logical px.
 - [x] **Step 2: Interaction.** Register each `book_N` node as "Read book". On tap:
-  - Hide the shelf book and spawn an open-book node 0.45 m in front of the camera, facing it. The open book is two quads (left and right page) on a thin cover box.
+  - Hide the shelf book and spawn an open-book node 0.45 m in front of the camera, facing it. The open book is two quads (left and right page) on a thin cover box. *(Review, 2026-09-27: at 0.45 m the 0.49 m spread overflows a portrait phone, so the book now moves back until the spread fits 95% of the view. The user chose this.)*
   - The left page is a `WidgetComponent(child: BookPage(result), size: Size(512, 700), pixelRatio: 2, update: WidgetUpdatePolicy.everyFrame while loading, then manual, input: WidgetInput.automatic)`.
   - The right page shows the next Pokémon in `kBookPokemon`, so the book is a Pokédex.
   - Swipe left or right on the look pad while a book is open to turn the page. A tap outside the book closes it.
