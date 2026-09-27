@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'ui/hotel_page.dart';
+import 'app/app_shell.dart';
 
 void main() => runApp(const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HotelPage(),
+      home: AppShell(),
     ));
