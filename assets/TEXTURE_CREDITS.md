@@ -28,3 +28,5 @@ Fabrics marked *neutral* were converted to grey so the room code can tint them p
 | `walnut_veneer.jpg` | [walnut_veneer](https://polyhaven.com/a/walnut_veneer) | 1800 × 1800 | Jenelle van Heerden |
 | `white_oak_veneer.jpg` | [white_oak_veneer](https://polyhaven.com/a/white_oak_veneer) | 500 × 500 | Jenelle van Heerden |
 | `white_stucco.jpg` | [white_stucco](https://polyhaven.com/a/white_stucco) | 1998 × 1998 | Amal Kumar |
+
+- Island Demo models (`assets/models/*.glb`): see `assets/models/CREDITS.txt`.
