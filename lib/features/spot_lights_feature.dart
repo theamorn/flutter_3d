@@ -1,7 +1,86 @@
+import 'dart:ui' show VoidCallback;
+import 'package:flutter_scene/scene.dart';
+import 'package:vector_math/vector_math.dart';
 import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
+import 'interaction_registry.dart';
 
-/// Reading spot lights. Task 10 builds it; until then it does nothing.
+/// Warm reading light: a tight cone onto the pillows.
+const double kReadingLightIntensity = 6, kReadingLightRange = 3;
+
+/// Cone half-angles in radians: about 17° full brightness, fading out by 34°.
+const double kReadingLightInner = 0.3, kReadingLightOuter = 0.6;
+
+/// Down and out from the wall toward the pillows, in the fixture's frame
+/// (room A's +X; room B's mirror flips it for free).
+Vector3 readingLightAim() => Vector3(0.55, -1, 0)..normalize();
+
+final Vector4 _shadeGlow = Vector4(3, 2.4, 1.7, 1);
+
+class _ReadingLight {
+  _ReadingLight(this.fixture, {required this.onSwitch}) {
+    for (final c in fixture.children) {
+      if (c.name != 'reading_light_shade') continue;
+      for (final p in c.mesh?.primitives ?? const <MeshPrimitive>[]) {
+        final m = p.material;
+        if (m is PhysicallyBasedMaterial) _shades[m] = m.emissiveFactor.clone();
+      }
+    }
+    lightNode.addComponent(SpotLightComponent(light));
+    fixture.add(lightNode);
+    interaction = Interactable(
+      node: fixture,
+      label: 'Reading light on/off',
+      onTap: () {
+        _on = !_on;
+        _apply();
+        onSwitch();
+      },
+    );
+    _apply();
+  }
+
+  final Node fixture;
+  final VoidCallback onSwitch;
+  final SpotLight light = SpotLight(
+    color: Vector3(1, .82, .6),
+    intensity: kReadingLightIntensity,
+    range: kReadingLightRange,
+    direction: readingLightAim(),
+    innerConeAngle: kReadingLightInner,
+    outerConeAngle: kReadingLightOuter,
+    castsShadow: true,
+  );
+
+  /// Just under the shade (Task 9 puts it at local (0.27, −0.13, 0)).
+  final Node lightNode = Node(
+    name: 'reading_light_source',
+    localTransform: Matrix4.translationValues(0.27, -0.14, 0),
+  )
+    ..castsShadows = false
+    ..raycastable = false;
+  final Map<PhysicallyBasedMaterial, Vector4> _shades = {};
+  late final Interactable interaction;
+  bool _on = true;
+
+  void _apply() {
+    light.intensity = _on ? kReadingLightIntensity : 0;
+    for (final e in _shades.entries) {
+      e.key.emissiveFactor = _on ? _shadeGlow.clone() : e.value.clone();
+    }
+  }
+
+  void dispose() {
+    fixture.remove(lightNode);
+    for (final e in _shades.entries) {
+      e.key.emissiveFactor = e.value;
+    }
+    _shades.clear();
+  }
+}
+
+/// Reading spot lights: a shadow-casting cone from each brass reading light
+/// over the beds, tappable on and off. Default-on because it owns the taps.
 class SpotLightsFeature extends HotelFeature {
   @override
   String get id => 'spot_lights';
@@ -9,8 +88,30 @@ class SpotLightsFeature extends HotelFeature {
   String get label => 'Reading spot lights (shadowed)';
   @override
   CostTier get tier => CostTier.mid;
+
+  final List<_ReadingLight> _lights = [];
+
   @override
-  Future<void> mount(HotelContext ctx) async {}
+  Future<void> mount(HotelContext ctx) async {
+    for (final fixture in [
+      ...ctx.nodesNamed('reading_light_left'),
+      ...ctx.nodesNamed('reading_light_right'),
+    ]) {
+      final l = _ReadingLight(fixture, onSwitch: () => ctx.lightingRevision.value++);
+      _lights.add(l);
+      ctx.interactions.register(l.interaction);
+    }
+    if (_lights.isNotEmpty) ctx.lightingRevision.value++;
+  }
+
   @override
-  void unmount(HotelContext ctx) {}
+  void unmount(HotelContext ctx) {
+    final hadLights = _lights.isNotEmpty;
+    for (final l in _lights) {
+      ctx.interactions.unregister(l.interaction);
+      l.dispose();
+    }
+    _lights.clear();
+    if (hadLights) ctx.lightingRevision.value++;
+  }
 }
