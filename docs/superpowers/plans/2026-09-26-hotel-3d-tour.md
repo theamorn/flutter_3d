@@ -12,7 +12,7 @@
 
 ## Progress
 
-_Updated 2026-09-26. Step boxes below are ticked for finished tasks._
+_Updated 2026-09-27. Step boxes below are ticked for finished tasks._
 
 | Task | Status | Commit |
 |---|---|---|
@@ -21,6 +21,7 @@ _Updated 2026-09-26. Step boxes below are ticked for finished tasks._
 | 16–26, 29 (Wave D): lamps, door, curtains, water, rain, glass, lightning, reflections, screens, books, instancing, booking | Done, merged to `main` | `6efd91a` … `97eac30` |
 | 27 Debug tour and screenshot capture (Wave E) | Done, merged to `main` | `f4854bf` |
 | 28 Real hotel `.glb` import (Wave E) | Blocked (awaiting real `.glb` asset) | — |
+| Waves D–E review (2026-09-27): rain button, book pages, stale PokéAPI replies, reader walk-off, swipe | Fixed on `hotel-tour/wave-de-review` | `53d6fd0` … `31a125b` |
 
 Waves A–D are merged to `main`. The review's hand-offs to Wave D were written into Tasks 17, 20, 23 and 24 as **Wave C notes**. Where the code departs from this plan (sky exposure and moon, bloom threshold, window layout, and so on), the reason is recorded in `learning.md`, and each decision is logged in the local ledger `.superpowers/sdd/2026-09-26-hotel-3d-tour/progress.md`.
 
@@ -316,7 +317,7 @@ Read it before starting a task; add to it before committing one. Format:
 - **Talk?** yes/no
 ```
 
-- [ ] **Step 4: Verify.**
+- [x] **Step 4: Verify.**
 
 ```bash
 fvm flutter pub get
@@ -326,7 +327,7 @@ fvm flutter analyze
 
 Expected: pub get succeeds, the skills are reported up to date, and analyze shows no errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
