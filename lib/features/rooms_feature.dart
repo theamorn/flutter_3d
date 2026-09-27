@@ -4,6 +4,7 @@ import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
 import '../math/floor_plan.dart';
 import 'placeholder_rooms.dart';
+import 'room_textures.dart';
 
 /// The two family rooms. Room B is Room A under a scale.x = −1 parent; the
 /// engine flips winding for the negative determinant (engine rule 6).
@@ -19,9 +20,10 @@ class RoomsFeature extends HotelFeature {
 
   @override
   Future<void> mount(HotelContext ctx) async {
-    final a = buildRoomA()..name = 'room_a';
+    final textures = await RoomTextures.load(textureRefs(roomASpec()));
+    final a = buildRoomA(textures: textures)..name = 'room_a';
     final b = Node(name: 'room_b', localTransform: Matrix4.diagonal3Values(-1, 1, 1))
-      ..add(buildRoomA(mirrored: true));
+      ..add(buildRoomA(mirrored: true, textures: textures));
     ctx.scene.add(a);
     ctx.scene.add(b);
     ctx.rooms[RoomId.a] = a;

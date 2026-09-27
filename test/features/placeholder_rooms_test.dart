@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter_scene/scene.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -212,6 +213,34 @@ void main() {
     }
   });
 
+  test('every texture the room names ships in assets/textures', () {
+    final refs = textureRefs(room).toList();
+    expect(refs, isNotEmpty);
+    for (final t in refs) {
+      expect(File(t.colorAsset).existsSync(), true, reason: t.colorAsset);
+      if (t.hasNormal) expect(File(t.normalAsset).existsSync(), true, reason: t.normalAsset);
+      expect(t.width, greaterThan(0));
+      expect(t.height, greaterThan(0));
+    }
+  });
+
+  test('objects get their own materials: the big surfaces are all textured', () {
+    Set<String?> texturesOf(String name) => {
+          for (final (n, _, path) in placedWithPath(room))
+            if (path.contains(name))
+              for (final p in n.parts) p.finish.texture?.id,
+        };
+    for (final name in ['floor', 'walls', 'bed', 'sofa', 'desk', 'bedside_table', 'tv_unit']) {
+      expect(texturesOf(name).whereType<String>(), isNotEmpty, reason: name);
+    }
+    // Variety: tables and cabinets don't all share one wood.
+    final woods = {
+      for (final name in ['desk', 'bedside_table', 'tv_unit', 'shelf', 'basin'])
+        texturesOf(name).whereType<String>().first,
+    };
+    expect(woods.length, greaterThanOrEqualTo(4));
+  });
+
   test('glass casts no shadow; every other mesh node does', () {
     for (final (n, _) in placed(room)) {
       if (n.parts.isEmpty) continue;
@@ -262,6 +291,49 @@ void main() {
       for (var i = 0; i < ps.length; i++) {
         expect((ps[i] - c).dot(ns[i]), greaterThan(0));
       }
+    });
+
+    group('textured finishes', () {
+      const tex = TextureRef('test', 0.5, 0.25);
+      const textured = Finish(1, 1, 1, texture: tex);
+      (double, double) span(List<double> uv, int axis) {
+        final xs = [for (var i = axis; i < uv.length; i += 2) uv[i]];
+        return (xs.reduce(math.min), xs.reduce(math.max));
+      }
+
+      test('a face repeats every texture-size metres: 2 m wide, 1 m tall', () {
+        final q = QuadPart(Vector3(-3, 1, 2), Vector3(0, 0, 1), 2, 1, textured);
+        final uv = partsMeshData([q]).texCoords!;
+        final (u0, u1) = span(uv, 0);
+        final (v0, v1) = span(uv, 1);
+        expect(u1 - u0, closeTo(2 / 0.5, 1e-4));
+        expect(v1 - v0, closeTo(1 / 0.25, 1e-4));
+      });
+
+      test('the same texture keeps its scale on a small part (no stretching)', () {
+        final big = BoxPart(Vector3(0, 0, 0), Vector3(2, 0.1, 2), textured);
+        final small = BoxPart(Vector3(0, 0, 0), Vector3(0.5, 0.1, 0.5), textured);
+        // Top faces (the last 4 vertices of a box's 6 faces are the bottom).
+        final (bu0, bu1) = span(partsMeshData([big]).texCoords!.sublist(32, 40), 0);
+        final (su0, su1) = span(partsMeshData([small]).texCoords!.sublist(32, 40), 0);
+        expect((bu1 - bu0) / (su1 - su0), closeTo(4, 1e-4));
+      });
+
+      test('a cylinder side wraps its circumference in metres', () {
+        final c = CylinderPart(Vector3.zero(),
+            bottomRadius: 0.1, topRadius: 0.1, height: 0.5, finish: textured);
+        final uv = partsMeshData([c]).texCoords!;
+        // Side vertices come first: 17 rings of 2.
+        final (u0, u1) = span(uv.sublist(0, 68), 0);
+        expect(u1 - u0, closeTo(2 * math.pi * 0.1 / 0.5, 1e-4));
+      });
+
+      test('untextured parts keep 0..1 UVs (screens, mirror, books)', () {
+        final tv = QuadPart(Vector3(-6.7, 1.3, 2.68), Vector3(0, 0, 1), 1.2, 0.675, f);
+        final uv = partsMeshData([tv]).texCoords!;
+        expect(span(uv, 0), (0.0, 1.0));
+        expect(span(uv, 1), (0.0, 1.0));
+      });
     });
 
     test('room B screens still read left-to-right: u runs to the viewer\'s right', () {

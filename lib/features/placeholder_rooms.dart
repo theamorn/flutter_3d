@@ -4,10 +4,13 @@ import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
 import '../math/colliders.dart';
 import '../math/floor_plan.dart';
+import 'room_textures.dart';
 
-/// Placeholder Room A, authored as plain data (`roomASpec`, GPU-free and
-/// unit-tested) and turned into scene nodes by [buildRoomA]. Every mesh is
-/// built from boxes, quads and cylinders in room A space (x ∈ [−8, 0]).
+/// Room A, authored as plain data (`roomASpec`, GPU-free and unit-tested)
+/// and turned into scene nodes by [buildRoomA]. Every mesh is built from
+/// boxes, quads and cylinders in room A space (x ∈ [−8, 0]). These
+/// code-built rooms are final: no `.glb` import replaces them (Task 28 was
+/// dropped).
 
 /// The window opening in the window wall (z = 6). Its middle 1.2 m is the
 /// open balcony doorway; glass fills the rest. Two 1.4 m curtains close it.
@@ -16,30 +19,67 @@ const double windowX0 = -4.4, windowX1 = -1.6;
 /// Top of the window opening and of the doors in the walls.
 const double _windowTop = 2.4, _doorTop = 2.1;
 
-/// Surface look of a part: linear RGB base colour plus PBR factors.
-class Finish {
-  const Finish(this.r, this.g, this.b,
-      {this.roughness = 0.8, this.metallic = 0, this.alpha = 1});
-  final double r, g, b, roughness, metallic, alpha;
+/// A photo texture in assets/textures (credits: assets/TEXTURE_CREDITS.md):
+/// `<id>.jpg`, plus the normal map `<id>_n.jpg` when [hasNormal]. It
+/// repeats every [width] × [height] metres, its real-world size.
+class TextureRef {
+  const TextureRef(this.id, this.width, this.height, {this.hasNormal = true});
+  final String id;
+  final double width, height;
+  final bool hasNormal;
+  String get colorAsset => 'assets/textures/$id.jpg';
+  String get normalAsset => 'assets/textures/${id}_n.jpg';
 }
 
-const _paint = Finish(0.80, 0.77, 0.70, roughness: 0.9);
+/// Surface look of a part: linear RGB base colour plus PBR factors. With a
+/// [texture], the colour tints it (the fabrics ship grey, so the tint is
+/// their colour) and the part's UVs run in metres.
+class Finish {
+  const Finish(this.r, this.g, this.b,
+      {this.roughness = 0.8, this.metallic = 0, this.alpha = 1, this.texture});
+  final double r, g, b, roughness, metallic, alpha;
+  final TextureRef? texture;
+}
+
+// Real-world sizes from Poly Haven, in metres.
+const _parquet = TextureRef('herringbone_parquet', 3.4, 3.4);
+const _stucco = TextureRef('white_stucco', 2.0, 2.0);
+const _bathTiles = TextureRef('interior_tiles', 1.9, 1.9);
+const _pavers = TextureRef('marble_01', 1.5, 1.5);
+const _linenWeave = TextureRef('rough_linen', 0.27, 0.27);
+const _caban = TextureRef('caban', 0.27, 0.27);
+const _satin = TextureRef('crepe_satin', 0.26, 0.27);
+const _hessian = TextureRef('hessian_230', 0.27, 0.27);
+const _americanWalnut = TextureRef('american_walnut_veneer', 1, 1, hasNormal: false);
+const _teak = TextureRef('teak_veneer', 1, 1, hasNormal: false);
+const _cherry = TextureRef('lacquered_cherry_wood', 1, 1, hasNormal: false);
+const _blackOak = TextureRef('black_oak_veneer', 1, 1, hasNormal: false);
+const _whiteOak = TextureRef('white_oak_veneer', 0.5, 0.5, hasNormal: false);
+const _walnut = TextureRef('walnut_veneer', 1.8, 1.8, hasNormal: false);
+const _blackWalnut = TextureRef('black_walnut_veneer_02', 1, 1, hasNormal: false);
+
+const _paint = Finish(0.95, 0.88, 0.78, roughness: 0.9, texture: _stucco);
 const _ceilingPaint = Finish(0.90, 0.90, 0.88, roughness: 0.95);
-const _wood = Finish(0.40, 0.26, 0.15, roughness: 0.6);
-const _tile = Finish(0.75, 0.75, 0.72, roughness: 0.35);
-const _balconyTile = Finish(0.55, 0.52, 0.48, roughness: 0.7);
-const _linen = Finish(0.92, 0.92, 0.90, roughness: 0.9);
-const _sofaFabric = Finish(0.30, 0.36, 0.42, roughness: 0.85);
-const _darkWood = Finish(0.18, 0.11, 0.07, roughness: 0.55);
-const _lightWood = Finish(0.55, 0.40, 0.26, roughness: 0.6);
+const _parquetFloor = Finish(1, 1, 1, roughness: 0.45, texture: _parquet);
+const _bathFloor = Finish(1, 1, 1, roughness: 0.25, texture: _bathTiles);
+const _balconyTile = Finish(1, 1, 1, roughness: 0.6, texture: _pavers);
+const _linen = Finish(1.0, 0.96, 0.9, roughness: 0.9, texture: _linenWeave);
+const _sofaFabric = Finish(0.62, 0.53, 0.43, roughness: 0.9, texture: _caban);
+const _bedFrameWood = Finish(0.85, 0.58, 0.40, roughness: 0.5, texture: _americanWalnut);
+const _deskWood = Finish(0.85, 0.72, 0.60, roughness: 0.45, texture: _teak);
+const _bedsideWood = Finish(1, 1, 1, roughness: 0.2, texture: _cherry);
+const _tvWood = Finish(0.45, 0.38, 0.33, roughness: 0.4, texture: _blackOak);
+const _shelfWood = Finish(1.0, 0.92, 0.82, roughness: 0.55, texture: _whiteOak);
+const _vanityWood = Finish(1, 1, 1, roughness: 0.45, texture: _walnut);
+const _doorWood = Finish(0.55, 0.42, 0.33, roughness: 0.4, texture: _blackWalnut);
 const _brass = Finish(0.90, 0.70, 0.35, roughness: 0.3, metallic: 1);
 const _chrome = Finish(0.80, 0.80, 0.82, roughness: 0.2, metallic: 1);
 const _blackPlastic = Finish(0.02, 0.02, 0.02, roughness: 0.4);
 const _screen = Finish(0, 0, 0, roughness: 0.15);
 const _mirror = Finish(0.95, 0.95, 0.95, roughness: 0.02, metallic: 1);
 const _porcelain = Finish(0.95, 0.95, 0.95, roughness: 0.2);
-const _shadeFabric = Finish(0.95, 0.88, 0.72, roughness: 0.9);
-const _curtainFabric = Finish(0.70, 0.62, 0.50, roughness: 0.95);
+const _shadeFabric = Finish(0.95, 0.88, 0.72, roughness: 0.9, texture: _hessian);
+const _curtainFabric = Finish(0.80, 0.70, 0.55, roughness: 0.35, texture: _satin);
 const _windowGlass = Finish(0.85, 0.92, 0.95, roughness: 0.03, alpha: 0.05);
 const _railingGlass = Finish(0.85, 0.95, 1.0, roughness: 0.02, alpha: 0.03);
 const _showerGlass = Finish(0.85, 0.92, 0.95, roughness: 0.05, alpha: 0.2);
@@ -137,6 +177,10 @@ class _Arrays {
   final indices = <int>[];
   int get vertexCount => positions.length ~/ 3;
 
+  /// The texture of the part being emitted: UVs then run in metres divided
+  /// by its size, so it tiles at real scale. Null: each face spans 0..1.
+  TextureRef? tile;
+
   void vertex(Vector3 p, Vector3 n, double u, double v) {
     positions.addAll([p.x, p.y, p.z]);
     normals.addAll([n.x, n.y, n.z]);
@@ -149,10 +193,20 @@ class _Arrays {
   /// with e1 × e2 along n: the engine's front face.
   void quad(Vector3 tl, Vector3 tr, Vector3 br, Vector3 bl, Vector3 n) {
     final base = vertexCount;
-    vertex(tl, n, 0, 0);
-    vertex(tr, n, 1, 0);
-    vertex(br, n, 1, 1);
-    vertex(bl, n, 0, 1);
+    final t = tile;
+    if (t == null) {
+      vertex(tl, n, 0, 0);
+      vertex(tr, n, 1, 0);
+      vertex(br, n, 1, 1);
+      vertex(bl, n, 0, 1);
+    } else {
+      // The face's own right and up, so u grows to the viewer's right and v
+      // downward, as on an untextured face.
+      final right = (tr - tl)..normalize(), up = (tl - bl)..normalize();
+      for (final p in [tl, tr, br, bl]) {
+        vertex(p, n, p.dot(right) / t.width, -p.dot(up) / t.height);
+      }
+    }
     indices.addAll([base, base + 1, base + 2, base, base + 2, base + 3]);
   }
 
@@ -179,14 +233,18 @@ class _Arrays {
     final rb = p.bottomRadius, rt = p.topRadius, h = p.height, b = p.base;
     Vector3 ring(double r, double y, double a) =>
         b + Vector3(r * math.sin(a), y, r * math.cos(a));
-    // Side: outward normal tilted by the taper.
+    // Side: outward normal tilted by the taper. Textured, u runs around the
+    // (mean) circumference and v down the height, both in metres.
+    final t = tile;
+    final uScale = t == null ? 1.0 : math.pi * (rb + rt) / t.width;
+    final vScale = t == null ? 1.0 : h / t.height;
     final base = vertexCount;
     for (var i = 0; i <= segments; i++) {
       final a = 2 * math.pi * i / segments;
       final n = Vector3(h * math.sin(a), rb - rt, h * math.cos(a)).normalized();
-      final u = i / segments;
+      final u = i / segments * uScale;
       vertex(ring(rt, h, a), n, u, 0);
-      vertex(ring(rb, 0, a), n, u, 1);
+      vertex(ring(rb, 0, a), n, u, vScale);
     }
     for (var i = 0; i < segments; i++) {
       final t0 = base + 2 * i, b0 = t0 + 1, t1 = t0 + 2, b1 = t0 + 3;
@@ -197,10 +255,13 @@ class _Arrays {
     void cap(double r, double y, Vector3 n) {
       if (r <= 0) return;
       final centre = vertexCount;
-      vertex(b + Vector3(0, y, 0), n, 0.5, 0.5);
+      // Untextured: the cap's disc fills 0..1. Textured: metres.
+      final su = t == null ? 0.5 : r / t.width, sv = t == null ? 0.5 : r / t.height;
+      final c = t == null ? 0.5 : 0.0;
+      vertex(b + Vector3(0, y, 0), n, c, c);
       for (var i = 0; i <= segments; i++) {
         final a = 2 * math.pi * i / segments;
-        vertex(ring(r, y, a), n, 0.5 + 0.5 * math.sin(a), 0.5 + 0.5 * math.cos(a));
+        vertex(ring(r, y, a), n, c + su * math.sin(a), c + sv * math.cos(a));
       }
       for (var i = 0; i < segments; i++) {
         final p0 = centre + 1 + i, p1 = p0 + 1;
@@ -218,10 +279,12 @@ class _Arrays {
 ///
 /// [mirrored]: the mesh will sit under a scale.x = −1 parent (room B). The
 /// engine flips the winding there, but not the UVs, so u is flipped here to
-/// keep textures (Task 24's screen poster) reading left to right.
+/// keep textures (Task 24's screen poster) reading left to right. For a
+/// repeating texture 1 − u tiles exactly like −u.
 MeshData partsMeshData(List<Part> parts, {bool mirrored = false}) {
   final a = _Arrays();
   for (final p in parts) {
+    a.tile = p.finish.texture;
     switch (p) {
       case BoxPart():
         a.box(p.min, p.max);
@@ -305,9 +368,9 @@ RoomNode _floor() {
   const edge = -FloorPlan.roomWidth - t;
   const bathZ = FloorPlan.bathZ1 + 0.06;
   return RoomNode('floor', parts: [
-    _wall(const Box2(edge, -t, FloorPlan.bathX1, bathZ), _tile, y0: -0.1, y1: 0),
-    _wall(const Box2(FloorPlan.bathX1, -t, 0, bathZ), _wood, y0: -0.1, y1: 0),
-    _wall(const Box2(edge, bathZ, 0, inside), _wood, y0: -0.1, y1: 0),
+    _wall(const Box2(edge, -t, FloorPlan.bathX1, bathZ), _bathFloor, y0: -0.1, y1: 0),
+    _wall(const Box2(FloorPlan.bathX1, -t, 0, bathZ), _parquetFloor, y0: -0.1, y1: 0),
+    _wall(const Box2(edge, bathZ, 0, inside), _parquetFloor, y0: -0.1, y1: 0),
     _wall(const Box2(edge, inside, 0, FloorPlan.roomDepth + FloorPlan.balconyDepth + t),
         _balconyTile, y0: -0.1, y1: 0),
   ]);
@@ -318,9 +381,9 @@ RoomNode _furniture(String name, List<Part> Function(Box2 b) parts) =>
 
 List<RoomNode> _furnitureNodes() => [
       _furniture('bed', (b) => [
-            BoxPart.footprint(b, 0, 0.3, _darkWood),
+            BoxPart.footprint(b, 0, 0.3, _bedFrameWood),
             BoxPart.footprint(b, 0.3, 0.55, _linen),
-            BoxPart.footprint(Box2(b.minX, b.minZ, b.minX + 0.1, b.maxZ), 0.55, 1.1, _darkWood),
+            BoxPart.footprint(Box2(b.minX, b.minZ, b.minX + 0.1, b.maxZ), 0.55, 1.1, _bedFrameWood),
           ]),
       _furniture('sofa', (b) => [
             BoxPart.footprint(b, 0, 0.45, _sofaFabric),
@@ -329,27 +392,27 @@ List<RoomNode> _furnitureNodes() => [
             BoxPart.footprint(Box2(b.maxX - 0.15, b.minZ, b.maxX, b.maxZ - 0.2), 0.45, 0.65, _sofaFabric),
           ]),
       _furniture('desk', (b) => [
-            BoxPart.footprint(b, 0.72, 0.76, _lightWood),
-            BoxPart.footprint(Box2(b.minX, b.minZ, b.minX + 0.05, b.maxZ), 0, 0.72, _lightWood),
-            BoxPart.footprint(Box2(b.maxX - 0.05, b.minZ, b.maxX, b.maxZ), 0, 0.72, _lightWood),
+            BoxPart.footprint(b, 0.72, 0.76, _deskWood),
+            BoxPart.footprint(Box2(b.minX, b.minZ, b.minX + 0.05, b.maxZ), 0, 0.72, _deskWood),
+            BoxPart.footprint(Box2(b.maxX - 0.05, b.minZ, b.maxX, b.maxZ), 0, 0.72, _deskWood),
             // Monitor behind pc_screen (−3.8, 1.05, 0.25): body, neck, foot.
             BoxPart(Vector3(-4.1, 0.86, 0.21), Vector3(-3.5, 1.24, 0.245), _blackPlastic),
             BoxPart(Vector3(-3.83, 0.76, 0.18), Vector3(-3.77, 0.86, 0.21), _blackPlastic),
             BoxPart(Vector3(-3.95, 0.76, 0.12), Vector3(-3.65, 0.775, 0.3), _blackPlastic),
           ]),
       _furniture('tv_unit', (b) => [
-            BoxPart.footprint(b, 0, 0.5, _darkWood),
+            BoxPart.footprint(b, 0, 0.5, _tvWood),
             // TV body on the bathroom wall, behind tv_screen (z = 2.68).
             BoxPart(Vector3(-7.33, 0.93, b.minZ), Vector3(-6.07, 1.67, 2.675), _blackPlastic),
           ]),
-      _furniture('shelf', (b) => [BoxPart.footprint(b, 0, 1.0, _lightWood)]),
+      _furniture('shelf', (b) => [BoxPart.footprint(b, 0, 1.0, _shelfWood)]),
       _furniture('basin', (b) => [
-            BoxPart.footprint(b, 0, 0.8, _darkWood),
+            BoxPart.footprint(b, 0, 0.8, _vanityWood),
             BoxPart.footprint(b, 0.8, 0.85, _porcelain),
           ]),
       _furniture('shower', (b) => [BoxPart.footprint(b, 0, 0.05, _porcelain)]),
       RoomNode('bedside_table', parts: [
-        BoxPart(Vector3(-7.95, 0, 5.45), Vector3(-7.45, 0.6, 5.93), _lightWood),
+        BoxPart(Vector3(-7.95, 0, 5.45), Vector3(-7.45, 0.6, 5.93), _bedsideWood),
       ]),
     ];
 
@@ -374,13 +437,13 @@ List<RoomNode> _fixtures() {
   return [
     RoomNode('door_connect', at: Vector3(0, 0, FloorPlan.doorZ0), parts: [
       BoxPart(Vector3(-0.025, 0, 0), Vector3(0.025, _doorTop, FloorPlan.doorZ1 - FloorPlan.doorZ0),
-          _darkWood),
+          _doorWood),
       BoxPart(Vector3(-0.07, 0.98, 0.72), Vector3(0.07, 1.02, 0.82), _brass),
     ]),
     RoomNode('door_entrance',
         at: Vector3((FloorPlan.entranceX0 + FloorPlan.entranceX1) / 2, 0, 0.03),
         parts: [
-          BoxPart(Vector3(-0.5, 0, -0.025), Vector3(0.5, _doorTop, 0.025), _darkWood),
+          BoxPart(Vector3(-0.5, 0, -0.025), Vector3(0.5, _doorTop, 0.025), _doorWood),
           BoxPart(Vector3(0.33, 0.98, 0.025), Vector3(0.43, 1.02, 0.06), _brass),
         ]),
     _lamp('lamp_bedside', Vector3(-7.7, 0.6, 5.6), stem: 0.3, shadeY: 0.22, shadeR: 0.14),
@@ -441,6 +504,17 @@ List<RoomNode> _fixtures() {
   ];
 }
 
+/// Every texture the parts under [spec] name (repeats included).
+Iterable<TextureRef> textureRefs(RoomNode spec) sync* {
+  for (final p in spec.parts) {
+    final t = p.finish.texture;
+    if (t != null) yield t;
+  }
+  for (final c in spec.children) {
+    yield* textureRefs(c);
+  }
+}
+
 /// Room A as data. Pure: safe to call in unit tests.
 RoomNode roomASpec() => RoomNode('room', children: [
       _floor(),
@@ -456,11 +530,16 @@ RoomNode roomASpec() => RoomNode('room', children: [
 
 // ------------------------------------------------------------------ nodes
 
-PhysicallyBasedMaterial _material(Finish f) {
+PhysicallyBasedMaterial _material(Finish f, RoomTextures? textures) {
   final m = PhysicallyBasedMaterial()
     ..baseColorFactor = Vector4(f.r, f.g, f.b, f.alpha)
     ..metallicFactor = f.metallic
     ..roughnessFactor = f.roughness;
+  final t = f.texture;
+  if (t != null && textures != null) {
+    m.baseColorTexture = textures.color(t);
+    m.normalTexture = textures.normal(t);
+  }
   if (f.alpha < 1) {
     m
       ..alphaMode = AlphaMode.blend
@@ -471,7 +550,7 @@ PhysicallyBasedMaterial _material(Finish f) {
 
 /// Builds [spec] into nodes: one primitive per finish, a fresh material per
 /// node (so features can restyle one node without touching another).
-Node _build(RoomNode spec, bool mirrored) {
+Node _build(RoomNode spec, bool mirrored, RoomTextures? textures) {
   final node = Node(name: spec.name, localTransform: spec.localTransform)
     ..castsShadows = spec.castsShadows;
   if (spec.parts.isNotEmpty) {
@@ -482,16 +561,19 @@ Node _build(RoomNode spec, bool mirrored) {
     node.mesh = Mesh.primitives(primitives: [
       for (final MapEntry(key: f, value: parts) in byFinish.entries)
         MeshPrimitive(
-            MeshGeometry.fromMeshData(partsMeshData(parts, mirrored: mirrored)), _material(f)),
+            MeshGeometry.fromMeshData(partsMeshData(parts, mirrored: mirrored)),
+            _material(f, textures)),
     ]);
   }
   for (final c in spec.children) {
-    node.add(_build(c, mirrored));
+    node.add(_build(c, mirrored, textures));
   }
   return node;
 }
 
 /// Room A's node tree (needs the GPU: call after
 /// `Scene.initializeStaticResources()`). Pass [mirrored] for the copy that
-/// becomes room B under a scale.x = −1 parent.
-Node buildRoomA({bool mirrored = false}) => _build(roomASpec(), mirrored);
+/// becomes room B under a scale.x = −1 parent, and the loaded [textures]
+/// (see [textureRefs]); without them every part shows its plain colour.
+Node buildRoomA({bool mirrored = false, RoomTextures? textures}) =>
+    _build(roomASpec(), mirrored, textures);
