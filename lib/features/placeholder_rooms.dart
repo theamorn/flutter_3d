@@ -136,6 +136,12 @@ const _walnut = TextureRef('walnut_veneer', 1.8, 1.8, hasNormal: false);
 const _blackWalnut = TextureRef('black_walnut_veneer_02', 1, 1, hasNormal: false);
 
 const _paint = Finish(0.95, 0.88, 0.78, roughness: 0.9, texture: _stucco, shading: Shading.matte);
+
+/// The reading lights' wall fixtures: high enough, and with an arm long
+/// enough, that the beam passes over the headboard (1.35 m tall, standing
+/// 0.6 m off the wall) onto the pillows. The shade stays clear of the bed.
+const double kReadingLightHeight = 1.95, kReadingLightArm = 0.5;
+
 const _ceilingPaint = Finish(0.90, 0.90, 0.88, roughness: 0.95, shading: Shading.matte);
 const _parquetFloor = Finish(1, 1, 1, roughness: 0.35, texture: _parquet, shading: Shading.glossy);
 const _bathFloor = Finish(1, 1, 1, roughness: 0.25, texture: _bathTiles, shading: Shading.glossy);
@@ -647,13 +653,13 @@ List<RoomNode> _fixtures() {
     _lamp('lamp_floor', Vector3(-0.4, 0, 5.6), stem: 1.45, shadeY: 1.3, shadeR: 0.22),
     // Reading lights over the bed (the spot-lights feature lights them): a
     // brass plate on the outer wall, an arm, and a cone shade over each side
-    // of the headboard, clear of the art above it (z 3.5..5.1, from 1.5 m).
+    // of the headboard, beside the art (z 3.5..5.1).
     for (final (name, z) in [('reading_light_left', 3.3), ('reading_light_right', 5.3)])
-      RoomNode(name, at: Vector3(-FloorPlan.roomWidth, 1.45, z), parts: [
+      RoomNode(name, at: Vector3(-FloorPlan.roomWidth, kReadingLightHeight, z), parts: [
         BoxPart(Vector3(0, -0.06, -0.04), Vector3(0.012, 0.03, 0.04), _brass), // wall plate
-        BoxPart(Vector3(0.012, -0.008, -0.008), Vector3(0.27, 0.008, 0.008), _brass), // arm
+        BoxPart(Vector3(0.012, -0.008, -0.008), Vector3(kReadingLightArm, 0.008, 0.008), _brass), // arm
       ], children: [
-        RoomNode('reading_light_shade', at: Vector3(0.27, -0.13, 0), parts: [
+        RoomNode('reading_light_shade', at: Vector3(kReadingLightArm, -0.13, 0), parts: [
           CylinderPart(Vector3.zero(),
               bottomRadius: 0.07, topRadius: 0.03, height: 0.12, finish: _shadeFabric),
         ]),

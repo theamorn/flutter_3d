@@ -5,6 +5,7 @@ import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
 import '../math/floor_plan.dart' show RoomId;
 import 'interaction_registry.dart';
+import 'placeholder_rooms.dart' show kReadingLightArm;
 
 /// Warm reading light: a tight cone onto the pillows.
 const double kReadingLightIntensity = 6, kReadingLightRange = 3;
@@ -14,7 +15,10 @@ const double kReadingLightInner = 0.3, kReadingLightOuter = 0.6;
 
 /// Down and out from the wall toward the pillows, in the fixture's frame
 /// (room A's +X; room B's mirror flips it for free).
-Vector3 readingLightAim() => Vector3(0.55, -1, 0)..normalize();
+Vector3 readingLightAim() => Vector3(0.7, -1, 0)..normalize();
+
+/// The light's position in the fixture's frame: just under the shade.
+final Vector3 kReadingLightSourceAt = Vector3(kReadingLightArm, -0.14, 0);
 
 final Vector4 _shadeGlow = Vector4(3, 2.4, 1.7, 1);
 
@@ -56,10 +60,9 @@ class _ReadingLight {
     castsShadow: true,
   );
 
-  /// Just under the shade (Task 9 puts it at local (0.27, −0.13, 0)).
   final Node lightNode = Node(
     name: 'reading_light_source',
-    localTransform: Matrix4.translationValues(0.27, -0.14, 0),
+    localTransform: Matrix4.translation(kReadingLightSourceAt),
   )
     ..castsShadows = false
     ..raycastable = false;
