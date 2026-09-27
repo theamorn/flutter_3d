@@ -13,9 +13,11 @@ const double kFogCutoffDistance = 895;
 const double kAutoExposureRangeEv = 1.5;
 
 /// Volumetric fog: exponential density at the sea (y = −90, ocean_feature's
-/// kSeaLevel), falling off with height so the rooms 90 m up see about 7 % of
-/// it (e^(−0.03 · 90) ≈ 0.067): mist over the sea, clear air on the balcony.
-const double kVolumetricFogDensity = 0.012, kVolumetricFogFalloff = 0.03;
+/// kSeaLevel), falling off with height so the rooms 90 m up see about 1 % of
+/// it (e^(−0.05 · 90) ≈ 0.011): mist over the sea, clear air on the balcony.
+/// Denser and steeper than a plain fog, so switching to it reads as mist
+/// settling on the sea rather than the same haze.
+const double kVolumetricFogDensity = 0.03, kVolumetricFogFalloff = 0.05;
 const double kVolumetricFogHeight = -90;
 
 /// The fog's glow toward the sun.
