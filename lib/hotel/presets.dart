@@ -8,9 +8,11 @@ const _medium = {
   'light_probes', 'auto_exposure', 'static_shadows', 'area_lights',
 };
 const _high = {..._medium, 'bloom', 'ao', 'rain', 'lightning', 'spot_lights'};
+// Dynamic GI is in no preset: it cost up to half of ultra's frame on the
+// iPhone 17 Pro Max (learning.md), so it stays a manual pick.
 const _ultra = {
   ..._high, 'god_rays', 'ssr', 'rain_glass', 'mirror', 'sea_reflection',
-  'dynamic_gi', 'volumetric_fog',
+  'volumetric_fog',
 };
 
 /// Each tier's one anti-aliasing mode (the `aa` exclusive group), or none.
@@ -22,6 +24,17 @@ const Map<Preset, String?> kPresetAa = {
   Preset.ultra: 'msaa',
 };
 
+/// Each tier's render scale (the `render_scale` exclusive group), or none for
+/// every screen pixel. The hotel is GPU-bound; on the iPhone 17 Pro Max, 85%
+/// cut ultra's frame time by 21–29% (learning.md). The 75% scale is a manual
+/// pick.
+const Map<Preset, String?> kPresetRenderScale = {
+  Preset.low: null,
+  Preset.medium: null,
+  Preset.high: null,
+  Preset.ultra: 'render_scale_85',
+};
+
 /// Toggleable feature ids that are ON for [p]. Each tier is a superset of the
 /// one below, apart from its anti-aliasing mode.
 Set<String> presetIds(Preset p) {
@@ -31,7 +44,7 @@ Set<String> presetIds(Preset p) {
     Preset.high => _high,
     Preset.ultra => _ultra,
   };
-  return {...base, ?kPresetAa[p]};
+  return {...base, ?kPresetAa[p], ?kPresetRenderScale[p]};
 }
 
 /// Enables the listed features and disables the other toggleables.

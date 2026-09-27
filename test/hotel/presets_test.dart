@@ -4,6 +4,7 @@ import 'package:flutter_3d/hotel/presets.dart';
 import 'package:flutter_3d/hotel/feature_catalog.dart';
 
 const aaModes = {'msaa', 'fxaa', 'smaa', 'taa'};
+const scaleIds = {'render_scale_85', 'render_scale_75'};
 
 void main() {
   test('each preset is a superset of the one below, outside the AA group', () {
@@ -29,9 +30,28 @@ void main() {
     }
   });
 
-  test('ultra enables every toggleable feature except the alternative AA modes', () {
+  test('ultra enables every toggleable feature except the alternative AA modes, '
+      'the 75% scale and dynamic GI', () {
     final toggleable = buildCatalog().where((f) => f.toggleable).map((f) => f.id).toSet();
-    expect(presetIds(Preset.ultra), toggleable.difference({'fxaa', 'smaa', 'taa'}));
+    expect(
+      presetIds(Preset.ultra),
+      toggleable.difference({'fxaa', 'smaa', 'taa', 'render_scale_75', 'dynamic_gi'}),
+    );
+  });
+
+  test('no preset turns on dynamic GI: it is a manual pick', () {
+    for (final p in Preset.values) {
+      expect(presetIds(p), isNot(contains('dynamic_gi')), reason: '$p');
+    }
+  });
+
+  test('each preset turns on at most one render scale, its own', () {
+    for (final p in Preset.values) {
+      final scales = presetIds(p).intersection(scaleIds);
+      final scale = kPresetRenderScale[p];
+      expect(scales, scale == null ? isEmpty : {scale}, reason: '$p');
+    }
+    expect(kPresetRenderScale[Preset.ultra], 'render_scale_85');
   });
 
   test('the anti-aliasing modes form one exclusive group', () {

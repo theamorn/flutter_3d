@@ -149,3 +149,49 @@ class TaaFeature extends AaFeature {
   @override
   CostTier get tier => CostTier.mid;
 }
+
+/// The render scales are one exclusive group too. With neither on, the scene
+/// draws every screen pixel. The hotel is GPU-bound (learning.md), so the
+/// share of pixels is ultra's biggest lever.
+const String kRenderScaleGroup = 'render_scale';
+
+/// The scale to leave behind when the feature that set [mine] unmounts: full
+/// resolution, unless the other scale has already taken over.
+double renderScaleAfterUnmount(double current, double mine) =>
+    current == mine ? 1.0 : current;
+
+/// Renders the scene at [scale] of the screen's resolution, then scales it up.
+abstract class RenderScaleFeature extends HotelFeature {
+  RenderScaleFeature(this.scale);
+  final double scale;
+
+  @override
+  bool get defaultOn => false;
+  @override
+  String? get exclusiveGroup => kRenderScaleGroup;
+  @override
+  CostTier get tier => CostTier.free;
+
+  @override
+  Future<void> mount(HotelContext ctx) async => ctx.scene.renderScale = scale;
+
+  @override
+  void unmount(HotelContext ctx) =>
+      ctx.scene.renderScale = renderScaleAfterUnmount(ctx.scene.renderScale, scale);
+}
+
+class RenderScale85Feature extends RenderScaleFeature {
+  RenderScale85Feature() : super(0.85);
+  @override
+  String get id => 'render_scale_85';
+  @override
+  String get label => 'Render at 85% (72% of the pixels)';
+}
+
+class RenderScale75Feature extends RenderScaleFeature {
+  RenderScale75Feature() : super(0.75);
+  @override
+  String get id => 'render_scale_75';
+  @override
+  String get label => 'Render at 75% (56% of the pixels)';
+}
