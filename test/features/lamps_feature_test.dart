@@ -51,4 +51,44 @@ void main() {
       feature.unmount(ctx);
     },
   );
+
+  test('each bathroom switch toggles its own dim ceiling light', () async {
+    final ctx = _Context();
+    final switches = <Node>[], lights = <Node>[];
+    for (final room in RoomId.values) {
+      final root = Node(name: room.name);
+      final light = Node(name: 'bath_light');
+      final sw = Node(name: 'bath_switch')..add(Node(name: 'bath_switch_rocker'));
+      root
+        ..add(light)
+        ..add(sw);
+      lights.add(light);
+      switches.add(sw);
+      ctx.rooms[room] = root;
+    }
+    final feature = LampsFeature();
+    await feature.mount(ctx);
+    final taps = ctx.interactions.all.toList();
+    expect(taps.map((t) => t.node), switches, reason: 'the switches are what you tap');
+    PointLight bath(int i) =>
+        lights[i].children.single.getComponent<PointLightComponent>()!.light;
+    final rocker = switches[0].children.single;
+    final restPose = rocker.localTransform.clone();
+
+    expect(bath(0).intensity, kBathLightIntensity, reason: 'on by default');
+    expect(kBathLightIntensity, lessThan(kLampIntensity), reason: 'a low light');
+    taps[0].onTap();
+    expect(bath(0).intensity, 0);
+    expect(bath(1).intensity, kBathLightIntensity, reason: 'room B is untouched');
+    expect(rocker.localTransform, isNot(restPose), reason: 'the rocker flips');
+    taps[0].onTap();
+    expect(bath(0).intensity, kBathLightIntensity);
+    expect(rocker.localTransform, restPose);
+
+    taps[0].onTap(); // leave it off, then unmount
+    feature.unmount(ctx);
+    expect(ctx.interactions.all, isEmpty);
+    expect(lights.every((l) => l.children.isEmpty), true);
+    expect(rocker.localTransform, restPose);
+  });
 }

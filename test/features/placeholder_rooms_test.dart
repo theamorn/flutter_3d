@@ -246,6 +246,23 @@ void main() {
     });
   });
 
+  test('bathroom: a ceiling light inside, its switch by the door on the bedroom side', () {
+    final light = union(partsUnder(room, 'bath_light'));
+    expect(light.max.y, closeTo(FloorPlan.ceiling, tol));
+    expect(footprintInside(light, const Box2(-FloorPlan.roomWidth, 0, FloorPlan.bathX1, FloorPlan.bathZ1)),
+        true, reason: 'the light is in the bathroom');
+    only(room, 'bath_light_diffuser');
+
+    final sw = union(partsUnder(room, 'bath_switch'));
+    expect(sw.min.x, closeTo(FloorPlan.bathX1, tol), reason: 'on the bedroom face of the bathroom wall');
+    expect(sw.max.x - sw.min.x, lessThan(0.03));
+    expect(sw.min.z, greaterThan(FloorPlan.bathDoorZ1), reason: 'beside the door, not in it');
+    expect(sw.max.z, lessThan(FloorPlan.bathDoorZ1 + 0.3));
+    expect(sw.center.y, closeTo(1.2, 0.1), reason: 'at hand height');
+    final rocker = placedWithPath(room).where((e) => e.$1.name == 'bath_switch_rocker').single;
+    expect(rocker.$3, containsAllInOrder(['bath_switch', 'bath_switch_rocker']));
+  });
+
   test('entrance door fills the entrance span on the corridor wall', () {
     final u = union(partsUnder(room, 'door_entrance'));
     expect(u.min.x, closeTo(FloorPlan.entranceX0, tol));

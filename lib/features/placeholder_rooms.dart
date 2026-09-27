@@ -102,6 +102,7 @@ const _blackPlastic = Finish(0.02, 0.02, 0.02, roughness: 0.4);
 const _screen = Finish(0, 0, 0, roughness: 0.15);
 const _mirror = Finish(0.95, 0.95, 0.95, roughness: 0.02, metallic: 1);
 const _porcelain = Finish(0.95, 0.95, 0.95, roughness: 0.2);
+const _opalGlass = Finish(0.95, 0.95, 0.93, roughness: 0.3);
 const _shadeFabric = Finish(0.95, 0.88, 0.72, roughness: 0.9, texture: _hessian);
 const _curtainFabric = Finish(0.80, 0.70, 0.55, roughness: 0.35, texture: _satin);
 const _windowGlass = Finish(0.85, 0.92, 0.95, roughness: 0.03, alpha: 0.05);
@@ -525,6 +526,26 @@ List<RoomNode> _fixtures() {
         CylinderPart(Vector3.zero(),
             bottomRadius: 0.022, topRadius: 0.022, height: 0.03, finish: _chrome),
         BoxPart(Vector3(0, 0.01, -0.012), Vector3(0.12, 0.025, 0.012), _chrome),
+      ]),
+    ]),
+    // Bathroom ceiling light (Task 16's lamps feature lights it) and its
+    // wall switch beside the bathroom door, on the bedroom side.
+    RoomNode('bath_light', at: Vector3(-6.6, FloorPlan.ceiling, 1.3), parts: [
+      CylinderPart(Vector3(0, -0.04, 0),
+          bottomRadius: 0.18, topRadius: 0.18, height: 0.04, finish: _brass),
+    ], children: [
+      RoomNode('bath_light_diffuser', parts: [
+        CylinderPart(Vector3(0, -0.045, 0),
+            bottomRadius: 0.15, topRadius: 0.15, height: 0.005, finish: _opalGlass),
+      ]),
+    ]),
+    RoomNode('bath_switch', parts: [
+      BoxPart(Vector3(FloorPlan.bathX1, 1.14, 2.1), Vector3(FloorPlan.bathX1 + 0.01, 1.26, 2.2),
+          _porcelain),
+    ], children: [
+      // The rocker pivots about its centre; the lamps feature tips it.
+      RoomNode('bath_switch_rocker', at: Vector3(FloorPlan.bathX1 + 0.01, 1.2, 2.15), parts: [
+        BoxPart(Vector3(0, -0.03, -0.02), Vector3(0.008, 0.03, 0.02), _porcelain),
       ]),
     ]),
     RoomNode('shower_head', at: Vector3(-5.8, 2.1, 0.55), parts: [
