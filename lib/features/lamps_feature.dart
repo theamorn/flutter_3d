@@ -1,3 +1,5 @@
+import 'dart:ui' show VoidCallback;
+
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
 
@@ -38,7 +40,7 @@ class LampsFeature extends HotelFeature {
       ...ctx.nodesNamed('lamp_bedside'),
       ...ctx.nodesNamed('lamp_floor'),
     ]) {
-      final lamp = _Lamp(node);
+      final lamp = _Lamp(node, onSwitch: () => ctx.lightingRevision.value++);
       _lamps.add(lamp);
       ctx.interactions.register(lamp.interaction);
     }
@@ -46,7 +48,11 @@ class LampsFeature extends HotelFeature {
     final lights = ctx.nodesNamed('bath_light');
     final switches = ctx.nodesNamed('bath_switch');
     for (var i = 0; i < lights.length && i < switches.length; i++) {
-      final bath = _BathLight(lights[i], switches[i]);
+      final bath = _BathLight(
+        lights[i],
+        switches[i],
+        onSwitch: () => ctx.lightingRevision.value++,
+      );
       _bathLights.add(bath);
       ctx.interactions.register(bath.interaction);
     }
@@ -96,7 +102,7 @@ Matrix4 rockerPose(Matrix4 rest, {required bool on}) =>
 
 /// The bathroom ceiling light, switched from the wall by the bathroom door.
 class _BathLight {
-  _BathLight(this.fixture, this.switchNode) {
+  _BathLight(this.fixture, this.switchNode, {required this.onSwitch}) {
     _diffusers.addAll(_glowMaterials(fixture, 'bath_light_diffuser'));
     _locators.addAll(_glowMaterials(switchNode, 'bath_switch_rocker'));
     for (final m in _locators.keys) {
@@ -116,12 +122,14 @@ class _BathLight {
       onTap: () {
         _on = !_on;
         _apply();
+        onSwitch();
       },
     );
     _apply();
   }
 
   final Node fixture, switchNode;
+  final VoidCallback onSwitch;
   Node? rocker;
   Matrix4? rockerRest;
   final PointLight light = PointLight(
@@ -167,7 +175,7 @@ class _BathLight {
 }
 
 class _Lamp {
-  _Lamp(this.node) {
+  _Lamp(this.node, {required this.onSwitch}) {
     _shades.addAll(_glowMaterials(node, 'lamp_shade'));
     lightNode.addComponent(PointLightComponent(light));
     node.add(lightNode);
@@ -177,12 +185,14 @@ class _Lamp {
       onTap: () {
         _on = !_on;
         _apply();
+        onSwitch();
       },
     );
     _apply();
   }
 
   final Node node;
+  final VoidCallback onSwitch;
   final PointLight light = PointLight(
     color: Vector3(1, .78, .55),
     intensity: kLampIntensity,

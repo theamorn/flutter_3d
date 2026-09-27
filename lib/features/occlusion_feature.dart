@@ -17,15 +17,20 @@ const Set<String> kOccludableOutdoors = {
   'rain_particles', 'rain_splash_particles',
 };
 
-/// The room's furniture and fixtures: the root's children, under any
-/// mesh-less single-child wrappers (room B's mirror parent).
-List<Node> roomContents(Node root) {
+/// The node a room's furniture and fixtures hang under: the root itself for
+/// room A, the `room` child under room B's x-mirror. Features that add
+/// nodes to a room add them here, so room B mirrors them for free and
+/// occlusion culling still finds the room's contents.
+Node roomContentsRoot(Node root) {
   var n = root;
   while (n.mesh == null && n.children.length == 1) {
     n = n.children.single;
   }
-  return n.children;
+  return n;
 }
+
+/// The room's furniture and fixtures.
+List<Node> roomContents(Node root) => roomContentsRoot(root).children;
 
 /// Camera occlusion culling (see `math/occlusion.dart`): each frame, every
 /// camera that renders the scene gets the cells it can see through the
@@ -59,6 +64,11 @@ class OcclusionFeature extends HotelFeature {
 
   @override
   void tick(HotelContext ctx, double dt) {
+    if (ctx.occlusionHolds > 0) {
+      // A probe capture renders this frame: it must see the whole scene.
+      _apply(const {}, const {}, const {});
+      return;
+    }
     final view = PlatformDispatcher.instance.implicitView;
     if (view == null || view.physicalSize.isEmpty) return;
     final camera = ctx.camera;

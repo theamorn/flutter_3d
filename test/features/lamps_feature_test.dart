@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:flutter_3d/features/lamps_feature.dart';
@@ -11,6 +12,8 @@ class _Context extends Fake implements HotelContext {
   final Map<RoomId, Node> rooms = {};
   @override
   final InteractionRegistry interactions = InteractionRegistry();
+  @override
+  final ValueNotifier<int> lightingRevision = ValueNotifier(0);
   @override
   List<Node> nodesNamed(String name) => [
     for (final room in rooms.values)
@@ -90,5 +93,24 @@ void main() {
     expect(ctx.interactions.all, isEmpty);
     expect(lights.every((l) => l.children.isEmpty), true);
     expect(rocker.localTransform, restPose);
+  });
+
+  test('switching any lamp or the bathroom light bumps the lighting revision', () async {
+    final ctx = _Context();
+    for (final room in RoomId.values) {
+      final root = Node(name: room.name)
+        ..add(Node(name: 'lamp_bedside'))
+        ..add(Node(name: 'lamp_floor'))
+        ..add(Node(name: 'bath_light'))
+        ..add(Node(name: 'bath_switch'));
+      ctx.rooms[room] = root;
+    }
+    await LampsFeature().mount(ctx);
+    final taps = ctx.interactions.all.toList();
+    expect(taps, hasLength(6));
+    for (final tap in taps) {
+      tap.onTap();
+    }
+    expect(ctx.lightingRevision.value, 6);
   });
 }
