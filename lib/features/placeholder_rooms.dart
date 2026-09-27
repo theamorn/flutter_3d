@@ -31,15 +31,91 @@ class TextureRef {
   String get normalAsset => 'assets/textures/${id}_n.jpg';
 }
 
+/// How a surface answers light, on top of its colour and roughness. The
+/// classic models map onto the engine's PBR: Lambert is a diffuse-only
+/// dielectric, Phong's sharp highlight is a low-roughness one; fabrics,
+/// lacquer and brushed metal get the matching glTF material layers.
+enum Shading {
+  /// The engine's default dielectric or metal response.
+  standard,
+
+  /// Lambert: diffuse only, no specular reflection (paint, linen, rugs).
+  matte,
+
+  /// Phong-like: diffuse plus a sharp dielectric highlight (glazed ceramic).
+  glossy,
+
+  /// The soft glow of a fabric's pile at grazing angles (velvet, satin).
+  sheen,
+
+  /// A glossy lacquer layer over the base (lacquered wood, polished stone).
+  clearcoat,
+
+  /// Highlights stretched along the brushing (brushed brass).
+  brushed,
+}
+
 /// Surface look of a part: linear RGB base colour plus PBR factors. With a
 /// [texture], the colour tints it (the fabrics ship grey, so the tint is
-/// their colour) and the part's UVs run in metres.
+/// their colour) and the part's UVs run in metres. [layer] (0..1) scales the
+/// [shading] layer: the clearcoat's weight, the sheen's or the brushing's
+/// strength.
 class Finish {
   const Finish(this.r, this.g, this.b,
-      {this.roughness = 0.8, this.metallic = 0, this.alpha = 1, this.texture});
-  final double r, g, b, roughness, metallic, alpha;
+      {this.roughness = 0.8,
+      this.metallic = 0,
+      this.alpha = 1,
+      this.texture,
+      this.shading = Shading.standard,
+      this.layer = 1});
+  final double r, g, b, roughness, metallic, alpha, layer;
   final TextureRef? texture;
+  final Shading shading;
 }
+
+/// The engine material settings a [Finish] asks for. Pure data, so the
+/// shading can be tested without a GPU.
+class ShadingLayers {
+  const ShadingLayers(
+      {required this.roughness,
+      this.specular = 1,
+      this.clearcoat = 0,
+      this.clearcoatRoughness = 0,
+      this.sheenColor,
+      this.sheenRoughness = 0,
+      this.anisotropy = 0});
+
+  /// PhysicallyBasedMaterial.roughnessFactor.
+  final double roughness;
+
+  /// Dielectric specular weight: 0 is Lambert (no reflection at all).
+  final double specular;
+  final double clearcoat, clearcoatRoughness;
+
+  /// Null: no sheen layer.
+  final Vector3? sheenColor;
+  final double sheenRoughness;
+  final double anisotropy;
+
+  /// Whether the engine draws it with its heavier physical shader variant
+  /// (clearcoat, sheen and anisotropy do; a scalar specular doesn't).
+  bool get usesPhysicalShader => clearcoat > 0 || sheenColor != null || anisotropy != 0;
+}
+
+ShadingLayers shadingLayers(Finish f) => switch (f.shading) {
+      Shading.standard => ShadingLayers(roughness: f.roughness),
+      Shading.matte => ShadingLayers(roughness: f.roughness, specular: 0),
+      Shading.glossy => ShadingLayers(roughness: math.min(f.roughness, 0.3)),
+      // The pile catches light in a paler shade of its own colour.
+      Shading.sheen => ShadingLayers(
+          roughness: f.roughness,
+          sheenColor: Vector3(f.r + (1 - f.r) * 0.3, f.g + (1 - f.g) * 0.3, f.b + (1 - f.b) * 0.3)
+            ..scale(f.layer),
+          sheenRoughness: 0.4),
+      Shading.clearcoat =>
+        ShadingLayers(roughness: f.roughness, clearcoat: f.layer, clearcoatRoughness: 0.05),
+      Shading.brushed => ShadingLayers(roughness: f.roughness, anisotropy: 0.7 * f.layer),
+    };
 
 // Real-world sizes from Poly Haven, in metres.
 const _parquet = TextureRef('herringbone_parquet', 3.4, 3.4);
@@ -58,17 +134,20 @@ const _whiteOak = TextureRef('white_oak_veneer', 0.5, 0.5, hasNormal: false);
 const _walnut = TextureRef('walnut_veneer', 1.8, 1.8, hasNormal: false);
 const _blackWalnut = TextureRef('black_walnut_veneer_02', 1, 1, hasNormal: false);
 
-const _paint = Finish(0.95, 0.88, 0.78, roughness: 0.9, texture: _stucco);
-const _ceilingPaint = Finish(0.90, 0.90, 0.88, roughness: 0.95);
-const _parquetFloor = Finish(1, 1, 1, roughness: 0.45, texture: _parquet);
-const _bathFloor = Finish(1, 1, 1, roughness: 0.25, texture: _bathTiles);
+const _paint = Finish(0.95, 0.88, 0.78, roughness: 0.9, texture: _stucco, shading: Shading.matte);
+const _ceilingPaint = Finish(0.90, 0.90, 0.88, roughness: 0.95, shading: Shading.matte);
+const _parquetFloor = Finish(1, 1, 1, roughness: 0.35, texture: _parquet, shading: Shading.glossy);
+const _bathFloor = Finish(1, 1, 1, roughness: 0.25, texture: _bathTiles, shading: Shading.glossy);
 const _balconyTile = Finish(1, 1, 1, roughness: 0.6, texture: _pavers);
-const _linen = Finish(1.0, 0.96, 0.9, roughness: 0.9, texture: _linenWeave);
-const _sofaFabric = Finish(0.62, 0.53, 0.43, roughness: 0.9, texture: _caban);
-const _bedFrameWood = Finish(0.85, 0.58, 0.40, roughness: 0.5, texture: _americanWalnut);
+const _linen = Finish(1.0, 0.96, 0.9, roughness: 0.9, texture: _linenWeave, shading: Shading.matte);
+const _sofaFabric =
+    Finish(0.62, 0.53, 0.43, roughness: 0.9, texture: _caban, shading: Shading.sheen, layer: 0.6);
+const _bedFrameWood = Finish(0.85, 0.58, 0.40,
+    roughness: 0.5, texture: _americanWalnut, shading: Shading.clearcoat, layer: 0.5);
 const _deskWood = Finish(0.85, 0.72, 0.60, roughness: 0.45, texture: _teak);
-const _bedsideWood = Finish(1, 1, 1, roughness: 0.2, texture: _cherry);
-const _tvWood = Finish(0.45, 0.38, 0.33, roughness: 0.4, texture: _blackOak);
+const _bedsideWood = Finish(1, 1, 1, roughness: 0.2, texture: _cherry, shading: Shading.clearcoat);
+const _tvWood = Finish(0.45, 0.38, 0.33,
+    roughness: 0.4, texture: _blackOak, shading: Shading.clearcoat, layer: 0.6);
 const _velvet = TextureRef('velour_velvet', 0.28, 0.27);
 const _jacquard = TextureRef('quatrefoil_jacquard_fabric', 0.28, 0.28);
 const _woolWeave = TextureRef('poly_wool_herringbone', 0.27, 0.28);
@@ -77,34 +156,42 @@ const _teddy = TextureRef('curly_teddy_natural', 0.34, 0.33);
 const _jute = TextureRef('hessian_380', 0.27, 0.27);
 const _whiteTiles = TextureRef('long_white_tiles', 1.27, 1.27);
 
-const _headboardVelvet = Finish(0.05, 0.20, 0.22, roughness: 0.95, texture: _velvet);
-const _pillowJacquard = Finish(0.85, 0.70, 0.45, roughness: 0.7, texture: _jacquard);
-const _throwWool = Finish(0.15, 0.15, 0.16, roughness: 0.9, texture: _woolWeave);
-const _benchLeather = Finish(1, 1, 1, roughness: 0.5, texture: _leather);
-const _rugTeddy = Finish(1, 1, 1, roughness: 1, texture: _teddy);
-const _rugJute = Finish(1, 1, 1, roughness: 1, texture: _jute);
-const _bathTilesWall = Finish(1, 1, 1, roughness: 0.15, texture: _whiteTiles);
-const _blackStone = Finish(0.02, 0.02, 0.022, roughness: 0.08);
+const _headboardVelvet =
+    Finish(0.05, 0.20, 0.22, roughness: 0.95, texture: _velvet, shading: Shading.sheen);
+const _pillowJacquard = Finish(0.85, 0.70, 0.45,
+    roughness: 0.7, texture: _jacquard, shading: Shading.sheen, layer: 0.7);
+const _throwWool = Finish(0.15, 0.15, 0.16,
+    roughness: 0.9, texture: _woolWeave, shading: Shading.sheen, layer: 0.5);
+const _benchLeather =
+    Finish(1, 1, 1, roughness: 0.5, texture: _leather, shading: Shading.clearcoat, layer: 0.3);
+const _rugTeddy = Finish(1, 1, 1, roughness: 1, texture: _teddy, shading: Shading.matte);
+const _rugJute = Finish(1, 1, 1, roughness: 1, texture: _jute, shading: Shading.matte);
+const _bathTilesWall =
+    Finish(1, 1, 1, roughness: 0.15, texture: _whiteTiles, shading: Shading.glossy);
+const _blackStone = Finish(0.02, 0.02, 0.022, roughness: 0.08, shading: Shading.clearcoat);
 const _leafGreen = Finish(0.10, 0.28, 0.08, roughness: 0.6);
-const _bloomPink = Finish(0.95, 0.70, 0.75, roughness: 0.7);
-const _bloomWhite = Finish(0.95, 0.95, 0.96, roughness: 0.6);
-const _canvas = Finish(0.85, 0.80, 0.70, roughness: 0.9);
-const _artTerracotta = Finish(0.60, 0.22, 0.10, roughness: 0.9);
-const _artMustard = Finish(0.75, 0.50, 0.10, roughness: 0.9);
-const _artTeal = Finish(0.05, 0.30, 0.32, roughness: 0.9);
-const _artCharcoal = Finish(0.05, 0.05, 0.05, roughness: 0.9);
+const _bloomPink = Finish(0.95, 0.70, 0.75, roughness: 0.7, shading: Shading.matte);
+const _bloomWhite = Finish(0.95, 0.95, 0.96, roughness: 0.6, shading: Shading.matte);
+const _canvas = Finish(0.85, 0.80, 0.70, roughness: 0.9, shading: Shading.matte);
+const _artTerracotta = Finish(0.60, 0.22, 0.10, roughness: 0.9, shading: Shading.matte);
+const _artMustard = Finish(0.75, 0.50, 0.10, roughness: 0.9, shading: Shading.matte);
+const _artTeal = Finish(0.05, 0.30, 0.32, roughness: 0.9, shading: Shading.matte);
+const _artCharcoal = Finish(0.05, 0.05, 0.05, roughness: 0.9, shading: Shading.matte);
 const _shelfWood = Finish(1.0, 0.92, 0.82, roughness: 0.55, texture: _whiteOak);
 const _vanityWood = Finish(1, 1, 1, roughness: 0.45, texture: _walnut);
-const _doorWood = Finish(0.55, 0.42, 0.33, roughness: 0.4, texture: _blackWalnut);
-const _brass = Finish(0.90, 0.70, 0.35, roughness: 0.3, metallic: 1);
+const _doorWood = Finish(0.55, 0.42, 0.33,
+    roughness: 0.4, texture: _blackWalnut, shading: Shading.clearcoat, layer: 0.5);
+const _brass = Finish(0.90, 0.70, 0.35, roughness: 0.3, metallic: 1, shading: Shading.brushed);
 const _chrome = Finish(0.80, 0.80, 0.82, roughness: 0.2, metallic: 1);
 const _blackPlastic = Finish(0.02, 0.02, 0.02, roughness: 0.4);
 const _screen = Finish(0, 0, 0, roughness: 0.15);
 const _mirror = Finish(0.95, 0.95, 0.95, roughness: 0.02, metallic: 1);
-const _porcelain = Finish(0.95, 0.95, 0.95, roughness: 0.2);
-const _opalGlass = Finish(0.95, 0.95, 0.93, roughness: 0.3);
-const _shadeFabric = Finish(0.95, 0.88, 0.72, roughness: 0.9, texture: _hessian);
-const _curtainFabric = Finish(0.80, 0.70, 0.55, roughness: 0.35, texture: _satin);
+const _porcelain = Finish(0.95, 0.95, 0.95, roughness: 0.2, shading: Shading.glossy);
+const _opalGlass = Finish(0.95, 0.95, 0.93, roughness: 0.3, shading: Shading.glossy);
+const _shadeFabric =
+    Finish(0.95, 0.88, 0.72, roughness: 0.9, texture: _hessian, shading: Shading.matte);
+const _curtainFabric = Finish(0.80, 0.70, 0.55,
+    roughness: 0.35, texture: _satin, shading: Shading.sheen, layer: 0.8);
 const _windowGlass = Finish(0.85, 0.92, 0.95, roughness: 0.03, alpha: 0.05);
 const _railingGlass = Finish(0.85, 0.95, 1.0, roughness: 0.02, alpha: 0.03);
 const _showerGlass = Finish(0.85, 0.92, 0.95, roughness: 0.05, alpha: 0.2);
@@ -748,10 +835,21 @@ RoomNode roomASpec() => RoomNode('room', children: [
 // ------------------------------------------------------------------ nodes
 
 PhysicallyBasedMaterial _material(Finish f, RoomTextures? textures) {
+  final l = shadingLayers(f);
   final m = PhysicallyBasedMaterial()
     ..baseColorFactor = Vector4(f.r, f.g, f.b, f.alpha)
     ..metallicFactor = f.metallic
-    ..roughnessFactor = f.roughness;
+    ..roughnessFactor = l.roughness
+    ..specular = l.specular
+    ..clearcoat = l.clearcoat
+    ..anisotropy = l.anisotropy;
+  if (l.clearcoat > 0) m.clearcoatRoughness = l.clearcoatRoughness;
+  final sheen = l.sheenColor;
+  if (sheen != null) {
+    m
+      ..sheenColor = Vector4(sheen.x, sheen.y, sheen.z, 1)
+      ..sheenRoughness = l.sheenRoughness;
+  }
   final t = f.texture;
   if (t != null && textures != null) {
     m.baseColorTexture = textures.color(t);

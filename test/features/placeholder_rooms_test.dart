@@ -263,6 +263,97 @@ void main() {
     expect(rocker.$3, containsAllInOrder(['bath_switch', 'bath_switch_rocker']));
   });
 
+  group('shading matches the object', () {
+    List<Finish> finishesUnder(String name) {
+      only(room, name);
+      return [
+        for (final (n, _, path) in placedWithPath(room))
+          if (path.contains(name))
+            for (final p in n.parts) p.finish,
+      ];
+    }
+
+    Finish textured(String node, String texture) =>
+        finishesUnder(node).firstWhere((f) => f.texture?.id == texture);
+
+    test('matte surfaces are Lambert: diffuse only, no specular', () {
+      for (final f in [
+        textured('walls', 'white_stucco'),
+        ...finishesUnder('ceiling'),
+        ...finishesUnder('rug_bed'),
+        ...finishesUnder('rug_lounge'),
+        textured('bed', 'rough_linen'),
+        textured('lamp_bedside', 'hessian_230'),
+        ...finishesUnder('art_bed').where((f) => f.metallic == 0),
+      ]) {
+        final l = shadingLayers(f);
+        expect(l.specular, 0, reason: '${f.texture?.id ?? f}');
+        expect(l.clearcoat, 0);
+        expect(l.sheenColor, isNull);
+      }
+    });
+
+    test('ceramics and tiles are glossy: a sharp highlight on top of the diffuse', () {
+      for (final f in [
+        ...finishesUnder('bath_cladding'),
+        textured('floor', 'interior_tiles'),
+        finishesUnder('vase').firstWhere((f) => f.shading == Shading.glossy),
+        ...finishesUnder('basin').where((f) => f.texture == null),
+      ]) {
+        final l = shadingLayers(f);
+        expect(l.specular, 1, reason: '${f.texture?.id ?? f}');
+        expect(l.roughness, lessThanOrEqualTo(0.3));
+      }
+    });
+
+    test('fabrics with a pile or a satin face get sheen', () {
+      for (final f in [
+        textured('bed', 'velour_velvet'),
+        textured('bed', 'quatrefoil_jacquard_fabric'),
+        textured('bed', 'poly_wool_herringbone'),
+        textured('sofa', 'caban'),
+        textured('curtain_left', 'crepe_satin'),
+      ]) {
+        final l = shadingLayers(f);
+        expect(l.sheenColor, isNotNull, reason: f.texture!.id);
+        expect(l.sheenRoughness, inExclusiveRange(0, 1));
+      }
+    });
+
+    test('lacquered and polished pieces wear a clearcoat', () {
+      for (final (node, texture) in [
+        ('bedside_table', 'lacquered_cherry_wood'),
+        ('bed', 'american_walnut_veneer'),
+        ('bench', 'fabric_leather_02'),
+        ('tv_unit', 'black_oak_veneer'),
+        ('door_connect', 'black_walnut_veneer_02'),
+      ]) {
+        expect(shadingLayers(textured(node, texture)).clearcoat, greaterThan(0), reason: node);
+      }
+      final stoneTop = finishesUnder('coffee_table').firstWhere((f) => f.shading == Shading.clearcoat);
+      expect(shadingLayers(stoneTop).clearcoat, 1);
+      expect(shadingLayers(stoneTop).clearcoatRoughness, lessThan(0.1));
+    });
+
+    test('brass is brushed; chrome stays polished', () {
+      final brass = finishesUnder('bench').firstWhere((f) => f.metallic == 1);
+      expect(shadingLayers(brass).anisotropy, greaterThan(0));
+      final chrome = finishesUnder('faucet_spout').first;
+      expect(chrome.metallic, 1);
+      expect(shadingLayers(chrome).anisotropy, 0);
+      expect(shadingLayers(chrome).roughness, lessThanOrEqualTo(0.2));
+    });
+
+    test('the big surfaces stay on the cheap standard shader (no physical layers)', () {
+      for (final name in ['floor', 'walls', 'ceiling']) {
+        for (final f in finishesUnder(name)) {
+          final l = shadingLayers(f);
+          expect(l.usesPhysicalShader, false, reason: '$name ${f.texture?.id ?? f}');
+        }
+      }
+    });
+  });
+
   test('entrance door fills the entrance span on the corridor wall', () {
     final u = union(partsUnder(room, 'door_entrance'));
     expect(u.min.x, closeTo(FloorPlan.entranceX0, tol));
