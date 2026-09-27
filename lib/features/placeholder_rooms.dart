@@ -645,6 +645,19 @@ List<RoomNode> _fixtures() {
         ]),
     _lamp('lamp_bedside', Vector3(-7.7, 0.6, 5.6), stem: 0.3, shadeY: 0.22, shadeR: 0.14),
     _lamp('lamp_floor', Vector3(-0.4, 0, 5.6), stem: 1.45, shadeY: 1.3, shadeR: 0.22),
+    // Reading lights over the bed (the spot-lights feature lights them): a
+    // brass plate on the outer wall, an arm, and a cone shade over each side
+    // of the headboard, clear of the art above it (z 3.5..5.1, from 1.5 m).
+    for (final (name, z) in [('reading_light_left', 3.3), ('reading_light_right', 5.3)])
+      RoomNode(name, at: Vector3(-FloorPlan.roomWidth, 1.45, z), parts: [
+        BoxPart(Vector3(0, -0.06, -0.04), Vector3(0.012, 0.03, 0.04), _brass), // wall plate
+        BoxPart(Vector3(0.012, -0.008, -0.008), Vector3(0.27, 0.008, 0.008), _brass), // arm
+      ], children: [
+        RoomNode('reading_light_shade', at: Vector3(0.27, -0.13, 0), parts: [
+          CylinderPart(Vector3.zero(),
+              bottomRadius: 0.07, topRadius: 0.03, height: 0.12, finish: _shadeFabric),
+        ]),
+      ]),
     // Water leaves each emitter's origin going −Y (Task 19): the nozzle's
     // tip. A basin mixer on the basin top (local y = −0.2), with a lever
     // that the water feature lifts while the water runs.
