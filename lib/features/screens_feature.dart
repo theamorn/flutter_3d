@@ -11,8 +11,9 @@ import '../ui/screen_overlay.dart';
 import 'interaction_registry.dart';
 import 'player_feature.dart';
 
-const kTvUrl = 'https://www.youtube.com/@GoogleDevelopers';       // TODO(user): replace with the real channel
-const kPcUrl = 'https://www.facebook.com/GoogleDevelopersThailand'; // TODO(user): replace with the real page
+/// What the TV and PC open (confirmed with the user, 2026-09-27).
+const kTvUrl = 'https://www.youtube.com/@GoogleDevelopers';
+const kPcUrl = 'https://www.facebook.com/GoogleDevelopersThailand';
 
 /// The two screens in each room: node name, page, tap label, poster.
 const _kinds = [

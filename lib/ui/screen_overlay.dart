@@ -122,11 +122,18 @@ class ScreenQuad {
 /// How far in front of [quad] the camera stops: [kMinFocusDistance], or
 /// further when the screen would overflow [kFocusFill] of the viewport
 /// (a 1.2 m TV in a portrait phone's narrow horizontal view).
-double focusDistance(ScreenQuad quad, {required double fovY, required Size viewport}) {
-  if (viewport.isEmpty) return kMinFocusDistance;
+double focusDistance(ScreenQuad quad, {required double fovY, required Size viewport}) =>
+    fitDistance(quad.width, quad.height,
+        fovY: fovY, viewport: viewport, min: kMinFocusDistance, fill: kFocusFill);
+
+/// How far from the camera a facing [width] × [height] rectangle (metres)
+/// fills at most [fill] of [viewport] in both directions, but no nearer
+/// than [min].
+double fitDistance(double width, double height,
+    {required double fovY, required Size viewport, required double min, required double fill}) {
+  if (viewport.isEmpty) return min;
   final halfH = math.tan(fovY / 2), halfW = halfH * viewport.width / viewport.height;
-  return math.max(kMinFocusDistance,
-      math.max(quad.width / (2 * halfW * kFocusFill), quad.height / (2 * halfH * kFocusFill)));
+  return math.max(min, math.max(width / (2 * halfW * fill), height / (2 * halfH * fill)));
 }
 
 /// A camera eye and the point it looks at.

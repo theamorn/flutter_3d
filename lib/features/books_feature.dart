@@ -10,16 +10,31 @@ import '../data/pokemon.dart';
 import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
 import '../math/fp_movement.dart';
+import '../ui/screen_overlay.dart';
 import 'book_page.dart';
 import 'interaction_registry.dart';
 import 'player_feature.dart';
 
-/// Distance from the camera to the open book, metres.
+/// Distance from the camera to the open book, metres, unless the spread
+/// needs more room to fit the view (a portrait phone).
 const double kOpenBookDistance = 0.45;
 
 /// Dimensions of each page in world units (metres).
 const double kPageHeight = 0.32;
 const double kPageWidth = kPageHeight * (512.0 / 700.0); // ~0.234 m
+
+/// The open book (both pages and the cover's 1 cm rim), metres.
+const double kSpreadWidth = kPageWidth * 2 + 0.02;
+const double kSpreadHeight = kPageHeight + 0.02;
+
+/// Largest share of the view the open spread fills.
+const double kSpreadFill = 0.95;
+
+/// The SceneView fills the window, so the window is the viewport.
+Size _windowSize() {
+  final view = WidgetsBinding.instance.platformDispatcher.implicitView;
+  return view == null ? Size.zero : view.physicalSize / view.devicePixelRatio;
+}
 
 /// Time in seconds for one page flip animation.
 const double kPageTurnDuration = 0.5;
@@ -238,7 +253,7 @@ class BooksFeature extends HotelFeature {
     _shelfTaps.clear();
   }
 
-  void openBook(HotelContext ctx, int initialIndex, Node shelfNode) {
+  void openBook(HotelContext ctx, int initialIndex, Node shelfNode, {Size? viewport}) {
     if (isBookOpen) return;
 
     _openShelfNode = shelfNode;
@@ -253,9 +268,14 @@ class BooksFeature extends HotelFeature {
     final fwd = ctx.camera.forward.normalized();
     _lockedPitch = math.asin(fwd.y.clamp(-1.0, 1.0));
 
-    // Spawn open book in front of camera
+    // Spawn open book in front of camera, far enough that both pages fit
     final eye = ctx.camera.position;
-    final bookPos = eye + fwd * kOpenBookDistance;
+    final distance = fitDistance(kSpreadWidth, kSpreadHeight,
+        fovY: ctx.camera.fovRadiansY,
+        viewport: viewport ?? _windowSize(),
+        min: kOpenBookDistance,
+        fill: kSpreadFill);
+    final bookPos = eye + fwd * distance;
 
     final root = Node(
       name: 'open_book_root',
@@ -280,8 +300,8 @@ class BooksFeature extends HotelFeature {
     root.add(coverNode);
     try {
       final coverData = buildCoverBoxMeshData(
-        width: kPageWidth * 2 + 0.02,
-        height: kPageHeight + 0.02,
+        width: kSpreadWidth,
+        height: kSpreadHeight,
         depth: 0.008,
       );
       final coverMat = PhysicallyBasedMaterial()
@@ -325,7 +345,7 @@ class BooksFeature extends HotelFeature {
     }
 
     // Dismiss backdrop (slightly behind the book)
-    final backdropPos = eye + fwd * (kOpenBookDistance + 0.02);
+    final backdropPos = eye + fwd * (distance + 0.02);
     final backdrop = Node(
       name: 'book_backdrop',
       localTransform: Matrix4.translation(backdropPos),

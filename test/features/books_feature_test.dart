@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show Rect, Size;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_scene/scene.dart';
@@ -14,6 +15,7 @@ import 'package:flutter_3d/features/interaction_registry.dart';
 import 'package:flutter_3d/hotel/feature.dart';
 import 'package:flutter_3d/hotel/hotel_context.dart';
 import 'package:flutter_3d/math/fp_movement.dart';
+import 'package:flutter_3d/ui/screen_overlay.dart';
 
 class _FakeContext extends Fake implements HotelContext {
   _FakeContext({required this.shelfNodes}) {
@@ -320,6 +322,50 @@ void main() {
       expect(depth('book_curling_page'), lessThan(depth('book_right_page')));
       expect(axisZ(part('book_curling_page')).dot(fwd), lessThan(-0.99));
       feature.closeBook(ctx);
+    });
+
+    group('the open spread fits the view', () {
+      /// Screen bounds of the cover's front face (the whole spread).
+      Rect coverOnScreen(_FakeContext ctx, Node root, Size viewport) {
+        final cover = root.children.firstWhere((c) => c.name == 'book_cover').globalTransform;
+        const hw = kPageWidth + 0.01, hh = kPageHeight / 2 + 0.01;
+        return projectedBounds([
+          for (final (x, y) in [(-hw, hh), (hw, hh), (hw, -hh), (-hw, -hh)])
+            cover.transform3(Vector3(x, y, -0.004)),
+        ],
+            eye: ctx.camera.position,
+            target: ctx.camera.target,
+            up: ctx.camera.up,
+            fovY: ctx.camera.fovRadiansY,
+            viewport: viewport)!;
+      }
+
+      test('portrait: both pages fit across the screen', () {
+        final bookNode = Node(name: 'book_0');
+        final ctx = _FakeContext(shelfNodes: {'book_0': [bookNode]});
+        final feature = BooksFeature(client: _ScriptedClient());
+        const portrait = Size(402, 874);
+
+        feature.openBook(ctx, 0, bookNode, viewport: portrait);
+        final r = coverOnScreen(ctx, feature.openBookRoot!, portrait);
+
+        expect(r.left, greaterThanOrEqualTo(0));
+        expect(r.right, lessThanOrEqualTo(portrait.width));
+        expect(r.width, greaterThan(portrait.width * 0.9)); // no smaller than it must be
+        feature.closeBook(ctx);
+      });
+
+      test('landscape: the book stays at arm\'s length', () {
+        final bookNode = Node(name: 'book_0');
+        final ctx = _FakeContext(shelfNodes: {'book_0': [bookNode]});
+        final feature = BooksFeature(client: _ScriptedClient());
+
+        feature.openBook(ctx, 0, bookNode, viewport: const Size(874, 402));
+        final at = feature.openBookRoot!.globalTransform.getTranslation();
+
+        expect((at - ctx.camera.position).length, closeTo(kOpenBookDistance, 1e-6));
+        feature.closeBook(ctx);
+      });
     });
   });
 }
