@@ -123,14 +123,16 @@ void main() {
 
   group('CaptureQueue', () {
     test(
-      'captures one probe per frame and releases hold on following frame',
+      'holds a frame ahead, captures one probe per frame, then releases',
       () {
+        // The lead frame lets features that cull earlier in the tick order
+        // (portal culling) see the hold before the first capture renders.
         final queue = CaptureQueue(4)..start();
-        final steps = [for (var i = 0; i < 5; i++) queue.step()];
-        expect([for (final step in steps) step.capture], [0, 1, 2, 3, null]);
+        final steps = [for (var i = 0; i < 6; i++) queue.step()];
+        expect([for (final step in steps) step.capture], [null, 0, 1, 2, 3, null]);
         expect(
           [for (final step in steps) step.hold],
-          [true, true, true, true, false],
+          [true, true, true, true, true, false],
         );
         expect(queue.busy, isFalse);
       },
@@ -148,6 +150,7 @@ void main() {
       queue.step();
       queue.step();
       queue.start();
+      expect(queue.step(), (capture: null, hold: true));
       expect(queue.step().capture, 0);
     });
   });

@@ -69,21 +69,31 @@ class LightingSignature {
 }
 
 /// Schedules at most one probe capture per frame while holding occlusion open.
+///
+/// The hold starts a frame ahead of the first capture: features that cull
+/// earlier in the tick order than the probes (portal culling) see it before
+/// any capture renders.
 class CaptureQueue {
   CaptureQueue(this.count);
 
+  static const int _idle = -2, _lead = -1;
+
   final int count;
-  int _next = -1;
+  int _next = _idle;
 
-  bool get busy => _next >= 0;
+  bool get busy => _next != _idle;
 
-  void start() => _next = 0;
+  void start() => _next = _lead;
 
-  void cancel() => _next = -1;
+  void cancel() => _next = _idle;
 
   ({int? capture, bool hold}) step() {
-    if (_next < 0 || _next >= count) {
-      _next = -1;
+    if (_next == _lead) {
+      _next = 0;
+      return (capture: null, hold: true);
+    }
+    if (_next == _idle || _next >= count) {
+      _next = _idle;
       return (capture: null, hold: false);
     }
     return (capture: _next++, hold: true);

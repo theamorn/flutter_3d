@@ -137,6 +137,13 @@ class PortalCullingFeature extends HotelFeature {
 
   @override
   void tick(HotelContext ctx, double dt) {
+    if (ctx.occlusionHolds > 0) {
+      // A light probe is capturing: it must see its own room.
+      for (final room in ctx.rooms.values) {
+        room.visible = true;
+      }
+      return;
+    }
     final shown = visibleRooms(
       cameraRoom: FloorPlan.roomOf(ctx.playerXZ),
       doorOpen: doorwayExposed(DoorFeature.angleFor(ctx)),
