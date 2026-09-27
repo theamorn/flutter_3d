@@ -56,6 +56,8 @@ class LampsFeature extends HotelFeature {
       _bathLights.add(bath);
       ctx.interactions.register(bath.interaction);
     }
+    // Switching the whole feature is a lighting change too.
+    ctx.lightingRevision.value++;
   }
 
   @override
@@ -70,6 +72,7 @@ class LampsFeature extends HotelFeature {
       bath.dispose();
     }
     _bathLights.clear();
+    ctx.lightingRevision.value++;
   }
 }
 

@@ -106,11 +106,22 @@ void main() {
       ctx.rooms[room] = root;
     }
     await LampsFeature().mount(ctx);
+    final mounted = ctx.lightingRevision.value;
     final taps = ctx.interactions.all.toList();
     expect(taps, hasLength(6));
     for (final tap in taps) {
       tap.onTap();
     }
-    expect(ctx.lightingRevision.value, 6);
+    expect(ctx.lightingRevision.value, mounted + 6);
+  });
+
+  test('switching the lamps feature itself bumps the lighting revision', () async {
+    final ctx = _Context();
+    ctx.rooms[RoomId.values.first] = Node(name: 'room')..add(Node(name: 'lamp_bedside'));
+    final feature = LampsFeature();
+    await feature.mount(ctx);
+    expect(ctx.lightingRevision.value, 1, reason: 'the lamps came on');
+    feature.unmount(ctx);
+    expect(ctx.lightingRevision.value, 2, reason: 'the lamps went out');
   });
 }
