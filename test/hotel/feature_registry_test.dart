@@ -88,11 +88,31 @@ void main() {
     await r.setEnabled('base', false);
     expect(r.isEnabled('base'), true);
   });
+
+  test('enabling one member of an exclusive group switches the others off', () async {
+    final a = _Grouped('a'), b = _Grouped('b'), c = _Fake('c');
+    final r = FeatureRegistry([a, b, c], mountContext: null);
+    await r.setEnabled('a', true);
+    await r.setEnabled('c', true);
+    await r.setEnabled('b', true);
+    expect(r.isEnabled('a'), isFalse);
+    expect(r.isMounted('a'), isFalse);
+    expect(a.unmounts, 1);
+    expect(r.isEnabled('b'), isTrue);
+    expect(r.isMounted('b'), isTrue);
+    expect(r.isEnabled('c'), isTrue, reason: 'features outside the group are untouched');
+  });
 }
 
 class _Base extends _Fake {
   _Base() : super('base');
   @override bool get toggleable => false;
+}
+
+class _Grouped extends _Fake {
+  _Grouped(super.id);
+  @override
+  String? get exclusiveGroup => 'aa';
 }
 
 /// Mount throws on the first attempt only.

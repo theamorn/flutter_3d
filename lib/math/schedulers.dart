@@ -76,3 +76,31 @@ class RebakeThrottle {
     return true;
   }
 }
+
+/// Fires once, [quiet] seconds after the last [markDirty], and never while
+/// changes keep coming: for work too heavy to repeat mid-change (a probe
+/// re-capture). [RebakeThrottle], by contrast, also fires during changes.
+class SettleTimer {
+  SettleTimer({this.quiet = 0.5});
+
+  final double quiet;
+  double? _sinceChange;
+
+  /// Whether a change is waiting for the quiet period to end.
+  bool get pending => _sinceChange != null;
+
+  void markDirty() => _sinceChange = 0;
+
+  /// Call every frame; true on the frame the quiet period ends.
+  bool tick(double dt) {
+    final since = _sinceChange;
+    if (since == null) return false;
+    final now = since + dt;
+    if (now < quiet) {
+      _sinceChange = now;
+      return false;
+    }
+    _sinceChange = null;
+    return true;
+  }
+}

@@ -24,9 +24,19 @@ class FeatureRegistry extends ChangeNotifier {
   Future<void> setEnabled(String id, bool on) {
     final f = byId(id);
     if (!on && !f.toggleable) return Future.value();
+    final group = f.exclusiveGroup;
+    // Switching a grouped feature on switches its alternatives off.
+    final rivals = [
+      if (on && group != null)
+        for (final g in features)
+          if (g.id != id && g.exclusiveGroup == group && _wanted.contains(g.id)) g,
+    ];
     on ? _wanted.add(id) : _wanted.remove(id);
+    for (final g in rivals) {
+      _wanted.remove(g.id);
+    }
     notifyListeners();
-    return _enqueue(f);
+    return Future.wait([for (final g in rivals) _enqueue(g), _enqueue(f)]);
   }
 
   /// Runs a reconcile after any pending one for [f]. [_reconcile] never

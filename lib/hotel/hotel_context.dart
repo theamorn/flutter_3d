@@ -47,6 +47,16 @@ class HotelContext {
   /// Extra collision boxes features can add (door leaf). Key = owner id.
   final Map<String, List<Box2>> dynamicColliders = {};
 
+  /// Bumped when a light the probes should see is switched (lamps, the
+  /// bathroom light, reading lights). The light-probes feature re-captures
+  /// once things settle.
+  final ValueNotifier<int> lightingRevision = ValueNotifier(0);
+
+  /// While above zero, occlusion culling hides nothing: a probe capture must
+  /// see the whole scene, not just what the camera sees. Take and release it
+  /// in pairs.
+  int occlusionHolds = 0;
+
   void applyLook() => scene.environmentSettings = composeLook(look);
 
   /// Every node named [name] in both rooms (A first). Empty if rooms not mounted.

@@ -9,6 +9,10 @@ abstract class HotelFeature {
   bool get toggleable => true;
   bool get defaultOn => true;
 
+  /// Features sharing a group are alternatives: switching one on switches
+  /// the others off (the anti-aliasing modes). Null: no group.
+  String? get exclusiveGroup => null;
+
   /// Build and attach nodes. May be async (asset loads). Must attach
   /// everything under nodes it can later remove in [unmount].
   Future<void> mount(HotelContext ctx);
