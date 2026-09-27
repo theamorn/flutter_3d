@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_3d/data/booking.dart';
@@ -5,9 +6,17 @@ import 'package:flutter_3d/home/home_page.dart';
 import 'package:flutter_3d/home/shader_backdrop.dart';
 import 'package:flutter_3d/ui/booking_page.dart';
 
-/// Stands in for the shader backdrops: widget tests can't load shaders.
-Widget _plainBackdrop(HomeShader shader) =>
-    ColoredBox(key: Key('backdrop-${shader.name}'), color: Colors.blue);
+/// Stands in for the shader backdrops: widget tests can't load shaders. It
+/// prints the look it was handed, so a test can see the drag reach it.
+Widget _plainBackdrop(HomeShader shader, ValueListenable<double> look) =>
+    ColoredBox(
+      key: Key('backdrop-${shader.name}'),
+      color: Colors.blue,
+      child: ValueListenableBuilder<double>(
+        valueListenable: look,
+        builder: (_, yaw, _) => Text('${shader.name} look=${yaw.toStringAsFixed(2)}'),
+      ),
+    );
 
 Future<void> _pumpHome(WidgetTester tester, {VoidCallback? onTakeTour}) =>
     tester.pumpWidget(
@@ -23,6 +32,33 @@ void main() {
     await _pumpHome(tester);
     expect(find.text(kHotelName), findsOneWidget);
     expect(find.byKey(const Key('backdrop-sea')), findsOneWidget);
+  });
+
+  testWidgets('dragging the hero sideways turns the sea and hides the hint', (
+    tester,
+  ) async {
+    await _pumpHome(tester);
+    expect(find.text('Drag to look around'), findsOneWidget);
+    expect(find.text('sea look=0.00'), findsOneWidget);
+
+    await tester.drag(find.byKey(const Key('backdrop-sea')), const Offset(-200, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.text('sea look=0.00'), findsNothing);
+    expect(find.text('Drag to look around'), findsNothing);
+  });
+
+  testWidgets('dragging the hero up still scrolls the page, not the sea', (
+    tester,
+  ) async {
+    await _pumpHome(tester);
+    final heroTop = tester.getTopLeft(find.byKey(const Key('backdrop-sea'))).dy;
+
+    await tester.drag(find.byKey(const Key('backdrop-sea')), const Offset(0, -150));
+    await tester.pumpAndSettle();
+
+    expect(tester.getTopLeft(find.byKey(const Key('backdrop-sea'))).dy, lessThan(heroTop));
+    expect(find.text('sea look=0.00'), findsOneWidget);
   });
 
   testWidgets('Take the 3D tour calls back', (tester) async {

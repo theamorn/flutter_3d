@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/booking.dart';
@@ -7,10 +8,18 @@ import 'shader_backdrop.dart';
 /// The hotel's name everywhere in the app.
 const String kHotelName = 'Seaside Family Hotel';
 
-typedef BackdropBuilder = Widget Function(HomeShader shader);
+/// Builds a backdrop. [look] is the sea's extra heading in radians, from
+/// dragging the hero; the banner's sky gets a still one.
+typedef BackdropBuilder =
+    Widget Function(HomeShader shader, ValueListenable<double> look);
 
 /// The real backdrops; tests pass plain boxes instead.
-Widget shaderBackdrop(HomeShader shader) => ShaderBackdrop(shader: shader);
+Widget shaderBackdrop(HomeShader shader, ValueListenable<double> look) =>
+    ShaderBackdrop(shader: shader, look: look);
+
+/// Radians the sea turns per logical pixel dragged: a full-width swipe on a
+/// phone turns it about 90 degrees.
+const double _lookPerPixel = 0.004;
 
 class _Room {
   const _Room(this.option, this.title, this.blurb, this.nightlyThb);
@@ -71,7 +80,9 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(child: _hero(context, theme)),
+          SliverToBoxAdapter(
+            child: _Hero(backdrop: backdrop, onTakeTour: onTakeTour),
+          ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
             sliver: SliverToBoxAdapter(
@@ -112,49 +123,6 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _hero(BuildContext context, ThemeData theme) => SizedBox(
-    height: MediaQuery.sizeOf(context).height / 3,
-    child: Stack(
-      fit: StackFit.expand,
-      children: [
-        backdrop(HomeShader.sea),
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.transparent, Colors.black54],
-            ),
-          ),
-        ),
-        Positioned(
-          left: 20,
-          right: 20,
-          bottom: 20,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                kHotelName,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: onTakeTour,
-                icon: const Icon(Icons.threed_rotation),
-                label: const Text('Take the 3D tour'),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-
   Widget _banner(BuildContext context, ThemeData theme) => ClipRRect(
     borderRadius: BorderRadius.circular(16),
     child: SizedBox(
@@ -162,7 +130,7 @@ class HomePage extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          backdrop(HomeShader.sky),
+          backdrop(HomeShader.sky, const AlwaysStoppedAnimation(0)),
           Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -183,6 +151,117 @@ class HomePage extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// The sea over a third of the screen, with the hotel's name. Dragging it
+/// sideways turns the camera, which is what shows it's live and not a video.
+class _Hero extends StatefulWidget {
+  const _Hero({required this.backdrop, required this.onTakeTour});
+
+  final BackdropBuilder backdrop;
+  final VoidCallback onTakeTour;
+
+  @override
+  State<_Hero> createState() => _HeroState();
+}
+
+class _HeroState extends State<_Hero> {
+  final ValueNotifier<double> _look = ValueNotifier(0);
+  bool _dragged = false;
+
+  @override
+  void dispose() {
+    _look.dispose();
+    super.dispose();
+  }
+
+  // Sideways only, so a vertical drag on the hero still scrolls the page.
+  void _drag(DragUpdateDetails d) {
+    _look.value -= d.delta.dx * _lookPerPixel;
+    if (!_dragged) setState(() => _dragged = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragUpdate: _drag,
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height / 3,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            widget.backdrop(HomeShader.sea, _look),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black54],
+                ),
+              ),
+            ),
+            Positioned(
+              top: MediaQuery.paddingOf(context).top + 12,
+              right: 16,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: _dragged ? const SizedBox.shrink() : const _DragHint(),
+              ),
+            ),
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 20,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    kHotelName,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: widget.onTakeTour,
+                    icon: const Icon(Icons.threed_rotation),
+                    label: const Text('Take the 3D tour'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DragHint extends StatelessWidget {
+  const _DragHint();
+
+  @override
+  Widget build(BuildContext context) => const DecoratedBox(
+    decoration: BoxDecoration(
+      color: Colors.black38,
+      borderRadius: BorderRadius.all(Radius.circular(16)),
+    ),
+    child: Padding(
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.swipe, size: 18, color: Colors.white),
+          SizedBox(width: 6),
+          Text('Drag to look around', style: TextStyle(color: Colors.white)),
         ],
       ),
     ),

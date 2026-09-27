@@ -33,7 +33,7 @@ Widget _shell(List<String> created, {AppTab initialTab = AppTab.home}) =>
         initialTab: initialTab,
         homeBuilder: (onTakeTour) => HomePage(
           onTakeTour: onTakeTour,
-          backdrop: (_) => const ColoredBox(color: Colors.blue),
+          backdrop: (_, _) => const ColoredBox(color: Colors.blue),
         ),
         hotelBuilder: (_) => _Scene3d('hotel', created),
         islandBuilder: (_) => _Scene3d('island', created),

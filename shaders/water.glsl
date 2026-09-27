@@ -2,7 +2,8 @@
 uniform vec2 iResolution;
 uniform float iTime;
 uniform float SEA_HEIGHT;
-vec2 iMouse = vec2(0);
+// Extra heading in radians, from dragging the hero.
+uniform float uLook;
 out vec4 fragColor;
 
 // Ported from https://www.shadertoy.com/view/Ms2SD1 to Flutter
@@ -166,10 +167,13 @@ vec3 getPixel(in vec2 coord, float time) {
     uv.x *= iResolution.x / iResolution.y;
         
     // ray
-    vec3 ang = vec3(sin(time*3.0)*0.1,sin(time)*0.2+0.3,time);    
+    vec3 ang = vec3(sin(time*3.0)*0.1,sin(time)*0.2+0.3,time+uLook);
     vec3 ori = vec3(0.0,3.5,time*5.0);
     vec3 dir = normalize(vec3(uv.xy,-2.0)); dir.z += length(uv) * 0.14;
-    dir = normalize(dir) * fromEuler(ang);    // tracing
+    dir = normalize(dir) * fromEuler(ang);
+    // Above the horizon the mix below is all sky: skip the sea's tracing.
+    if (dir.y >= 0.0) return getSkyColor(dir);
+    // tracing
     vec3 p;
     heightMapTracing(ori,dir,p);
     vec3 dist = p - ori;
@@ -184,7 +188,7 @@ vec3 getPixel(in vec2 coord, float time) {
 }
 
 void main() { 
-    float time = iTime * 0.3 + iMouse.x*0.01;
+    float time = iTime * 0.3;
 	
     vec3 color = getPixel(FlutterFragCoord().xy, time);
     
