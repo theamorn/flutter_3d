@@ -15,6 +15,8 @@ class _Context extends Fake implements HotelContext {
   @override
   final ValueNotifier<int> lightingRevision = ValueNotifier(0);
   @override
+  final PerspectiveCamera camera = PerspectiveCamera(position: Vector3(-4, 1.6, 3));
+  @override
   List<Node> nodesNamed(String name) {
     final out = <Node>[];
     void walk(Node n) {
@@ -77,6 +79,26 @@ void main() {
     expect(ctx.lightingRevision.value, 1);
     f.unmount(ctx);
     expect(ctx.lightingRevision.value, 2);
+  });
+
+  test('only the camera room\'s reading lights cast shadows', () async {
+    // Spot shadows take sun-sized tiles in one atlas: two cascades and four
+    // spots at 2048 is 12288 wide, past the GPU's 8192 limit, and the frame
+    // fails to draw. So only the room the camera stands in casts them.
+    final ctx = rooms();
+    final f = SpotLightsFeature();
+    await f.mount(ctx);
+    List<bool> shadowed(RoomId id) => [
+          for (final name in ['reading_light_left', 'reading_light_right'])
+            spot(ctx.nodesNamed(name)[id.index]).light.castsShadow,
+        ];
+    expect(shadowed(RoomId.a), [true, true]);
+    expect(shadowed(RoomId.b), [false, false]);
+
+    ctx.camera.position.setValues(4, 1.6, 3); // walk into room B
+    f.tick(ctx, 0.016);
+    expect(shadowed(RoomId.a), [false, false]);
+    expect(shadowed(RoomId.b), [true, true]);
   });
 
   test('unmount removes the lights and the taps', () async {

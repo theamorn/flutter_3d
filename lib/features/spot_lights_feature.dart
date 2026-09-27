@@ -3,6 +3,7 @@ import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
 import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
+import '../math/floor_plan.dart' show RoomId;
 import 'interaction_registry.dart';
 
 /// Warm reading light: a tight cone onto the pillows.
@@ -18,7 +19,7 @@ Vector3 readingLightAim() => Vector3(0.55, -1, 0)..normalize();
 final Vector4 _shadeGlow = Vector4(3, 2.4, 1.7, 1);
 
 class _ReadingLight {
-  _ReadingLight(this.fixture, {required this.onSwitch}) {
+  _ReadingLight(this.fixture, {required this.inRoomA, required this.onSwitch}) {
     for (final c in fixture.children) {
       if (c.name != 'reading_light_shade') continue;
       for (final p in c.mesh?.primitives ?? const <MeshPrimitive>[]) {
@@ -42,6 +43,9 @@ class _ReadingLight {
 
   final Node fixture;
   final VoidCallback onSwitch;
+
+  /// Whether the fixture hangs in room A (at x < 0) rather than room B.
+  final bool inRoomA;
   final SpotLight light = SpotLight(
     color: Vector3(1, .82, .6),
     intensity: kReadingLightIntensity,
@@ -79,8 +83,16 @@ class _ReadingLight {
   }
 }
 
-/// Reading spot lights: a shadow-casting cone from each brass reading light
-/// over the beds, tappable on and off. Default-on because it owns the taps.
+bool _isUnder(Node node, Node? root) {
+  for (Node? n = node; n != null; n = n.parent) {
+    if (identical(n, root)) return true;
+  }
+  return false;
+}
+
+/// Reading spot lights: a cone from each brass reading light over the beds,
+/// shadowed in the camera's room, tappable on and off. Default-on because it
+/// owns the taps.
 class SpotLightsFeature extends HotelFeature {
   @override
   String get id => 'spot_lights';
@@ -97,11 +109,31 @@ class SpotLightsFeature extends HotelFeature {
       ...ctx.nodesNamed('reading_light_left'),
       ...ctx.nodesNamed('reading_light_right'),
     ]) {
-      final l = _ReadingLight(fixture, onSwitch: () => ctx.lightingRevision.value++);
+      final l = _ReadingLight(
+        fixture,
+        inRoomA: _isUnder(fixture, ctx.rooms[RoomId.a]),
+        onSwitch: () => ctx.lightingRevision.value++,
+      );
       _lights.add(l);
       ctx.interactions.register(l.interaction);
     }
+    _shadowCameraRoom(ctx);
     if (_lights.isNotEmpty) ctx.lightingRevision.value++;
+  }
+
+  @override
+  void tick(HotelContext ctx, double dt) => _shadowCameraRoom(ctx);
+
+  /// Only the camera's room's reading lights cast shadows. Spot shadows take
+  /// sun-sized tiles (2048) in the sun's shadow atlas: two cascades and four
+  /// spots make it 12288 wide, past the 8192 texture limit, and the frame
+  /// fails to draw. The other room's lights are behind a wall, or seen
+  /// through the connecting door, where their shadows barely show.
+  void _shadowCameraRoom(HotelContext ctx) {
+    final cameraInA = ctx.camera.position.x < 0;
+    for (final l in _lights) {
+      l.light.castsShadow = l.inRoomA == cameraInA;
+    }
   }
 
   @override
