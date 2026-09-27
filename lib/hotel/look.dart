@@ -1,6 +1,12 @@
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
 
+/// Fragments farther than this skip fog. The sky feature's sun and moon
+/// discs stand beyond it (so haze doesn't erase them); the sea's farthest
+/// corner, seen from anywhere in the rooms, is nearer (so it stays fogged).
+/// Pinned by sky_test.
+const double kFogCutoffDistance = 895;
+
 class LookState {
   bool toneMapping = true,
       fog = false,
@@ -50,6 +56,7 @@ EnvironmentSettings composeLook(LookState s) {
       ambientOcclusionHalfResolution: true,
       fogEnabled: s.fog,
       fogDensity: s.fogDensity,
+      fogCutoffDistance: kFogCutoffDistance,
       fogSkyColorInfluence: 1.0,
       fogColor: Vector3(0.7, 0.78, 0.86),
       godRaysEnabled: s.godRays,

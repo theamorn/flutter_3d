@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_math/vector_math.dart';
 import 'package:flutter_3d/features/ocean_feature.dart';
@@ -42,5 +43,45 @@ void main() {
         (kSandTop - kSeaLevel) / (kSandTop - kShoreEndY) * (kShoreEndZ - kSea.min.z);
     expect(crossing, greaterThan(kSea.min.z));
     expect(crossing, lessThan(kShoreEndZ));
+  });
+
+  group('sea horizon', () {
+    final standing = [
+      for (final x in [-FloorPlan.roomWidth, -4.0, 0.0, FloorPlan.roomWidth])
+        for (final z in [0.0, 3.0, FloorPlan.roomDepth + FloorPlan.balconyDepth])
+          Vector3(x, FloorPlan.eyeHeight, z),
+    ];
+    double? hit(Ray r) {
+      double? best;
+      for (final b in kSeaHorizon) {
+        final t = r.intersectsWithAabb3(b);
+        if (t != null && (best == null || t < best)) best = t;
+      }
+      return best;
+    }
+
+    Vector3 heading(double azimuth, double elevation) => Vector3(
+        math.cos(elevation) * math.sin(azimuth), math.sin(elevation),
+        math.cos(elevation) * math.cos(azimuth));
+
+    test('the sea reaches the horizon over the view (a sun just below it is hidden)', () {
+      for (final eye in standing) {
+        for (var az = -70.0; az <= 70.0; az += 5) {
+          final r = Ray.originDirection(eye, heading(az * degrees2Radians, -0.3 * degrees2Radians));
+          final t = hit(r);
+          expect(t, isNotNull, reason: 'nothing below the horizon at azimuth $az from $eye');
+          expect(t!, lessThan(cameraFar), reason: 'azimuth $az from $eye');
+        }
+      }
+    });
+
+    test('its top is the horizon: a sun just above it stays in view', () {
+      for (final eye in standing) {
+        for (var az = -70.0; az <= 70.0; az += 5) {
+          final r = Ray.originDirection(eye, heading(az * degrees2Radians, 0.3 * degrees2Radians));
+          expect(hit(r), isNull, reason: 'azimuth $az from $eye');
+        }
+      }
+    });
   });
 }
