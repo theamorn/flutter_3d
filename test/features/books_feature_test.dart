@@ -1,15 +1,19 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:flutter_test/flutter_test.dart';
 // ignore: implementation_imports
 import 'package:flutter_scene/src/fmat/fmat.dart';
 import 'package:vector_math/vector_math.dart';
 
+import 'package:flutter_3d/data/pokemon.dart';
 import 'package:flutter_3d/features/books_feature.dart';
 import 'package:flutter_3d/features/interaction_registry.dart';
 import 'package:flutter_3d/hotel/feature.dart';
 import 'package:flutter_3d/hotel/hotel_context.dart';
+import 'package:flutter_3d/math/fp_movement.dart';
 
 class _FakeContext extends Fake implements HotelContext {
   _FakeContext({required this.shelfNodes}) {
@@ -38,6 +42,23 @@ class _FakeContext extends Fake implements HotelContext {
   @override
   List<Node> nodesNamed(String name) => shelfNodes[name] ?? const [];
 }
+
+/// A PokéAPI whose replies the test hands out, in any order.
+class _ScriptedClient extends PokeApiClient {
+  final Map<int, Completer<PokemonResult>> pending = {};
+
+  @override
+  Future<PokemonResult> fetch(int id) => (pending[id] = Completer()).future;
+
+  void reply(int id) => pending.remove(id)!.complete(PokemonLoaded(Pokemon(
+      id: id, name: 'p$id', types: const [], stats: const {}, artworkUrl: '',
+      heightDm: 1, weightHg: 1)));
+}
+
+int? _shownId(ValueNotifier<PokemonResult?> page) => switch (page.value) {
+      PokemonLoaded(:final pokemon) => pokemon.id,
+      _ => null,
+    };
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -164,6 +185,98 @@ void main() {
       feature.tick(ctx, kPageTurnDuration);
       expect(feature.currentPokemonIndex, 2);
 
+      feature.closeBook(ctx);
+    });
+
+    test('a slow reply for a page already turned away from is dropped', () async {
+      final bookNode = Node(name: 'book_0');
+      final ctx = _FakeContext(shelfNodes: {'book_0': [bookNode]});
+      final client = _ScriptedClient();
+      final feature = BooksFeature(client: client);
+
+      feature.openBook(ctx, 0, bookNode); // asks for #1 and #4
+      feature.turnPage(forward: true);
+      feature.tick(ctx, kPageTurnDuration * 1.1); // now asks for #7 and #25
+      client.reply(7);
+      client.reply(25);
+      await pumpEventQueue();
+      client.reply(1); // the slow network finally answers the old pages
+      client.reply(4);
+      await pumpEventQueue();
+
+      expect(_shownId(feature.leftResultNotifier), 7);
+      expect(_shownId(feature.rightResultNotifier), 25);
+      feature.closeBook(ctx);
+    });
+
+    test('a reply meant for the previous book is dropped', () async {
+      final book0 = Node(name: 'book_0'), book3 = Node(name: 'book_3');
+      final ctx = _FakeContext(shelfNodes: {'book_0': [book0], 'book_3': [book3]});
+      final client = _ScriptedClient();
+      final feature = BooksFeature(client: client);
+
+      feature.openBook(ctx, 0, book0); // asks for #1 and #4
+      feature.closeBook(ctx);
+      feature.openBook(ctx, 3, book3); // asks for #25 and #133
+      client.reply(1);
+      client.reply(4);
+      await pumpEventQueue();
+
+      expect(feature.leftResultNotifier.value, isNull); // still loading #25
+      expect(feature.rightResultNotifier.value, isNull);
+      feature.closeBook(ctx);
+    });
+
+    test('the reader stays where they opened the book', () {
+      final bookNode = Node(name: 'book_0');
+      final ctx = _FakeContext(shelfNodes: {'book_0': [bookNode]})
+        ..playerXZ = Vector2(-1, 2);
+      final feature = BooksFeature(client: _ScriptedClient());
+
+      feature.openBook(ctx, 0, bookNode);
+      for (var i = 0; i < 30; i++) {
+        ctx.playerXZ += Vector2(0.02, 0); // the joystick's walk this frame
+        feature.tick(ctx, 1 / 60);
+      }
+
+      expect(ctx.playerXZ.x, closeTo(-1, 1e-9));
+      expect(ctx.playerXZ.y, closeTo(2, 1e-9));
+      expect(ctx.camera.position.x, closeTo(-1, 1e-6));
+      expect(ctx.camera.position.z, closeTo(2, 1e-6));
+      feature.closeBook(ctx);
+    });
+
+    test('an ordinary-speed swipe spread over many frames turns the page', () {
+      final bookNode = Node(name: 'book_0');
+      final ctx = _FakeContext(shelfNodes: {'book_0': [bookNode]});
+      final feature = BooksFeature(client: _ScriptedClient());
+
+      feature.openBook(ctx, 0, bookNode);
+      // ~900 px/s leftward: 15 px of look-pad drag per 60 Hz frame, 150 px.
+      for (var i = 0; i < 10; i++) {
+        ctx.playerYaw += -15 * kLookSensitivity; // what the player tick applied
+        feature.tick(ctx, 1 / 60);
+      }
+      feature.tick(ctx, kPageTurnDuration * 1.1);
+
+      expect(feature.currentPokemonIndex, 2);
+      feature.closeBook(ctx);
+    });
+
+    test('one swipe turns one page', () {
+      final bookNode = Node(name: 'book_0');
+      final ctx = _FakeContext(shelfNodes: {'book_0': [bookNode]});
+      final feature = BooksFeature(client: _ScriptedClient());
+
+      feature.openBook(ctx, 0, bookNode);
+      // A long, steady 40-frame swipe outlasts one page turn.
+      for (var i = 0; i < 40; i++) {
+        ctx.playerYaw += -15 * kLookSensitivity;
+        feature.tick(ctx, 1 / 60);
+      }
+      feature.tick(ctx, kPageTurnDuration * 1.1);
+
+      expect(feature.currentPokemonIndex, 2);
       feature.closeBook(ctx);
     });
   });

@@ -24,8 +24,11 @@ const double kPageWidth = kPageHeight * (512.0 / 700.0); // ~0.234 m
 /// Time in seconds for one page flip animation.
 const double kPageTurnDuration = 0.5;
 
-/// Logical pixel drag threshold on look pad to trigger a page turn.
-const double kSwipeThreshold = 25.0;
+/// Look-pad drag, logical px, one swipe needs to turn a page.
+const double kSwipeThreshold = 40.0;
+
+/// Seconds the look pad must rest before the next swipe can turn a page.
+const double kSwipePause = 0.15;
 
 /// Advances or rewinds the book Pokémon index by 2 (two pages per view).
 int advanceBookIndex(int current, {required bool forward, int count = 6}) {
@@ -183,6 +186,17 @@ class BooksFeature extends HotelFeature {
 
   double? _lockedYaw;
   double? _lockedPitch;
+  Vector2? _lockedXZ;
+
+  /// Horizontal drag (px, + = right) of the swipe in progress; a swipe turns
+  /// at most one page ([_swipeSpent]) until the pad rests for [kSwipePause].
+  double _swipe = 0;
+  double _swipeIdle = 0;
+  bool _swipeSpent = false;
+
+  /// Bumped per request and on close, so a reply for a page no longer shown
+  /// (turned away from, or from a previous book) is dropped.
+  int _leftRequest = 0, _rightRequest = 0;
 
   bool get isBookOpen => _openBookRoot != null;
   int get currentPokemonIndex => _currentIndex;
@@ -230,6 +244,10 @@ class BooksFeature extends HotelFeature {
     _currentIndex = initialIndex % kBookPokemon.length;
 
     _lockedYaw = ctx.playerYaw;
+    _lockedXZ = ctx.playerXZ.clone();
+    _swipe = 0;
+    _swipeIdle = 0;
+    _swipeSpent = false;
     final fwd = ctx.camera.forward.normalized();
     _lockedPitch = math.asin(fwd.y.clamp(-1.0, 1.0));
 
@@ -388,6 +406,7 @@ class BooksFeature extends HotelFeature {
         ? _currentIndex
         : (_currentIndex + 1) % kBookPokemon.length;
     final id = kBookPokemon[index];
+    final request = isLeft ? ++_leftRequest : ++_rightRequest;
 
     if (isLeft) {
       _leftResult.value = null;
@@ -397,7 +416,7 @@ class BooksFeature extends HotelFeature {
     _requestCapture(isLeft ? _leftComponent : _rightComponent);
 
     final res = await client.fetch(id);
-    if (!isBookOpen) return;
+    if (!isBookOpen || request != (isLeft ? _leftRequest : _rightRequest)) return;
 
     if (isLeft) {
       _leftResult.value = res;
@@ -449,7 +468,10 @@ class BooksFeature extends HotelFeature {
 
     _lockedYaw = null;
     _lockedPitch = null;
+    _lockedXZ = null;
     _isCurling = false;
+    _leftRequest++;
+    _rightRequest++;
   }
 
   void turnPage({required bool forward}) {
@@ -477,26 +499,41 @@ class BooksFeature extends HotelFeature {
     }
   }
 
+  /// Swipe left turns forward, right turns back: one page per swipe.
+  void _swipeStep(double dragX, double dt) {
+    if (dragX == 0) {
+      _swipeIdle += dt;
+      if (_swipeIdle > kSwipePause) {
+        _swipe = 0;
+        _swipeSpent = false;
+      }
+      return;
+    }
+    _swipeIdle = 0;
+    if (_swipeSpent) return;
+    // A change of direction starts the swipe over.
+    _swipe = (_swipe * dragX < 0 ? 0 : _swipe) + dragX;
+    if (!_isCurling && _swipe.abs() >= kSwipeThreshold) {
+      turnPage(forward: _swipe < 0);
+      _swipeSpent = true;
+    }
+  }
+
   @override
   void tick(HotelContext ctx, double dt) {
     if (!isBookOpen) return;
 
     final lockedYaw = _lockedYaw;
     final lockedPitch = _lockedPitch;
-    if (lockedYaw != null && lockedPitch != null) {
-      // Detect drag on look pad
-      final deltaYaw = ctx.playerYaw - lockedYaw;
-      final dragX = deltaYaw / kLookSensitivity;
+    final lockedXZ = _lockedXZ;
+    if (lockedYaw != null && lockedPitch != null && lockedXZ != null) {
+      // The player tick turned this frame's look-pad drag into yaw; read it
+      // back as the swipe, gathered over frames (one frame's share of an
+      // ordinary swipe is only ~15 px).
+      _swipeStep((ctx.playerYaw - lockedYaw) / kLookSensitivity, dt);
 
-      if (!_isCurling) {
-        if (dragX < -kSwipeThreshold) {
-          turnPage(forward: true);
-        } else if (dragX > kSwipeThreshold) {
-          turnPage(forward: false);
-        }
-      }
-
-      // Keep player camera locked onto the book
+      // Keep the reader and the camera locked onto the book
+      ctx.playerXZ = lockedXZ.clone();
       ctx.playerYaw = lockedYaw;
       aimCamera(ctx.camera, FpState(ctx.playerXZ, lockedYaw, lockedPitch));
       PlayerFeature.stick.value = Offset.zero;
