@@ -37,12 +37,12 @@ void main() {
       PointLight light(int i) => taps[i].node.children.single
           .getComponent<PointLightComponent>()!
           .light;
-      expect(light(0).intensity, 8);
+      expect(light(0).intensity, 4);
       taps[0].onTap();
       expect(light(0).intensity, 0);
-      expect(light(1).intensity, 8);
+      expect(light(1).intensity, 4);
       taps[0].onTap();
-      expect(light(0).intensity, 8);
+      expect(light(0).intensity, 4);
       feature.unmount(ctx);
       expect(ctx.interactions.all, isEmpty);
       expect(taps.every((t) => t.node.children.isEmpty), true);

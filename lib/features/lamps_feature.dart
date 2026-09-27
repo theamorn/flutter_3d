@@ -5,6 +5,11 @@ import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
 import 'interaction_registry.dart';
 
+/// Lamp light and shade glow. Halved from the first cut (8 and 8, 6.24,
+/// 4.4): at the night exposure (2.5) they washed the room out.
+const double kLampIntensity = 4;
+final Vector4 _shadeGlow = Vector4(4, 3.12, 2.2, 1);
+
 class LampsFeature extends HotelFeature {
   @override
   String get id => 'lamps';
@@ -70,7 +75,7 @@ class _Lamp {
   final Node node;
   final PointLight light = PointLight(
     color: Vector3(1, .78, .55),
-    intensity: 8,
+    intensity: kLampIntensity,
     range: 6,
   );
   final Node lightNode =
@@ -85,11 +90,11 @@ class _Lamp {
   bool _on = true;
 
   void _apply() {
-    light.intensity = _on ? 8 : 0;
+    light.intensity = _on ? kLampIntensity : 0;
     for (final entry in _shades.entries) {
       // HDR shade radiance gives bloom a small, localized highlight.
       entry.key.emissiveFactor = _on
-          ? Vector4(8, 6.24, 4.4, 1)
+          ? _shadeGlow.clone()
           : entry.value.clone();
     }
   }
