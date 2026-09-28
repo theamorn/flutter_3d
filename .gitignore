@@ -52,3 +52,6 @@ app.*.map.json
 
 # Superpowers plan workspaces
 .superpowers/
+
+# Local blog draft
+/blog.md
