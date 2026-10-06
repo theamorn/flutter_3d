@@ -23,8 +23,10 @@ void main() {
     });
 
     test('runs from full resolution down, never above it', () {
-      final scales =
-          SuperUltraRenderScale.values.map((scale) => scale.scale).toList();
+      final scales = SuperUltraRenderScale.values
+          .where((scale) => !scale.adaptive)
+          .map((scale) => scale.scale)
+          .toList();
       expect(scales.first, 1.0);
       for (var i = 1; i < scales.length; i++) {
         expect(scales[i], lessThan(scales[i - 1]));
@@ -32,6 +34,22 @@ void main() {
       }
     });
   });
+  test('Auto render scale is adaptive and starts from full resolution', () {
+    expect(SuperUltraRenderScale.auto.adaptive, isTrue);
+    expect(SuperUltraRenderScale.auto.scale, 1.0);
+    expect(SuperUltraRenderScale.values.where((s) => s.adaptive), [
+      SuperUltraRenderScale.auto,
+    ]);
+    expect(SuperUltraRenderScale.initial, SuperUltraRenderScale.percent85);
+  });
+
+  test('frame cap and scene copies default to the engine behaviour', () {
+    expect(SuperUltraFrameCap.initial.fps, isNull);
+    expect(SuperUltraSceneCopies.initial.batches, isNull);
+    expect(SuperUltraFrameCap.fps60.fps, 60);
+    expect(SuperUltraSceneCopies.shared.batches, 1);
+  });
+
   test('GPU pacing picks are 1 and 2 frames in flight, 1 by default', () {
     expect(SuperUltraGpuPacing.values.map((p) => p.frames), [1, 2]);
     expect(SuperUltraGpuPacing.initial, SuperUltraGpuPacing.one);

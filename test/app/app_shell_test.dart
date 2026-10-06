@@ -27,10 +27,15 @@ class _Scene3dState extends State<_Scene3d> {
       Text('${widget.name} ticking=${TickerMode.valuesOf(context).enabled}');
 }
 
-Widget _shell(List<String> created, {AppTab initialTab = AppTab.home}) =>
+Widget _shell(
+  List<String> created, {
+  AppTab initialTab = AppTab.home,
+  void Function(AppTab hidden)? onTabHidden,
+}) =>
     MaterialApp(
       home: AppShell(
         initialTab: initialTab,
+        onTabHidden: onTabHidden ?? (_) {},
         homeBuilder: (onTakeTour) => HomePage(
           onTakeTour: onTakeTour,
           backdrop: (_, _) => const ColoredBox(color: Colors.blue),
@@ -96,6 +101,33 @@ void main() {
       );
     },
   );
+
+  testWidgets('hidden tab releases once', (tester) async {
+    final created = <String>[];
+    final hidden = <AppTab>[];
+    await tester.pumpWidget(_shell(created, onTabHidden: hidden.add));
+    Future<void> go(String label) async {
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+
+    await go('Island Demo');
+    expect(hidden, [AppTab.home]);
+    await go('Home');
+    await go('Island Demo');
+    await go('Home');
+    // Home is hidden twice, the island twice; the callback fires once per
+    // hide, not per frame, and selecting the shown tab again is not a hide.
+    expect(hidden, [AppTab.home, AppTab.island, AppTab.home, AppTab.island]);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    expect(hidden, hasLength(4));
+    // A tab coming back renders at once, still ticking, with no error.
+    await go('Island Demo');
+    expect(find.text('island ticking=true'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('Take the 3D tour opens Home Demo', (tester) async {
     final created = <String>[];

@@ -531,6 +531,8 @@ class _IslandSceneScreenState extends State<IslandSceneScreen>
                       _island.scene,
                       onTick: _onTick,
                       warmUp: true,
+                      maxFrameRate:
+                          _island.isSuperUltra ? _island.frameCap.fps : null,
                     ),
                   ),
                 ),
@@ -1293,11 +1295,15 @@ class _EffectsPanelState extends State<_EffectsPanel> {
     final rasterMs =
         _frames.fold<int>(0, (sum, frame) => sum + frame.$3) / count / 1000;
     final fps = span > 0 ? (count - 1) / span : 0.0;
+    final island = widget.island;
+    final auto = island.renderScale.adaptive
+        ? ' · ${(island.scene.adaptiveRenderScale * 100).round()}%'
+        : '';
     setState(() {
       _readout = 'UI ${uiMs.toStringAsFixed(1)} ms · '
           'raster ${rasterMs.toStringAsFixed(1)} ms · '
           '${fps.toStringAsFixed(0)} flutter fps · '
-          '${_meter.sceneFps.toStringAsFixed(0)} scene fps';
+          '${_meter.sceneFps.toStringAsFixed(0)} scene fps$auto';
     });
   }
 
@@ -1399,6 +1405,22 @@ class _EffectsPanelState extends State<_EffectsPanel> {
             label: (p) => p.label,
             cost: (p) => p.cost,
             onSelected: (p) => _change(() => island.setGpuPacing(p)),
+          ),
+          _EffectsPicker<SuperUltraFrameCap>(
+            title: 'Frame cap',
+            options: SuperUltraFrameCap.values,
+            selected: island.frameCap,
+            label: (c) => c.label,
+            cost: (c) => c.cost,
+            onSelected: (c) => _change(() => island.setFrameCap(c)),
+          ),
+          _EffectsPicker<SuperUltraSceneCopies>(
+            title: 'Scene copies',
+            options: SuperUltraSceneCopies.values,
+            selected: island.sceneCopies,
+            label: (c) => c.label,
+            cost: (c) => c.cost,
+            onSelected: (c) => _change(() => island.setSceneCopies(c)),
           ),
           for (final group in SuperUltraEffectGroup.values) ...<Widget>[
             header(group.label),

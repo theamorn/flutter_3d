@@ -53,9 +53,20 @@ enum SuperUltraAntiAliasing {
 enum SuperUltraRenderScale {
   percent100('100%', 'Every screen pixel', 1.0),
   percent85('85%', '72% of the pixels, scaled up', 0.85),
-  percent75('75%', '56% of the pixels, scaled up', 0.75);
+  percent75('75%', '56% of the pixels, scaled up', 0.75),
+  auto(
+    'Auto',
+    'Starts at 100% and lowers the scale (to 60%) whenever frames miss 60 fps',
+    1.0,
+    adaptive: true,
+  );
 
-  const SuperUltraRenderScale(this.label, this.cost, this.scale);
+  const SuperUltraRenderScale(
+    this.label,
+    this.cost,
+    this.scale, {
+    this.adaptive = false,
+  });
 
   static const SuperUltraRenderScale initial = SuperUltraRenderScale.percent85;
 
@@ -67,6 +78,10 @@ enum SuperUltraRenderScale {
 
   /// `Scene.renderScale`.
   final double scale;
+
+  /// Whether the renderer may lower the scale itself
+  /// (`Scene.renderQuality.adaptive`, flutter_scene 0.24).
+  final bool adaptive;
 }
 
 /// How many frames of GPU work may be queued before the scene re-presents its
@@ -85,6 +100,41 @@ enum SuperUltraGpuPacing {
   final String label;
   final String cost;
   final int frames;
+}
+
+/// Caps how often the scene renders (`SceneView.maxFrameRate`, 0.24): an even
+/// cadence instead of a ragged one when the device can't hold the panel rate.
+enum SuperUltraFrameCap {
+  uncapped('Uncapped', 'Renders every frame it can', null),
+  fps60('60 fps', 'Every other refresh on a 120 Hz panel; steadier, cooler', 60);
+
+  const SuperUltraFrameCap(this.label, this.cost, this.fps);
+
+  static const SuperUltraFrameCap initial = SuperUltraFrameCap.uncapped;
+
+  final String label;
+  final String cost;
+  final double? fps;
+}
+
+/// How many scene-colour copies a frame may take for the sea and the heat
+/// haze (`Scene.sceneColorCaptureBatches`, 0.24). Shared is one copy, but the
+/// haze then sees the scene from before the sea was drawn.
+enum SuperUltraSceneCopies {
+  separate(
+    'Separate',
+    'One copy per overlapping reader (engine default)',
+    null,
+  ),
+  shared('Shared', 'One copy for all; the sea may vanish behind the haze', 1);
+
+  const SuperUltraSceneCopies(this.label, this.cost, this.batches);
+
+  static const SuperUltraSceneCopies initial = SuperUltraSceneCopies.separate;
+
+  final String label;
+  final String cost;
+  final int? batches;
 }
 
 /// Where an effect sits in the menu.

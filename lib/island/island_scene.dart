@@ -931,6 +931,8 @@ class IslandScene {
       return;
     }
     scene.maxGpuFramesInFlight = 1;
+    scene.renderQuality.adaptive = false;
+    scene.sceneColorCaptureBatches = null;
     sunLight.shadowCascadeCount = 1;
     sunLight.shadowMapResolution = 512;
     sunLight.shadowMaxDistance = 24.0;
@@ -1008,6 +1010,12 @@ class IslandScene {
     // behind it, which splits the scene pass, and with MSAA that split writes
     // the 4x depth buffer out to memory and reads it back every frame.
     scene.renderScale = _renderScale.scale;
+    scene.renderQuality
+      ..adaptive = _renderScale.adaptive
+      ..targetFrameRate = 60
+      ..minRenderScale = 0.6
+      ..maxRenderScale = 1.0;
+    scene.sceneColorCaptureBatches = _sceneCopies.batches;
     scene.maxGpuFramesInFlight = _gpuPacing.frames;
     scene.antiAliasingMode = _antiAliasing.mode;
     scene.environmentSettings = EnvironmentSettings(
@@ -1058,6 +1066,8 @@ class IslandScene {
   SuperUltraAntiAliasing _antiAliasing = SuperUltraAntiAliasing.initial;
   SuperUltraRenderScale _renderScale = SuperUltraRenderScale.initial;
   SuperUltraGpuPacing _gpuPacing = SuperUltraGpuPacing.initial;
+  SuperUltraFrameCap _frameCap = SuperUltraFrameCap.initial;
+  SuperUltraSceneCopies _sceneCopies = SuperUltraSceneCopies.initial;
 
   /// Whether the effects menu has [effect] on (all are, by default).
   bool isEffectOn(SuperUltraEffect effect) => !_effectsOff.contains(effect);
@@ -1071,13 +1081,21 @@ class IslandScene {
   /// The effects menu's GPU-pacing pick.
   SuperUltraGpuPacing get gpuPacing => _gpuPacing;
 
+  /// The effects menu's frame-cap pick (`SceneView.maxFrameRate`).
+  SuperUltraFrameCap get frameCap => _frameCap;
+
+  /// The effects menu's scene-copies pick.
+  SuperUltraSceneCopies get sceneCopies => _sceneCopies;
+
   /// How many menu entries differ from their default: effects switched off,
   /// plus each image-quality pick that has been changed.
   int get effectsMenuChanges =>
       _effectsOff.length +
       (_antiAliasing == SuperUltraAntiAliasing.initial ? 0 : 1) +
       (_renderScale == SuperUltraRenderScale.initial ? 0 : 1) +
-      (_gpuPacing == SuperUltraGpuPacing.initial ? 0 : 1);
+      (_gpuPacing == SuperUltraGpuPacing.initial ? 0 : 1) +
+      (_frameCap == SuperUltraFrameCap.initial ? 0 : 1) +
+      (_sceneCopies == SuperUltraSceneCopies.initial ? 0 : 1);
 
   /// Switches one Super Ultra feature on or off, to read its cost off the
   /// frame times. Kept across mode switches until [resetEffects].
@@ -1116,6 +1134,26 @@ class IslandScene {
     _refreshEffects();
   }
 
+  /// Picks how often the scene may render. Kept until [resetEffects]; the
+  /// scene screen passes it to `SceneView.maxFrameRate`.
+  void setFrameCap(SuperUltraFrameCap value) {
+    if (value == _frameCap) {
+      return;
+    }
+    _frameCap = value;
+    _refreshEffects();
+  }
+
+  /// Picks how many scene-colour copies the sea and haze may take. Kept
+  /// until [resetEffects].
+  void setSceneCopies(SuperUltraSceneCopies value) {
+    if (value == _sceneCopies) {
+      return;
+    }
+    _sceneCopies = value;
+    _refreshEffects();
+  }
+
   /// Every effect back on and every image-quality pick back to default.
   void resetEffects() {
     if (effectsMenuChanges == 0) {
@@ -1125,6 +1163,8 @@ class IslandScene {
     _antiAliasing = SuperUltraAntiAliasing.initial;
     _renderScale = SuperUltraRenderScale.initial;
     _gpuPacing = SuperUltraGpuPacing.initial;
+    _frameCap = SuperUltraFrameCap.initial;
+    _sceneCopies = SuperUltraSceneCopies.initial;
     _refreshEffects();
   }
 
