@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_scene/scene.dart';
+import '../app/debug_handles.dart';
 import '../features/entrance_feature.dart';
 import '../features/interactions_feature.dart';
 import '../features/player_feature.dart';
@@ -18,6 +20,12 @@ class HotelPage extends StatefulWidget {
 class _HotelPageState extends State<HotelPage> {
   final hotel = HotelScene();
   late final Future<void> _ready = hotel.start();
+
+  @override
+  void initState() {
+    super.initState();
+    if (kDebugMode) debugHotel = hotel;
+  }
 
   @override
   Widget build(BuildContext context) {

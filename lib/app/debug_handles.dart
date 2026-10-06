@@ -1,0 +1,198 @@
+/// Debug builds only: the live scenes, so a VM-service `evaluate` can reach
+/// them when a device check is driven from a terminal (set a mode, pose the
+/// camera, read a counter). App code never reads these.
+library;
+
+import 'dart:ui' show FrameTiming, Offset;
+
+import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/scheduler.dart';
+import 'package:flutter_scene/scene.dart'
+    show
+        DebugView,
+        Mesh,
+        MeshPrimitive,
+        Node,
+        PhysicallyBasedMaterial,
+        Scene,
+        MeshGeometry,
+        SurfaceDebugChannel,
+        loadFmatMaterial;
+
+import 'package:vector_math/vector_math.dart';
+
+import '../hotel/debug_tour.dart';
+import '../hotel/hotel_scene.dart';
+import '../hotel/presets.dart';
+import '../island/island_scene.dart';
+import '../island/super_ultra/super_ultra_effects.dart';
+
+HotelScene? debugHotel;
+IslandScene? debugIsland;
+
+/// Applies the hotel preset named [name] (low, medium, high, ultra).
+Future<void> debugHotelPreset(String name) =>
+    applyPreset(debugHotel!.registry, parsePreset(name)!);
+
+/// Stands the hotel player at ([x], [z]) facing [yaw] at [hour], looking
+/// [look] (a drag, in look-pad pixels) away from level.
+void debugHotelPose(double x, double z, double yaw,
+        {double hour = 15, double lookX = 0, double lookY = 0, bool rain = false}) =>
+    applyTourStop(
+      debugHotel!.ctx,
+      TourStop(
+        name: 'debug',
+        xz: Vector2(x, z),
+        yaw: yaw,
+        timeOfDay: hour,
+        rain: rain,
+        lookDelta: Offset(lookX, lookY),
+      ),
+    );
+
+final List<FrameTiming> _timings = [];
+bool _listening = false;
+
+/// Starts (once) collecting frame timings and clears what was collected, so
+/// a later [debugFrameReport] covers only the frames after this call.
+void debugFramesReset() {
+  if (!_listening) {
+    _listening = true;
+    SchedulerBinding.instance.addTimingsCallback(_timings.addAll);
+  }
+  _timings.clear();
+}
+
+/// Frames since [debugFramesReset]: count, average and p90 build and raster
+/// milliseconds.
+String debugFrameReport() {
+  if (_timings.isEmpty) return 'no frames';
+  List<double> ms(Duration Function(FrameTiming) f) =>
+      [for (final t in _timings) f(t).inMicroseconds / 1000.0]..sort();
+  String stat(List<double> v) =>
+      '${(v.reduce((a, b) => a + b) / v.length).toStringAsFixed(1)}'
+      '/p90 ${v[(v.length * 0.9).floor().clamp(0, v.length - 1)].toStringAsFixed(1)}';
+  return 'n=${_timings.length} build ${stat(ms((t) => t.buildDuration))} '
+      'raster ${stat(ms((t) => t.rasterDuration))}';
+}
+
+/// Frames the island's orbit camera on ([x], [y], [z]) from about twice
+/// [radius] away, [polar] radians above its lowest elevation, turned by
+/// [azimuth] radians.
+void debugIslandFrame(double x, double y, double z, double radius,
+    {double azimuth = 0, double polar = 0}) {
+  final orbit = debugIsland!.orbit..minDistance = 0.3;
+  orbit
+    ..frame(Aabb3.centerAndHalfExtents(Vector3(x, y, z), Vector3.all(radius)), margin: 1.0)
+    ..orbitBy(0, -10)
+    ..orbitBy(azimuth, polar);
+}
+
+/// Switches the island Effects menu entry named [name] (a [SuperUltraEffect]).
+void debugIslandEffect(String name, bool on) => debugIsland!
+    .setEffect(SuperUltraEffect.values.byName(name), on);
+
+/// Sets the island clock to [hours] (0..24).
+void debugIslandTime(double hours) => debugIsland!.timeOfDay = hours;
+
+/// Every node named [name] in the island scene: visibility, world position
+/// and its primitives' material types and names.
+String debugIslandDescribe(String name) {
+  final out = <String>[];
+  void walk(Node n) {
+    if (n.name == name) {
+      final p = n.globalTransform.getTranslation();
+      final materials = [
+        for (final prim in n.mesh?.primitives ?? const [])
+          '${prim.material.runtimeType}:${prim.material.name}'
+      ];
+      out.add('${n.visible} (${p.x.toStringAsFixed(2)}, ${p.y.toStringAsFixed(2)}, '
+          '${p.z.toStringAsFixed(2)}) $materials');
+    }
+    n.children.forEach(walk);
+  }
+
+  walk(debugIsland!.scene.root);
+  return out.join(' | ');
+}
+
+/// Shows the island's surfaces through the debug channel named [channel]
+/// (a [SurfaceDebugChannel]), or the lit scene again for null.
+void debugIslandView(String? channel) => debugIsland!.scene.debug.view = channel == null
+    ? DebugView.none
+    : DebugView(channel: SurfaceDebugChannel.values.byName(channel));
+
+/// Experiments on the first node named [name] in the island scene:
+/// `reattach` (detach and re-add to its parent) or `pbr` (swap every
+/// primitive to a plain red PBR material, as the bindings swap meshes).
+String debugIslandNodeOp(String name, String op) {
+  Node? found;
+  void walk(Node n) {
+    if (found == null && n.name == name) found = n;
+    n.children.forEach(walk);
+  }
+
+  walk(debugIsland!.scene.root);
+  final node = found;
+  if (node == null) return 'not found';
+  switch (op) {
+    case 'reattach':
+      final parent = node.parent!;
+      node.detach();
+      parent.add(node);
+    case 'pbr':
+      final own = node.mesh!;
+      node.mesh = Mesh.primitives(primitives: [
+        for (final p in own.primitives)
+          MeshPrimitive(p.geometry,
+              PhysicallyBasedMaterial()..baseColorFactor = Vector4(1, 0, 0, 1)),
+      ]);
+  }
+  return 'ok static=${node.shadowStatic} parentStatic=${node.parent?.shadowStatic}';
+}
+
+/// Captures one island frame and prints every draw and skipped item whose
+/// node path contains [needle], as `capture:` lines, then `capture: done`.
+void debugIslandCapture(String needle) {
+  Scene.debugAllowRenderGraphCapture = true;
+  debugIsland!.scene.captureRenderGraph().then((r) {
+    for (final pass in r.passes) {
+      for (final d in pass.draws) {
+        if ((d.nodePath ?? '').contains(needle)) {
+          debugPrint('capture: ${pass.name} draw ${d.nodePath} '
+              '${d.materialSource ?? d.materialType} ${d.fragmentShaderName} '
+              'verts ${d.vertexCount} inst ${d.instanceCount}');
+        }
+      }
+      for (final s in pass.skips) {
+        if ((s.nodePath ?? '').contains(needle)) {
+          debugPrint('capture: ${pass.name} skip ${s.nodePath} ${s.reason.name}');
+        }
+      }
+    }
+    debugPrint('capture: done (${r.passes.length} passes)');
+  }, onError: (Object e) => debugPrint('capture: error $e'));
+}
+
+/// Loads the `.fmat` at [path] and swaps every primitive of the first island
+/// node named [name] to it (prints `swap: done` when it lands); [repack]
+/// first copies the geometry into a code-built [MeshGeometry].
+void debugIslandNodeFmat(String name, String path, {bool repack = false}) {
+  Node? found;
+  void walk(Node n) {
+    if (found == null && n.name == name) found = n;
+    n.children.forEach(walk);
+  }
+
+  walk(debugIsland!.scene.root);
+  final node = found!;
+  loadFmatMaterial(path).then((m) {
+    final own = node.mesh!;
+    node.mesh = Mesh.primitives(primitives: [
+      for (final p in own.primitives)
+        MeshPrimitive(
+            repack ? MeshGeometry.fromMeshData(p.geometry.extractMeshData()) : p.geometry, m),
+    ]);
+    debugPrint('swap: done $path');
+  });
+}

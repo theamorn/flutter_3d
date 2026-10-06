@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_scene/scene.dart' hide Material;
+import 'package:flutter_3d/app/debug_handles.dart';
 import 'package:flutter_3d/island/island_scene.dart';
 import 'package:flutter_3d/island/particles.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_effects.dart';
@@ -250,6 +251,7 @@ class _IslandSceneScreenState extends State<IslandSceneScreen>
   @override
   void initState() {
     super.initState();
+    if (kDebugMode) debugIsland = _island;
     if (kSceneFrameStats || kSceneAblation) {
       SchedulerBinding.instance.addTimingsCallback(_onFrameTimings);
     }
