@@ -1212,9 +1212,6 @@ class IslandScene {
       rig
         ..grassLevel = (() => qualityLevelFor(scene.effectiveRenderQualityTier))
         ..grassFullDensity = off(SuperUltraEffect.grassThinning);
-      rig.setGrassCoverage(off(SuperUltraEffect.grassCoverage)
-          ? GrassCoverageMode.original
-          : GrassCoverageMode.covered);
       rig.fire.setCoreGlow(
           off(SuperUltraEffect.glowCard) ? CoreGlowMode.sprite : CoreGlowMode.card);
       if (off(SuperUltraEffect.stoneIndirect)) {

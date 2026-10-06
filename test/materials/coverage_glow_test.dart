@@ -3,8 +3,6 @@ import 'dart:io';
 // The engine's own .fmat compiler (pure Dart, no GPU).
 // ignore: implementation_imports
 import 'package:flutter_scene/src/fmat/fmat.dart';
-// ignore: implementation_imports
-import 'package:flutter_scene/src/fmat/fmat_emitter.dart' show materialHasDepthSurface;
 import 'package:flutter_test/flutter_test.dart';
 
 FmatCompilation _compile(String path) =>
@@ -35,36 +33,5 @@ void main() {
       expect(c.vertexGlsl, isNotEmpty);
     });
   });
-
-  group('grass_coverage.fmat', () {
-    final covered = _compile('assets/materials/grass_coverage.fmat');
-    final original = _compile('assets/materials/grass.fmat');
-
-    test('is an opaque alpha-to-coverage cutout with its own depth surface', () {
-      expect(covered.material.blending, FmatBlending.opaque);
-      expect(covered.material.alphaToCoverage, isTrue);
-      expect(materialHasDepthSurface(covered.material), isTrue);
-    });
-
-    test('keeps every grass parameter, so wind, player and light still drive it', () {
-      expect(_params(covered), containsPair('time', FmatType.float_));
-      for (final p in original.material.parameters) {
-        expect(_params(covered)[p.name], p.type, reason: p.name);
-      }
-    });
-
-    test('keeps the world-space wind and player push in its vertex stage', () {
-      final vertex = covered.material.vertexSource!;
-      expect(vertex, contains('material_params.wind'));
-      expect(vertex, contains('material_params.player'));
-      expect(vertex, contains('vertex.world_position.xz += bend * k'));
-    });
-
-    test('fades a narrow band at the blade edges and tip from the UVs', () {
-      final body = covered.material.fragmentSource;
-      expect(body, contains('GetUV0()'));
-      expect(body, contains('precision highp float;'));
-      expect(covered.glsl, isNotEmpty);
-    });
-  });
 }
+

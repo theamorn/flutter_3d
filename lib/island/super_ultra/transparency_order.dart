@@ -1,5 +1,5 @@
-/// Draw order for the campfire's translucent stack, and the two Super Ultra
-/// comparisons that come with it (covered grass, the glow card).
+/// Draw order for the campfire's translucent stack, and the glow-card
+/// comparison that comes with it.
 ///
 /// flutter_scene 0.24 sorts translucent draws by `Node.renderOrder`
 /// (ascending) within a pass, then by depth. The order only holds inside one
@@ -49,15 +49,6 @@ class RenderOrderLedger<T extends Object> {
 
   /// Every target back to its authored value; the ledger is empty after.
   void restore() => apply(const {});
-}
-
-/// The grass comparison: blades with soft alpha-to-coverage edges, or the
-/// original hard-edged material.
-enum GrassCoverageMode {
-  covered,
-  original;
-
-  static const GrassCoverageMode initial = GrassCoverageMode.covered;
 }
 
 /// The fire's core glow: the camera-facing additive card, or the previous

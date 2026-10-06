@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_3d/island/super_ultra/super_ultra_effects.dart';
 import 'package:flutter_3d/island/super_ultra/transparency_order.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -68,10 +70,6 @@ void main() {
   });
 
   group('comparisons', () {
-    test('grass defaults to covered blades', () {
-      expect(GrassCoverageMode.initial, GrassCoverageMode.covered);
-    });
-
     test('the core glow is the card or the sprite, never both', () {
       for (final mode in CoreGlowMode.values) {
         final shown = coreGlowVisibility(mode);
@@ -82,9 +80,13 @@ void main() {
       expect(coreGlowVisibility(CoreGlowMode.sprite).sprite, isTrue);
     });
 
-    test('the effects menu offers both comparisons in scene content', () {
-      expect(SuperUltraEffect.grassCoverage.group, SuperUltraEffectGroup.scene);
+    test('the effects menu offers the glow comparison in scene content', () {
       expect(SuperUltraEffect.glowCard.group, SuperUltraEffectGroup.scene);
+    });
+
+    test('covered grass is not offered (engine cutout pre-draw has no UVs)', () {
+      expect(SuperUltraEffect.values.map((e) => e.name), isNot(contains('grassCoverage')));
+      expect(File('assets/materials/grass_coverage.fmat').existsSync(), isFalse);
     });
   });
 }

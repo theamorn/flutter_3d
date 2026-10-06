@@ -14,7 +14,12 @@ import 'package:flutter_scene/scene.dart'
         MeshPrimitive,
         Node,
         PhysicallyBasedMaterial,
+        RenderQualityTier,
         Scene,
+        InstancedMesh,
+        InstancedMeshComponent,
+        MeshDrawContext,
+        MeshDrawPass,
         MeshGeometry,
         SurfaceDebugChannel,
         loadFmatMaterial;
@@ -195,4 +200,63 @@ void debugIslandNodeFmat(String name, String path, {bool repack = false}) {
     ]);
     debugPrint('swap: done $path');
   });
+}
+
+/// Loads the `.fmat` at [path] and draws the Super Ultra lawn with it (a
+/// fresh InstancedMesh over the same instances), for shader experiments.
+void debugIslandLawnFmat(String path) {
+  Node? found;
+  void walk(Node n) {
+    if (found == null && n.name == 'su_grass') found = n;
+    n.children.forEach(walk);
+  }
+
+  walk(debugIsland!.scene.root);
+  final node = found!;
+  final current = node.getComponent<InstancedMeshComponent>()!;
+  loadFmatMaterial(path).then((m) {
+    final old = current.instancedMesh;
+    final batch = InstancedMesh(geometry: old.geometry, material: m)
+      ..drawSelector = old.drawSelector;
+    old.updateInstanceTransforms((transforms) {
+      for (var i = 0; i < transforms.length; i++) {
+        batch.addInstance(transforms[i]);
+      }
+    }, recomputeWinding: false);
+    for (final c in node.getComponents<InstancedMeshComponent>().toList()) {
+      node.removeComponent(c);
+    }
+    node.addComponent(InstancedMeshComponent(batch));
+    debugPrint('lawn: done $path');
+  });
+}
+
+/// Pins the island's render quality tier (`low`, `medium`, `high`), or lets
+/// the platform pick again for null. Returns the effective tier.
+String debugIslandTier(String? tier) {
+  final scene = debugIsland!.scene;
+  scene.renderQuality.tier =
+      tier == null ? null : RenderQualityTier.values.byName(tier);
+  return scene.effectiveRenderQualityTier.name;
+}
+
+/// How many lawn tufts the Super Ultra grass selector draws now, per pass,
+/// out of the total.
+String debugIslandGrassCount() {
+  Node? found;
+  void walk(Node n) {
+    if (found == null && n.name == 'su_grass') found = n;
+    n.children.forEach(walk);
+  }
+
+  walk(debugIsland!.scene.root);
+  final mesh = found!.getComponent<InstancedMeshComponent>()!.instancedMesh;
+  final selector = mesh.drawSelector;
+  if (selector == null) return 'no selector, ${mesh.instanceCount}';
+  final context =
+      MeshDrawContext(pass: MeshDrawPass.color, cameraPosition: Vector3.zero(), primaryView: true);
+  final colour = selector(context).instanceCount;
+  context.pass = MeshDrawPass.depth;
+  final depth = selector(context).instanceCount;
+  return 'colour $colour depth $depth of ${mesh.instanceCount}';
 }
