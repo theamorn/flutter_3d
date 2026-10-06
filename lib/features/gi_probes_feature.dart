@@ -17,8 +17,9 @@ class GiProbeLayout {
     }
     if (_origin == grid.origin &&
         _spacing == grid.spacing &&
-        _counts == grid.counts)
+        _counts == grid.counts) {
       return false;
+    }
     _origin = grid.origin.clone();
     _spacing = grid.spacing.clone();
     _counts = grid.counts.clone();
@@ -64,8 +65,9 @@ class GiProbesFeature extends HotelFeature {
     if (!_layout.update(
       ctx.scene.globalIllumination.enabled,
       ctx.scene.globalIlluminationProbeGrid,
-    ))
+    )) {
       return;
+    }
     _remove(ctx);
     final positions = _layout.positions.toList();
     if (positions.isEmpty) return;

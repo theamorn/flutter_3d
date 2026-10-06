@@ -1581,7 +1581,7 @@ git commit -m "feat(island): Auto render scale, 60 fps cap, shared scene copies;
 
 ### Task 9: Hotel lights and startup
 
-Implementation complete; visual checks remain partial as recorded in Step 5.
+Implementation and physical iPhone verification complete, including the bathroom light range correction recorded in Step 5.
 
 **Files:**
 - Modify: `lib/features/lamps_feature.dart` (bath light ~138, bedside lamps ~199)
@@ -1741,7 +1741,7 @@ In `hotel_scene.dart` `start()`, replace `await Scene.initializeStaticResources(
 
 In `hotel_page.dart`, add `warmUp: true,` to `SceneView(...)`. 0.24 slices the warm-up so input keeps flowing.
 
-- [ ] **Step 5: Test, look, commit** (tests/analyze and commit done; macOS Ultra startup, zero overflow, and 22:00 bath shadow A/B observed; simulator, clear door-frame floor shadow and pillow shadow checks remain unobserved)
+- [x] **Step 5: Test, look, commit** (physical iPhone substituted for simulator at the user's request. Raised bath range from 2.6 to 4.0 m; regression checks the actual mounted bulb against both mirrored doorway floors with falloff margin. 483 tests pass, analysis clean. At 22:00, doorway on/off comparisons show the bath shadow's effect on the adjoining floor; pillow shadows remain visible, atlas overflow is zero. Final comparison held exposure fixed to isolate shadows, then restored normal settings. Evidence: `docs/superpowers/notes/2026-10-06-hotel-ios-shadows.md`.)
 
 ```bash
 fvm flutter test && fvm flutter analyze lib test

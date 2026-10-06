@@ -6,6 +6,8 @@ import 'package:flutter_3d/features/bath_shadow_feature.dart';
 import 'package:flutter_3d/features/interaction_registry.dart';
 import 'package:flutter_3d/hotel/hotel_context.dart';
 import 'package:flutter_3d/math/floor_plan.dart';
+import 'package:flutter_3d/features/placeholder_rooms.dart';
+import 'package:vector_math/vector_math.dart';
 
 // Replace only the GPU-owning context; scene nodes and interactions are real.
 class _Context extends Fake implements HotelContext {
@@ -24,6 +26,60 @@ class _Context extends Fake implements HotelContext {
 }
 
 void main() {
+  test(
+    'bath ceiling lights reach the doorway floor before their cutoff',
+    () async {
+      // Use the authored fixture pose and the real mounted bulb. A range that
+      // stops above the floor, or loses its falloff margin, breaks this check.
+      RoomNode? fixture;
+      void findFixture(RoomNode node) {
+        if (node.name == 'bath_light') fixture = node;
+        for (final child in node.children) {
+          findFixture(child);
+        }
+      }
+
+      findFixture(roomASpec());
+      expect(fixture, isNotNull);
+      final ctx = _Context();
+      for (final room in RoomId.values) {
+        ctx.rooms[room] =
+            Node(
+                name: room.name,
+                localTransform: Matrix4.diagonal3Values(
+                  room == RoomId.a ? 1 : -1,
+                  1,
+                  1,
+                ),
+              )
+              ..add(
+                Node(
+                  name: 'bath_light',
+                  localTransform: fixture!.localTransform.clone(),
+                ),
+              )
+              ..add(Node(name: 'bath_switch'));
+      }
+      final lamps = LampsFeature();
+      addTearDown(() => lamps.unmount(ctx));
+      await lamps.mount(ctx);
+      for (final room in RoomId.values) {
+        final source = ctx.rooms[room]!.children.first.children.single;
+        final light = source.getComponent<PointLightComponent>()!.light;
+        final position = source.globalTransform.getTranslation();
+        final mirror = room == RoomId.a ? 1.0 : -1.0;
+        for (final z in [FloorPlan.bathDoorZ0, FloorPlan.bathDoorZ1]) {
+          final floor = Vector3(mirror * (FloorPlan.bathX1 + 0.1), 0, z);
+          expect(
+            position.distanceTo(floor),
+            lessThan(light.range * 0.85),
+            reason: '${room.name}: the doorway floor needs falloff margin',
+          );
+        }
+      }
+    },
+  );
+
   test('bath shadows follow lamp remounts and switch off on unmount', () async {
     final ctx = _Context();
     for (final room in RoomId.values) {

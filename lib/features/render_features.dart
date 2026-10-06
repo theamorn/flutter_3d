@@ -41,8 +41,9 @@ class SunShadows {
 
   /// Call every frame: configures a sun that replaced the one we set up.
   void sync(LookState look) {
-    if (_enabled && !identical(look.sunLight, _configured))
+    if (_enabled && !identical(look.sunLight, _configured)) {
       _configure(look.sunLight);
+    }
   }
 
   void _configure(SunLight? sun) {

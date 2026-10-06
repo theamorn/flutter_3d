@@ -13,9 +13,10 @@ const double kLampIntensity = 4;
 const double kBulbRadius = 0.06;
 final Vector4 _shadeGlow = Vector4(4, 3.12, 2.2, 1);
 
-/// The bathroom's dim ceiling light: a low, warm glow that stays in the
-/// bathroom (range ≈ its size).
-const double kBathLightIntensity = 1.5, kBathLightRange = 2.6;
+/// The bathroom's dim ceiling light. Its bulb is 2.65 m above the floor;
+/// 4 m reaches the doorway floor (~3.1 m away) with falloff margin, so point
+/// shadows can land there. The old 2.6 m cutoff excluded the entire floor.
+const double kBathLightIntensity = 1.5, kBathLightRange = 4.0;
 final Vector4 _diffuserGlow = Vector4(2, 1.7, 1.3, 1);
 
 /// How far the switch rocker tips when the light is off (radians).
