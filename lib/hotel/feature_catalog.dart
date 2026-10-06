@@ -41,7 +41,7 @@ List<HotelFeature> buildCatalog() => [
       ShadowsFeature(), MsaaFeature(),
       LampsFeature(), FixtureShadowsFeature(), BathShadowFeature(), DoorFeature(), PortalCullingFeature(), CurtainsFeature(),
       ClothLightingFeature(),
-      WaterFxFeature(), RainFeature(), RainGlassFeature(), LightningFeature(),
+      WaterFxFeature(), RainFeature(), RainGlassFeature(), LightningFeature(), LightningRippleFeature(),
       MirrorFeature(), SeaReflectionFeature(),
       ScreensFeature(), BooksFeature(), InstancingFeature(), EntranceFeature(),
       LightProbesFeature(), DynamicGiFeature(), GiProbesFeature(), AutoExposureFeature(), StaticShadowsFeature(),

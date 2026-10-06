@@ -4,8 +4,13 @@ import '../hotel/feature_registry.dart';
 import '../hotel/presets.dart';
 
 class EffectsSheet extends StatelessWidget {
-  const EffectsSheet({super.key, required this.registry, this.presetRow});
+  const EffectsSheet(
+      {super.key, required this.registry, this.presetRow, this.previews = const {}});
   final FeatureRegistry registry;
+
+  /// A one-tap preview per feature id (label and action), shown under the
+  /// feature's switch while it is on.
+  final Map<String, (String, VoidCallback)> previews;
 
   /// Replaces the default Low / Medium / High / Ultra chips.
   final Widget? presetRow;
@@ -36,11 +41,18 @@ class EffectsSheet extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelLarge)),
             for (final f in registry.features
                 .where((f) => f.tier == tier && f.toggleable))
-              SwitchListTile(
-                title: Text(f.label),
-                value: registry.isEnabled(f.id),
-                onChanged: (v) => registry.setEnabled(f.id, v),
-              ),
+              ...[
+                SwitchListTile(
+                  title: Text(f.label),
+                  value: registry.isEnabled(f.id),
+                  onChanged: (v) => registry.setEnabled(f.id, v),
+                ),
+                if (previews[f.id] case final preview? when registry.isEnabled(f.id))
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(onPressed: preview.$2, child: Text(preview.$1)),
+                  ),
+              ],
           ],
         ]),
       ),

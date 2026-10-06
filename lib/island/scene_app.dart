@@ -341,6 +341,7 @@ class _IslandSceneScreenState extends State<IslandSceneScreen>
         state != AppLifecycleState.paused &&
         state != AppLifecycleState.hidden &&
         state != AppLifecycleState.detached;
+    if (!active) _island.clearShockwaves();
     if (active != _renderLoopActive) {
       // Logged, not just rendered: this is the only way to confirm the tab
       // actually stopped rendering when the host hid it, since the HUD line
@@ -350,6 +351,14 @@ class _IslandSceneScreenState extends State<IslandSceneScreen>
       );
       setState(() => _renderLoopActive = active);
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The app shell hides a tab by switching its tickers off: a ripple must
+    // not wait, frozen, for the tab to come back.
+    if (!TickerMode.valuesOf(context).enabled) _island.clearShockwaves();
   }
 
   void _onTick(Duration elapsed, double deltaSeconds) {
@@ -1443,6 +1452,17 @@ class _EffectsPanelState extends State<_EffectsPanel> {
                     style: const TextStyle(color: Colors.white60),
                   ),
                 ),
+            if (group == SuperUltraEffect.lightningRipple.group)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: island.isEffectOn(SuperUltraEffect.lightningRipple)
+                      ? island.previewShockwave
+                      : null,
+                  icon: const Icon(Icons.blur_circular),
+                  label: const Text('Preview lightning ripple'),
+                ),
+              ),
           ],
         ],
       ),

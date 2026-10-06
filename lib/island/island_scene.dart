@@ -24,6 +24,8 @@ import 'package:flutter_3d/island/super_ultra/transparency_order.dart';
 import 'package:flutter_3d/island/tap_to_move.dart';
 import 'package:flutter_3d/island/xray.dart';
 import 'package:flutter_3d/render/prewarm.dart';
+import 'package:flutter_3d/render/shockwave_apply.dart';
+import 'package:flutter_3d/render/shockwave_pool.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 /// Fixed dimensions of the island. The walkable disc and the visible grass cap
@@ -275,6 +277,32 @@ class IslandScene {
     _superRig.lightning?.enabled = on;
   }
 
+  /// A short screen ripple per lightning strike in view (Super Ultra's
+  /// "Lightning ripple" effect).
+  final ShockwavePool _shockwaves = ShockwavePool();
+  ui.Size? _viewport;
+
+  void _onStrike(StrikeEvent event) {
+    final viewport = _viewport;
+    if (viewport == null ||
+        !isSuperUltra ||
+        !isEffectOn(SuperUltraEffect.lightningRipple)) {
+      return;
+    }
+    triggerStrike(_shockwaves, event, camera, viewport);
+  }
+
+  /// One centred ripple, to check the effect without waiting for a strike.
+  void previewShockwave() {
+    if (isSuperUltra && isEffectOn(SuperUltraEffect.lightningRipple)) {
+      _shockwaves.preview();
+    }
+  }
+
+  /// Drops every ripple and switches the distortion pass off (the scene was
+  /// hidden, the rain stopped, the mode or the effect changed).
+  void clearShockwaves() => clearSceneShockwaves(scene, _shockwaves);
+
   /// Lightning strikes so far, for the readout.
   int get lightningStrikes =>
       isSuperUltra ? (_superRig.lightning?.strikes ?? 0) : 0;
@@ -310,6 +338,7 @@ class IslandScene {
   /// nothing.
   Future<void> setRain(bool on) async {
     _rainWanted = on;
+    if (!on) clearShockwaves();
     if (on) {
       await _prepareRain();
     }
@@ -333,7 +362,9 @@ class IslandScene {
           cameraPose: _cameraPose,
           lightningHoldSeconds: debugLightningHoldSeconds,
         );
-        _superRig.lightning?.enabled = _stormWanted;
+        _superRig.lightning
+          ?..enabled = _stormWanted
+          ..onStrike = _onStrike;
       } finally {
         _preparingRain = false;
       }
@@ -826,6 +857,7 @@ class IslandScene {
     final wasUltra = isUltraMode;
     final wasSuper = isSuperUltra;
     _quality = quality;
+    clearShockwaves();
     if (quality == IslandQuality.normal && _xray != XrayMode.off) {
       setXray(XrayMode.off);
     }
@@ -1209,6 +1241,7 @@ class IslandScene {
           in rig.oceanNode.getComponents<PlanarReflectorComponent>()) {
         reflector.enabled = !off(SuperUltraEffect.planarReflection);
       }
+      if (off(SuperUltraEffect.lightningRipple)) clearShockwaves();
       rig
         ..grassLevel = (() => qualityLevelFor(scene.effectiveRenderQualityTier))
         ..grassFullDensity = off(SuperUltraEffect.grassThinning);
@@ -2529,6 +2562,11 @@ class IslandScene {
   void tick(double deltaSeconds, {ui.Size? viewportSize}) {
     if (!_loaded) {
       return;
+    }
+    _viewport = viewportSize;
+    if (!_shockwaves.isEmpty || scene.screenDistortion.enabled) {
+      _shockwaves.update(deltaSeconds);
+      applyShockwaves(scene, _shockwaves);
     }
     if (_xray != XrayMode.off) {
       _xrayClock += deltaSeconds;

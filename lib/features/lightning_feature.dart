@@ -5,6 +5,8 @@ import 'package:vector_math/vector_math.dart';
 import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
 import '../math/schedulers.dart';
+import '../render/shockwave_apply.dart';
+import '../render/shockwave_pool.dart';
 import 'ocean_feature.dart' show kSeaLevel;
 import 'reflection_features.dart' show kSeaReflectedLayer;
 import 'sky_feature.dart' show kDayExposure, kNightExposure;
@@ -130,6 +132,10 @@ class LightningFeature extends HotelFeature {
   late final LightningScheduler _scheduler =
       LightningScheduler(random: math.Random());
 
+  /// Ids for the strikes' screen ripples. Kept across remounts; each mount
+  /// starts a new generation.
+  final StrikeCounter _strikeIds = StrikeCounter();
+
   Node? _boltNode;
   TubeGeometry? _boltGeometry;
   Node? _flashNode;
@@ -144,6 +150,7 @@ class LightningFeature extends HotelFeature {
 
   @override
   Future<void> mount(HotelContext ctx) async {
+    _strikeIds.replaceScheduler();
     // Seeded with a harmless straight-down stub; the first real strike
     // reshapes it via updatePath before the node is ever shown.
     final initial = buildBoltPoints(0, (kBoltZMin + kBoltZMax) / 2, _rng);
@@ -184,6 +191,17 @@ class LightningFeature extends HotelFeature {
       final points = buildStrikeBolt(_rng);
       _boltGeometry?.updatePath(PolylinePath(points));
       debugPrint('lightning strike');
+      _ripple(ctx, points);
+    }
+    if (ctx.lightningRipple && !ctx.shockwaves.isEmpty) {
+      ctx.shockwaves.update(dt);
+      applyShockwaves(ctx.scene, ctx.shockwaves);
+    } else if (ctx.scene.screenDistortion.enabled) {
+      applyShockwaves(ctx.scene, ctx.shockwaves);
+    }
+    // The storm is over: no ripple outlives it.
+    if (ctx.weather <= 0.7 && !ctx.shockwaves.isEmpty) {
+      clearSceneShockwaves(ctx.scene, ctx.shockwaves);
     }
 
     final strike = _strike;
@@ -218,8 +236,23 @@ class LightningFeature extends HotelFeature {
     }
   }
 
+  /// One ripple for the new strike, centred on its bolt, if it is in view.
+  void _ripple(HotelContext ctx, List<Vector3> bolt) {
+    if (!ctx.lightningRipple) return;
+    final view = PlatformDispatcher.instance.implicitView;
+    if (view == null) return;
+    final middle = bolt[bolt.length ~/ 2];
+    triggerStrike(
+      ctx.shockwaves,
+      StrikeEvent(_strikeIds.next(), middle.x, middle.y, middle.z),
+      ctx.camera,
+      view.physicalSize / view.devicePixelRatio,
+    );
+  }
+
   @override
   void unmount(HotelContext ctx) {
+    clearSceneShockwaves(ctx.scene, ctx.shockwaves);
     final bolt = _boltNode;
     if (bolt != null) ctx.scene.remove(bolt);
     final flash = _flashNode;
@@ -234,5 +267,28 @@ class LightningFeature extends HotelFeature {
     _flashNode = null;
     _flashLight = null;
     _strike = null;
+  }
+}
+
+/// A short screen ripple from each lightning strike in view (flutter_scene
+/// 0.24 screen distortion). The lightning feature makes the ripples; this
+/// switch lets it. Off clears any ripple and the distortion pass.
+class LightningRippleFeature extends HotelFeature {
+  @override
+  String get id => 'lightning_ripple';
+  @override
+  String get label => 'Lightning ripple (screen distortion)';
+  @override
+  CostTier get tier => CostTier.cheap;
+  @override
+  bool get defaultOn => false;
+
+  @override
+  Future<void> mount(HotelContext ctx) async => ctx.lightningRipple = true;
+
+  @override
+  void unmount(HotelContext ctx) {
+    ctx.lightningRipple = false;
+    clearSceneShockwaves(ctx.scene, ctx.shockwaves);
   }
 }

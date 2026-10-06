@@ -200,6 +200,12 @@ enum SuperUltraEffect {
     'Ghosts and a halo off the sun',
     SuperUltraEffectGroup.post,
   ),
+  lightningRipple(
+    'Lightning ripple',
+    'A short screen ripple from each lightning strike in view (screen '
+        'distortion pass, only while a ripple lives)',
+    SuperUltraEffectGroup.post,
+  ),
   fog(
     'Fog',
     'Distance haze that glows toward the sun',

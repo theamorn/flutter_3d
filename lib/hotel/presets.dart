@@ -7,7 +7,9 @@ const _medium = {
   ..._low, 'fog', 'shadows', 'lamps', 'water_fx',
   'light_probes', 'auto_exposure', 'static_shadows', 'area_lights',
 };
-const _high = {..._medium, 'bloom', 'ao', 'rain', 'lightning', 'spot_lights'};
+const _high = {
+  ..._medium, 'bloom', 'ao', 'rain', 'lightning', 'lightning_ripple', 'spot_lights',
+};
 // Dynamic GI is in no preset: it cost up to half of ultra's frame on the
 // iPhone 17 Pro Max (learning.md), so it stays a manual pick.
 const _ultra = {

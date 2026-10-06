@@ -62,6 +62,11 @@ void main() {
     expect(SuperUltraEffect.grassThinning.cost, contains('75%'));
   });
 
+  test('the lightning ripple is a post effect, on by default like the rest', () {
+    expect(SuperUltraEffect.lightningRipple.group, SuperUltraEffectGroup.post);
+    expect(SuperUltraEffect.lightningRipple.label, contains('ripple'));
+  });
+
   test('GPU pacing picks are 1 and 2 frames in flight, 1 by default', () {
     expect(SuperUltraGpuPacing.values.map((p) => p.frames), [1, 2]);
     expect(SuperUltraGpuPacing.initial, SuperUltraGpuPacing.one);

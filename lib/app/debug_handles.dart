@@ -260,3 +260,9 @@ String debugIslandGrassCount() {
   final depth = selector(context).instanceCount;
   return 'colour $colour depth $depth of ${mesh.instanceCount}';
 }
+
+/// The island's live ripple count and whether the distortion pass is on.
+String debugIslandRipples() {
+  final d = debugIsland!.scene.screenDistortion;
+  return 'pulses ${d.pulses.length} enabled ${d.enabled} strikes ${debugIsland!.lightningStrikes}';
+}

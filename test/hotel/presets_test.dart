@@ -18,6 +18,13 @@ void main() {
     expect(f.defaultOn, isFalse);
   });
 
+  test('the lightning ripple comes with the storm, from High up', () {
+    for (final p in [Preset.high, Preset.ultra]) {
+      expect(presetIds(p), containsAll(['lightning', 'lightning_ripple']), reason: '$p');
+    }
+    expect(presetIds(Preset.medium), isNot(contains('lightning_ripple')));
+  });
+
   test('cloth lighting hooks are an ultra feature, standard bedding below', () {
     expect(presetIds(Preset.ultra), contains('cloth_lighting'));
     expect(presetIds(Preset.high), isNot(contains('cloth_lighting')));

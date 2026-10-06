@@ -8,6 +8,7 @@ import '../features/player_feature.dart';
 import '../features/rain_feature.dart';
 import '../features/screens_feature.dart';
 import '../hotel/hotel_scene.dart';
+import '../render/shockwave_apply.dart';
 import 'effects_sheet.dart';
 import 'hud.dart';
 
@@ -25,6 +26,15 @@ class _HotelPageState extends State<HotelPage> {
   void initState() {
     super.initState();
     if (kDebugMode) debugHotel = hotel;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // A hidden tab's tickers stop: no ripple waits, frozen, for its return.
+    if (!TickerMode.valuesOf(context).enabled) {
+      clearSceneShockwaves(hotel.scene, hotel.ctx.shockwaves);
+    }
   }
 
   @override
@@ -72,7 +82,15 @@ class _HotelPageState extends State<HotelPage> {
               onPressed: () => showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
-                  builder: (_) => EffectsSheet(registry: hotel.registry)),
+                  builder: (_) => EffectsSheet(
+                        registry: hotel.registry,
+                        previews: {
+                          'lightning_ripple': (
+                            'Preview lightning ripple',
+                            hotel.ctx.shockwaves.preview,
+                          ),
+                        },
+                      )),
               child: const Text('Effects'),
             ),
           ),
