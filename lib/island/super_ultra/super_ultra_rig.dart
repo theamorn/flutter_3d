@@ -18,6 +18,7 @@ import 'package:flutter_3d/island/super_ultra/lightning.dart';
 import 'package:flutter_3d/island/super_ultra/ocean_waves.dart';
 import 'package:flutter_3d/island/super_ultra/procedural_textures.dart';
 import 'package:flutter_3d/island/super_ultra/rain_collision.dart';
+import 'package:flutter_3d/island/super_ultra/super_ultra_decals.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_fire.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_rain.dart';
 import 'package:flutter_3d/island/water_bump.dart';
@@ -67,6 +68,7 @@ class SuperUltraRig {
   late final Node simpleSeaNode;
   late final Node grassNode;
   late final SuperUltraFire fire;
+  late final SuperUltraDecals decals;
   late final PreprocessedSky sky;
   late final Skybox skybox;
   late final SkyEnvironment skyEnvironment;
@@ -242,11 +244,17 @@ class SuperUltraRig {
       base: campfireBase,
     );
 
+    decals = await SuperUltraDecals.build(
+      campfireX: campfireBase.x,
+      campfireZ: campfireBase.z,
+    );
+
     root
       ..add(terrainNode)
       ..add(oceanNode)
       ..add(grassNode)
       ..add(fire.root)
+      ..add(decals.root)
       ..addComponent(_SuperUltraTick(this));
     _built = true;
     debugPrint(

@@ -2474,6 +2474,14 @@ class IslandScene {
       scene.debug.split = xraySplit(_xrayClock);
     }
     walker.advance(deltaSeconds);
+    if (isSuperUltra && _superRig.isMounted) {
+      _superRig.decals.tick(
+        deltaSeconds,
+        walker.position.x,
+        walker.position.z,
+        walker.yaw,
+      );
+    }
 
     final pivot = _characterPivot;
     if (pivot != null) {

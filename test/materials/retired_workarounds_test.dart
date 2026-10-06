@@ -36,4 +36,10 @@ void main() {
     expect(File('assets/materials/page_curl.fmat').readAsStringSync(),
         isNot(contains('world_tangent')));
   });
+
+  test('decal_ground compiles with the decal contract', () {
+    final c = compile('assets/materials/decal_ground.fmat');
+    expect(c.material.engineInputs, ['scene_depth']);
+    expect(c.sidecar.toString(), contains('decal_inverse'));
+  });
 }

@@ -1,0 +1,56 @@
+// Ground decals for Super Ultra: the campfire's scorch ring (kind 0) and the
+// player's footprints (kind 1). Projected by a DecalNode box onto whatever
+// opaque surface is inside it (the heightfield, stones), so they follow the
+// ground instead of floating on it.
+material {
+  name: "DecalGround",
+  shading_model: unlit,
+  blending: alpha,
+  culling: front,
+  depth_test: always,
+  engine_inputs: [scene_depth],
+  scene_color_reach: 0.0,
+  parameters: [
+    { type: mat4, name: decal_inverse },
+    { type: float, name: decal_fade, default: 1.0 },
+    { type: float, name: kind, default: 0.0 },
+    // rgb = linear colour of the mark; a = strength.
+    { type: vec4, name: tint, default: [0.03, 0.025, 0.02, 0.85] },
+  ],
+}
+
+fragment {
+  precision highp float;
+
+  float Hash12(vec2 p) {
+    vec3 q = fract(vec3(p.xyx) * 0.1031);
+    q += dot(q, q.yzx + 33.33);
+    return fract((q.x + q.y) * q.z);
+  }
+
+  void Surface(inout MaterialInputs material) {
+    vec3 local = (material_params.decal_inverse *
+                  vec4(GetSceneWorldPosition(vec2(0.0)), 1.0)).xyz;
+    vec3 outside = step(vec3(0.5), abs(local));
+    if (max(outside.x, max(outside.y, outside.z)) > 0.0) {
+      discard;
+    }
+    vec2 uv = local.xz * 2.0; // -1..1 across the box
+    float coverage;
+    if (material_params.kind < 0.5) {
+      // Scorch: dark centre, ragged edge.
+      float r = length(uv);
+      float ragged = 0.82 + 0.12 * Hash12(floor((uv + 1.0) * 18.0));
+      coverage = 1.0 - smoothstep(ragged - 0.25, ragged, r);
+    } else {
+      // Footprint: a sole (ellipse) and a heel, along local z.
+      vec2 sole = (uv - vec2(0.0, 0.25)) / vec2(0.42, 0.55);
+      vec2 heel = (uv + vec2(0.0, 0.55)) / vec2(0.32, 0.3);
+      float d = min(dot(sole, sole), dot(heel, heel));
+      coverage = 1.0 - smoothstep(0.75, 1.0, d);
+    }
+    coverage *= material_params.tint.a * material_params.decal_fade;
+    material.base_color = vec4(material_params.tint.rgb, coverage);
+    PrepareMaterial(material);
+  }
+}
