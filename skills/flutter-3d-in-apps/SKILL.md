@@ -1,34 +1,40 @@
 ---
 name: flutter-3d-in-apps
-description: Use when adding 3D with flutter_scene to an ordinary (non-game) Flutter app, choosing which rendering effects to turn on for phones, diagnosing a slow flutter_scene frame (high UI/build time, low fps, jank), or putting 3D scenes in tabs that must keep their state and cost nothing while hidden. Written against flutter_scene 0.23.0 and Flutter 3.47.
+description: Use when adding 3D with flutter_scene to an ordinary (non-game) Flutter app, choosing which rendering effects to turn on for phones, diagnosing a slow flutter_scene frame (high UI/build time, low fps, jank), or putting 3D scenes in tabs that must keep their state and cost nothing while hidden. APIs and guidance are written against flutter_scene 0.24.0 and Flutter 3.47.
 ---
 
 # 3D in Flutter apps
 
-> Tested with flutter_scene 0.23.0 and Flutter 3.47.2 on an iPhone 17 Pro Max (September 2026).
-> Check the project's version first: `grep -A2 'flutter_scene:' pubspec.lock`. If it's newer than
-> 0.23.0, treat API names, the numbers and `references/traps-0.23.md` as possibly out of date, and
-> check them against the package source before relying on them. The four rules below still apply.
+> API guidance checked against flutter_scene 0.24.0 and Flutter 3.47.2. Measurements in
+> `references/measured-costs.md` are from 0.23.0, before GPU pacing; they are historical and do not
+> establish 0.24 performance. Check the project's version first: `grep -A2 'flutter_scene:'
+> pubspec.lock`. If it differs, verify API names and behavior against the resolved package source.
 
-## Rule 1: on a phone, "UI time" is usually the GPU
+## Rule 1: read scene fps separately from Flutter fps
 
-flutter_scene encodes and submits every render pass from the UI thread. When the GPU falls behind,
-Metal's command queue fills up and the UI thread blocks in `CreateCommandBuffer`. So the frame chart
-shows high **UI** time while the Dart code is idle; `FrameTiming.rasterDuration` doesn't include the
-scene's GPU work. In our hotel, 87–89% of UI-thread samples were that wait, and app logic was 1%.
+With flutter_scene 0.24, GPU pacing can re-present the previous scene image while Flutter continues
+to produce frames. `FrameTiming` and Flutter frame events therefore measure Flutter fps, not how
+often the scene rendered a new image. Calculate scene fps from the change in
+`scene.renderStats.frameCount - scene.pacedFrameCount` over wall time, and show Flutter fps and
+paced frames per second beside it. A paced frame may also leave `renderStats.latest` without an
+on-screen view; read draw counts from the newest recent frame that contains one.
 
-- Confirm before optimising anything: sample the UI thread (`node scripts/cpuprof.mjs <ws-url> 4`).
-  If the top frame is `semaphore_wait_trap` under `CreateCommandBuffer`, treat UI time as GPU time.
-  This overrides flutter_scene-performance's rule that UI over budget means scene-graph/CPU work.
-- Then cut GPU work (Rule 2). Don't start with Dart ticks, allocations, instancing or LOD.
+The 0.23 profile runs recorded here had 85–89% of UI-thread samples blocked in
+`semaphore_wait_trap` under `CreateCommandBuffer`, while app logic was about 1%. Treat that as
+historical evidence, not a rule for 0.24. Before optimizing, sample the UI thread
+(`node scripts/cpuprof.mjs <ws-url> 4`) and inspect the scene counters and render passes. High UI
+time alone does not identify the scene's GPU cost.
 
 ## Rule 2: pull the measured levers, in this order
+
+This order comes from the paired 0.23 results in `references/measured-costs.md`. Those runs predate
+0.24 GPU pacing and are a starting point for experiments, not a performance ranking for 0.24.
 
 | Change | Measured effect (paired A/B, see `references/measured-costs.md`) |
 |---|---|
 | `scene.renderScale = 0.85` | 21–29% less frame time; no visible difference on a 3x screen |
 | `renderScale = 0.75` | 47–49% less; slightly softer |
-| Dynamic GI (irradiance probe grid) off | 5–55% less depending on the view. It exists in 0.23.0; use static light probes (captured once, ~free) |
+| Dynamic GI (irradiance probe grid) off | 5–55% less depending on the view. Prefer static light probes when they meet the look |
 | SSR, AO, area lights, shadowed spot lights off | 5–10% each |
 | Anti-aliasing mode, bloom, light probes | ~0% — keep them; cutting them saves nothing |
 | Planar reflection (mirror, water, glossy floor) | Re-renders the scene every frame. Ours cost ~0% only because its capture was layer-masked to three far objects (horizon, sun, moon); one that reflects the room pays for the room again |
@@ -69,5 +75,5 @@ painter in a `RepaintBoundary`. That took the app from ~64 to 120 fps.
 - Quoting a "before" and an "after" from different sessions: that mostly measures temperature.
 - Reading `flutter run`'s log for probe output: in profile runs it can go silent. Read the VM
   service's `Stdout` stream (`node scripts/stdout.mjs <ws-url> 'done' 900`).
-- Assuming every light casts shadows: only the sun and spot lights can in 0.23.0.
-- More traps with workarounds: `references/traps-0.23.md`.
+- Point-light shadows are supported in 0.24; shadowed spot and point lights share a capped shadow atlas. Read `shadowCasterOverflowCount` when a requested caster is missing.
+- Remaining engine traps and the historical 0.23 workarounds: `references/traps-0.23.md`.

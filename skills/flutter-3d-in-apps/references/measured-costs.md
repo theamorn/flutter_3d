@@ -1,9 +1,11 @@
-# Measured costs (flutter_scene 0.23.0)
+# Historical measured costs (flutter_scene 0.23.0, before GPU pacing)
 
 All numbers: iPhone 17 Pro Max, profile builds, Flutter 3.47.2, flutter_scene 0.23.0, September
 2026. The scenes: a hotel (two furnished rooms, sea view, PBR, sky IBL, sun cascades, lamps,
-rain and lightning) and an island (terrain, water, vegetation, fire). Quote ratios, not absolute
-fps: the phone's temperature moves absolute numbers as much as most changes do.
+rain and lightning) and an island (terrain, water, vegetation, fire). These runs predate 0.24's GPU
+pacing, so their frame-rate counts cannot be compared directly with 0.24 scene fps. No 0.24 profile
+performance results are recorded here. Quote ratios, not absolute fps: the phone's temperature
+moves absolute numbers as much as most changes do.
 
 ## Paired A/B against the hotel's "ultra" preset
 

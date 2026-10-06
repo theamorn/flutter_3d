@@ -1,7 +1,8 @@
-# Traps in flutter_scene 0.23.0, with workarounds
+# Traps recorded in flutter_scene 0.23.0, with 0.24.0 follow-up
 
-Each entry is as of flutter_scene 0.23.0 / Flutter 3.47.2. On a newer version, check the package
-source before applying a workaround: the trap may be fixed, or the API renamed.
+The sections below preserve the 0.23.0 behavior and workarounds on which the old measurements and
+incidents were based. The final section lists traps checked against flutter_scene 0.24.0. For a
+different package version, check the package source before applying a workaround.
 
 ## Enabling and app integration
 
@@ -19,17 +20,15 @@ source before applying a workaround: the trap may be fixed, or the API renamed.
 
 ## Lighting and shadows
 
-- **Only `DirectionalLight` and `SpotLight` cast shadows.** `PointLight` and `RectAreaLight` have
-  no `castsShadow`.
-- **Shadowed spot lights share the sun's shadow atlas**, one tile each at the sun's resolution, and
-  the atlas can't exceed 8192 px wide. Budget `(8192 / sunResolution) - cascades` shadowed spots.
-  Past it: "Texture creation failed" every frame and a black view.
+- **Shadow support changed in 0.24.** In 0.23 only `DirectionalLight` and `SpotLight` cast
+  shadows. 0.24 adds point-light shadows and caps shadowed spots and points at four each; use
+  `Scene.shadowCasterOverflowCount` and `Scene.isShadowCasterGranted` to check the budget.
 - **Sun shadows vanish under a sky IBL**: the IBL has no occlusion. Set
   `SunLight.shadowAmbientStrength` (~0.5 read well) so shadowed areas lose ambient light too.
-- **Any light besides the sun costs two texture uploads every frame**: `PunctualLightBuffer.build`
-  runs once per frame (plus once per probe capture or GI bake) and overwrites a parameters texture
-  and an index texture, each through its own command buffer. On a GPU-bound phone those submits were
-  15–29% of the UI thread's waits in the hotel. Fewer lights help; unchanging lights don't skip it.
+- **Punctual-light upload cost was measured on 0.23.** `PunctualLightBuffer.build` overwrote two
+  textures per frame and those submits accounted for 15–29% of the hotel's UI-thread waits. In
+  0.24, unchanged light textures are no longer re-uploaded and froxel clustering replaces the
+  per-object light cap; remeasure any remaining cost on the target device.
 - **`PhysicalSkySource`**: exposure 1.0 clips a sunlit room to white (~0.35 by day); its sky goes
   black from dusk (no ambient floor), and its sun light colour/intensity are constants. Drive the
   light from your own time-of-day curve; the sun disk can't be switched off, only covered.
@@ -55,8 +54,10 @@ source before applying a workaround: the trap may be fixed, or the API renamed.
   geometry: `node.mesh = node.mesh!.clone()..primitives.single.material = m`.
 - **Planar reflections need a lit `.fmat`** with `engine_inputs: [planar_reflection]`; unlit is
   rejected and `PhysicallyBasedMaterial` never opts in.
-- **A `scene_color` reader costs a full-screen copy per reader in view.** Swap such materials in
-  only while needed (e.g. rain on glass only while raining). With MSAA the split also re-resolves.
+- **Scene-colour capture cost depends on overlap.** In 0.23 each reader used its own full-screen
+  copy. In 0.24, `scene_color_reach` lets non-overlapping readers share a capture, and
+  `Scene.sceneColorCaptureBatches` caps the copies per frame. With MSAA, splitting the pass also
+  re-resolves.
 - **A translucent `.fmat` with `depth_write: true` reads its own depth** through `scene_depth`
   (zero thickness everywhere). Water: `depth_write: false`.
 - **`.fmat` syntax**: `shading_model:` (not `shading:`), a quoted `name:`, parameters as
@@ -78,3 +79,29 @@ source before applying a workaround: the trap may be fixed, or the API renamed.
 - `ParticleEmitterComponent` steps its system every frame: don't also call `system.step()`.
 - Built-in emitter shapes emit along +Y; wrap a shape to flip it rather than rotating a node.
 - `ParticleEmitterComponent.system` is final; gate a burst-only effect with `paused`.
+
+## Still open in flutter_scene 0.24.0
+
+The engine behavior below was checked against the 0.24 package source and remains open. The final
+Kenney `.glb` item retains this repository's asset guidance; the 0.24 changelog does not cover those
+asset-specific rules, so assume they are unchanged and verify them with the models you import.
+
+- **Changing a mounted node's material:** assigning `primitive.material` is ignored. Assign a new
+  mesh over the existing geometry with `node.mesh = node.mesh!.clone()..primitives.single.material = m`;
+  `MeshComponent.refreshMaterials()` remains internal.
+- **Physical-sky night lighting:** keep the `skyAt()` schedule that solves sky energy, lifts the sun
+  above the horizon and lets the moon take over. `PhysicalSkySource.sunLightColor` is still constant
+  and its shader still has no ambient floor.
+- **Widget pages:** keep the `WidgetComponent` look-at-the-view and x-mirror setup. 0.24 makes pages
+  display-referred by default; pass `displayReferred: false` when they should respond to exposure,
+  tone mapping and fog.
+- **Pausing a view:** use `TickerMode`, not `SceneView(autoTick:)`; the view still uses a single
+  ticker provider.
+- **Rain collision:** use analytic proxies for instanced geometry. `raycast.dart` still marks
+  instanced-mesh raycasting and a BVH as TODOs.
+- **Planar reflections:** `planar_reflection` still requires a lit `.fmat`; keep `mirror.fmat` and
+  `ocean.fmat` lit.
+- **Kenney glTF assets:** keep the repository's pruning and conversion rules: remove unreachable or
+  duplicate nodes, embed textures instead of URI sidecars, set metallic to zero, replace
+  `KHR_materials_unlit` when the model must respond to scene lighting, and account for portal
+  culling. 0.24's Vulkan unlit fix does not change the lighting behavior of an unlit material.

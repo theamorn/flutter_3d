@@ -4,8 +4,14 @@
 
 - **Profile build, real device.** `flutter run --profile --enable-flutter-gpu -d <device>`. Debug
   builds and simulators say nothing about speed (a debug hotel ran 4–8 fps on the simulator).
-- **Count frames, not just milliseconds.** `FrameTiming.rasterDuration` covers Flutter compositing
-  the finished scene texture, not the scene's GPU work. Frames per second is the honest number.
+- **Separate Flutter fps from scene fps.** `FrameTiming` and `scripts/frames.mjs` count Flutter
+  frames. Under 0.24 GPU pacing, Flutter can present a previously rendered scene image, so that
+  rate can be higher than scene fps. Calculate scene fps from the change in
+  `scene.renderStats.frameCount - scene.pacedFrameCount` over elapsed wall time. Record paced
+  frames per second as well.
+- **Use engine draw counters.** Read `Scene.renderStats` for per-view, per-pass draws. Paced frames
+  can have no on-screen view in `renderStats.latest`; use the newest recent frame that contains an
+  on-screen view.
 - **Pair every comparison.** Measure the baseline, then the change, back to back at the same camera
   pose, and repeat at several poses. A before from one session and an after from another mostly
   measure the phone's temperature (the same view: 57 fps cool, 34 fps warm). Quote ratios.
@@ -23,7 +29,7 @@ The scripts take the WebSocket form: `ws://127.0.0.1:PORT/TOKEN=/ws`. Node 22+ h
 
 | Script | Use |
 |---|---|
-| `scripts/frames.mjs <ws> <secs> [label]` | fps plus build/raster mean and p90 from the engine's `Flutter.Frame` events. The stream replays a backlog; the script dedupes by frame number and keeps only the last `<secs>` seconds |
+| `scripts/frames.mjs <ws> <secs> [label]` | Flutter fps plus build/raster mean and p90 from the engine's `Flutter.Frame` events. It does **not** measure scene fps under 0.24 pacing. The stream replays a backlog; the script dedupes by frame number and keeps only the last `<secs>` seconds |
 | `scripts/cpuprof.mjs <ws> <secs> <label> [out.json]` | Samples the UI (main isolate) thread: top self-time functions, and flutter_scene/app functions by inclusive time |
 | `scripts/waits.mjs <out.json>` | For samples blocked in `semaphore_wait_trap`, which calls led to the wait (e.g. `CreateCommandBuffer <- BloomPass._drawUpsample`) |
 | `scripts/stdout.mjs <ws> <pattern> [maxSecs]` | Streams the app's stdout until a line contains `<pattern>`. Use it for probe output: `flutter run`'s own log can go silent in profile runs |

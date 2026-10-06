@@ -2,9 +2,9 @@
 
 A reusable reference for building a 3D demo with `flutter_scene`, distilled from the island tab (`06-island-scene.md`) and its Super Ultra mode. It is written to be **copied into another project on its own**: it names the file in this repo that implements each recipe, but nothing here depends on the island.
 
-> **Pinned to `flutter_scene 0.23.0`, Flutter 3.47.2 (Dart 3.13.2), Impeller.** APIs and traps below were checked against that package's source. Re-check anything marked *engine behaviour* after an upgrade.
+> **Pinned to `flutter_scene 0.24.0`, Flutter 3.47.2 (Dart 3.13.2), Impeller.** APIs and traps below were checked against that package's source. Re-check anything marked *engine behaviour* after an upgrade.
 >
-> **Evidence level.** Everything here was verified on the iPhone 17 Pro **simulator** (Metal) and an Android **emulator** (API 36, Impeller on OpenGL ES), in debug. That is evidence for *correctness*, never for *frame rate*. Performance claims need a physical device in profile or release mode.
+> **Evidence level.** Earlier island behavior was checked on the iPhone 17 Pro **simulator** (Metal) and an Android **emulator** (API 36, Impeller on OpenGL ES), in debug. The 0.24 additions were checked in debug on macOS and an iPhone; those runs are evidence for the behaviors described, never for *frame rate*. Performance claims need a physical device in profile or release mode.
 
 Read the `flutter_scene` agent skills too (`dart run flutter_scene:skills` installs them into `.claude/skills/`). `flutter_scene-idioms/references/traps.md` is the best single page on the engine. This playbook covers what the skills do **not** say, or say too quietly.
 
@@ -50,7 +50,7 @@ Read the `flutter_scene` agent skills too (`dart run flutter_scene:skills` insta
 
 **Stop the render loop with `TickerMode`, not `SceneView(autoTick:)`.** Toggling `autoTick` recreates the ticker, and a `SingleTickerProviderStateMixin` throws the second time. Also pin `onGenerateInitialRoutes` to exactly one route, or a deep-linked route mounts two scenes.
 
-**Keep the readout honest.** Label the number "meshes", not "draw calls": the engine exposes no draw counter. Count triangles with `Geometry.extractMeshData().triangleCount`, cached per geometry, including instanced batches.
+**Keep the readout honest.** In 0.24, use `Scene.renderStats` for real per-view, per-pass draw counts. A paced frame may have no on-screen view, so use the newest recent frame with an on-screen view instead of blindly reading `renderStats.latest`. Scene fps is the rate of change in `renderStats.frameCount - pacedFrameCount`; show Flutter fps separately. Count triangles with `Geometry.extractMeshData().triangleCount`, cached per geometry, including instanced batches.
 
 **Reframe the orbit camera without setters.** `OrbitCameraController` has no public azimuth, polar or distance setters. To move the camera, build a new controller at the camera's *current* pose, then push its goals so it eases instead of cutting:
 
@@ -131,9 +131,9 @@ To keep the sun in frame, drive its *direction* from a high-latitude arc (`DayNi
 | Thing | Rule |
 |---|---|
 | Blocks | `material { … }` plus **either** `fragment { void Surface(inout MaterialInputs material) }` **or** `sky { vec3 Sky(vec3 direction) }`. A surface material may add `vertex { void Vertex(inout VertexInputs vertex) }`. |
-| Shading | `lit` (default), `physical`, `unlit`. `engine_inputs` require a lit model. |
+| Shading | `lit` (default), `physical`, `unlit`. In 0.24, unlit surface materials may use `engine_inputs: [scene_color]`; `planar_reflection` still requires lit shading. |
 | Blending | `opaque` or `alpha` (premultiplied) **only**. There's no additive mode, and unlit output is premultiplied by alpha, so alpha = 0 cannot give additive either. Use `SpriteMaterial` with `SpriteBlendMode.additive` for glow. |
-| Engine inputs | `scene_color`, `filtered_scene_color`, `scene_depth`, `planar_reflection`. Surface materials only. Accessors: `GetSceneColor(uvOffset)`, `GetSceneDepth(uvOffset)` (returns 1e8 if unavailable), `GetFragmentViewDepth()`, `GetPlanarReflection()`. The raw `planar_reflection` sampler and `planar_reflection_info.view_projection` are in scope if you want to distort the lookup yourself. |
+| Engine inputs | `scene_color`, `filtered_scene_color`, `scene_depth`, `planar_reflection`. Surface materials only. In 0.24, unlit materials can read `scene_color`; planar reflections remain lit-only. Accessors: `GetSceneColor(uvOffset)`, `GetSceneDepth(uvOffset)` (returns 1e8 if unavailable), `GetFragmentViewDepth()`, `GetPlanarReflection()`. The raw `planar_reflection` sampler and `planar_reflection_info.view_projection` are in scope if you want to distort the lookup yourself. |
 | Parameters | `float int vec2 vec3 vec4 mat4 sampler2d samplerCube`. **No `mat3`, no arrays**: pack per-wave data into `mat4` columns (`m[i]` in GLSL is `Matrix4.setColumn(i, …)` in Dart). Set with `material.parameters.setFloat/setVec4/setMat4(…)`. Textures: `setTexture(name, tex.gpuTexture, sampler: tex.sampledSampler)`. |
 | Varyings | `varyings: [{ type: float, name: v_x }]`. Write it in `Vertex()`, read it in `Surface()`. |
 | Vertex stage | Displace by writing `vertex.world_position` and `vertex.world_normal`. `vertex.position` is object space and `vertex.camera_position` is available. **There is no `GetTime()` in the vertex stage**: pass a `time` parameter from Dart each frame. `Vertex()` runs for instanced meshes (after the instance transform) and in the depth variant too. |
@@ -142,6 +142,8 @@ To keep the sun in frame, drive its *direction* from a high-latitude arc (`DayNi
 | Loading | `loadFmatMaterial('assets/materials/x.fmat')` gives a `PreprocessedMaterial`; `loadFmatSky(…)` gives a `PreprocessedSky`, which is a `ShaderSkySource`, so it works in `Skybox(...)` and in `SkyEnvironment(...)`. One material instance per `PlanarReflectorComponent` group. |
 
 ### Portability rules (Metal hides all of these; GLES doesn't)
+
+**Start every `.fmat` fragment body with `precision highp float;` on 0.24.** Fragment bodies now inherit `mediump`; on Mali, Adreno and the web that is half precision, which loses accuracy in this project's world positions, time-based phases, hashes and caustic coordinates. Metal ignores precision qualifiers, and desktop emulators commonly use full float precision, so neither is a useful visual check for this issue. Relax a material to `mediump` only after measuring it on the target GPU.
 
 1. **Never `#include <noise.glsl>`** in a material that has to run on GLES. Its large constant tables made the sky pipeline fail **silently** on the Android emulator: the sky drew nothing, the lighting baked from it was garbage, and nothing appeared in logcat. Use local hash noise (below).
 2. **Never write a reversed `smoothstep(hi, lo, x)`.** It's undefined in GLSL ES. Write `1.0 - smoothstep(lo, hi, x)`.
@@ -153,9 +155,9 @@ To keep the sun in frame, drive its *direction* from a high-latitude arc (`DayNi
    - The bytes are sampled raw: call `SRGBToLinear` on colour maps yourself.
    - Use `TextureContent.normal` for normal maps and `.data` for masks, so mips average correctly.
    - For flipbooks, cap `maxMipmapLevels` and use `SamplerAddressMode.clampToEdge` (from `package:flutter_scene/gpu.dart`) so frames don't bleed.
-8. **Build hook cache.** If a new `.fmat` doesn't appear, delete `.dart_tool/hooks_runner/<package>` and rebuild (deleting just its `*/dependencies.dependencies_hash_file.json` is enough, and keeps the compiled hook). The hook's discovery hash covers only the names directly under `assets/`, so a new file inside `assets/materials/` doesn't rerun it, and touching an existing `.fmat` doesn't either: the cache compares contents. Check `flutter_scene_generated/material.*.index.json` for your material names. Bundles are per backend (`metalIos`, `metalDesktop`, `openglEs`, `openglEs,vulkan`), about 2–3.6 MB each, and everything in the folder ships as assets. `.fmat` edits need a rebuild, not a hot restart.
+8. **Build hook cache.** In 0.24, adding or removing a source in an asset subdirectory triggers a rebuild. One new `.fmat` (`decal_ground.fmat`) was picked up without clearing `.dart_tool/hooks_runner` on macOS; check the build log and `flutter_scene_generated/material.*.index.json` when validating a new source. If generated output is stale, inspect the hook dependency cache before deleting it. Bundles are per backend (`metalIos`, `metalDesktop`, `openglEs`, `openglEs,vulkan`), about 2–3.6 MB each, and everything in the folder ships as assets. `.fmat` edits need a rebuild, not a hot restart.
 9. **Test on the Android emulator** as well as the simulator. It runs Impeller on OpenGL ES and caught two of the rules above.
-10. **A failed `.fmat` compile keeps the old shaders and the build still succeeds.** The only sign is one line: `building .fmat materials failed; keeping the previous shaders.` Grep for it after every material edit, or you'll debug a change that never shipped. (A redefined local variable did it here.)
+10. **A failed `.fmat` compile may keep the old shaders while the build succeeds.** 0.24's runtime `.fmat` compiler exposes line-numbered `FmatCompileException.diagnostics`. The build hook compiles its bundle through a separate path and can print `building .fmat materials failed; keeping the previous shaders.` with the underlying compiler error. Grep for that message and read the emitted error after every material edit, or you'll debug a change that never shipped. (A redefined local variable did it here.)
 
 Local noise that replaced `noise.glsl` (sine-free hashes after Dave Hoskins):
 
@@ -370,7 +372,9 @@ done
 
 ## 7. Performance
 
-The budget is 16.6 ms at 60 Hz, split between the UI thread (Dart, scene-graph walk, component updates) and the raster thread (GPU work and the whole post stack). **Measure in profile mode on the device** (DevTools frame chart) and fix the thread that's over budget. `flutter_scene` has no stats API.
+At 60 Hz, Flutter has about 16.6 ms per display frame. `FrameTiming` reports Flutter UI and raster work, while `Scene.renderStats` provides scene draw counters and per-pass CPU timings. Under 0.24 pacing, Flutter fps can exceed scene fps; calculate scene fps from `frameCount - pacedFrameCount` over wall time. **Measure in profile mode on the device** and inspect the thread and scene counters that are over budget.
+
+The performance comparisons below were recorded before the 0.24 upgrade. Treat their rankings as starting points; they are not 0.24 profile results.
 
 What the Super Ultra tier adds, roughly heaviest first:
 
@@ -424,9 +428,9 @@ So most UI time is the engine encoding passes you can see. Cutting it further me
   Compare variants only in alternating runs. A difference smaller than the run-to-run spread is no result; say so rather than quote it.
 - **Stopping a profile run:** `flutter run --pid-file` is not written in profile mode. Kill the tool (`pkill -f "flutter_tools.snapshot run --profile"`), then `adb shell am force-stop` the app.
 - **Flaky launches:** a launch right after an emulator reboot sometimes ends at once with `Application finished.`; run it again.
-- **Find a feature's cost by taking it away, on the device.** On `flutter_scene` the UI thread also encodes every GPU pass and draw, so each extra pass costs UI time, not just raster time. The honest attribution is a per-feature switch plus a live frame readout (the island's `🎛 Effects` menu), or an automated ablation run that cycles the switches (`SCENE_ABLATION`). On the emulator, even interleaved ablation came back with 2–4× swings between rounds of identical settings, so only a device answers this.
+- **Find a feature's cost by taking it away, on the device.** The scene submits its render work while the Flutter view paints it, so inspect both Flutter timings and scene counters. Attribute changes with a per-feature switch plus a live readout (the island's `🎛 Effects` menu), or an automated ablation run (`SCENE_ABLATION`). On the emulator, even interleaved ablation came back with 2–4× swings between rounds of identical settings, so only a device answers this.
 - **Instruments that worked:**
-  - A `SCENE_FRAME_STATS` dart-define that logs `FrameTiming` UI and raster avg/p90/max every 5 s.
+  - `SCENE_FRAME_STATS` logs Flutter UI/raster avg/p90/max, scene fps and paced frames per second every 5 s.
   - A short `vm_service` script that samples the UI isolate with `getCpuSamples`. It works in profile mode, and it attributes time to render-graph passes and to your own modules.
 
 ---

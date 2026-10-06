@@ -1,7 +1,8 @@
 # Learnings — Hotel 3D Tour
 
-Append-only log of non-obvious findings from building this app with flutter_scene 0.23.0.
-Read it before starting a task; add to it before committing one. Format:
+Append-only log of non-obvious findings. Entries through 2026-09-27 use
+flutter_scene 0.23.0; the dated 2026-10-06 upgrade entries record findings from
+0.24.0. Read it before starting a task; add to it before committing one. Format:
 
 ## <short title> (Task N, YYYY-MM-DD)
 - **Found:**
@@ -417,3 +418,9 @@ Read it before starting a task; add to it before committing one. Format:
 - **Why it matters:** enabling point shadows and passing configuration tests does not establish the planned visible floor shadow when the receiver is outside the light's reach.
 - **Do:** set and test the bath range against the actual ceiling-to-doorway-floor distance (about 3.02 m), including falloff margin, then compare shadows on/off on the device. Follow-up: range is now 4.0 m, the mounted-light regression passes in both mirrored rooms, and the physical iPhone doorway comparison shows the shadow affecting the adjoining floor. Hold exposure fixed during the comparison because Auto exposure shifts the overall brightness when shadows toggle; restore it afterward. See `docs/superpowers/notes/2026-10-06-hotel-ios-shadows.md`. Task 9 Step 5 is complete; 483 tests pass and analysis is clean.
 - **Talk?** yes. The device check identified a concrete lighting-range defect that the earlier screenshots could not settle.
+
+## Material fragment precision defaults to mediump in 0.24 (Task 11, 2026-10-06)
+- **Found:** `.fmat` fragment bodies now inherit `mediump`; every material in `assets/materials/` starts with `precision highp float;` because these shaders calculate world coordinates, time-based phases, hashes and caustic coordinates. The precision regression test enforces the declaration for new materials too. Metal ignores precision qualifiers, and the emulator did not expose the risk, so the effect on Mali and Adreno remains unverified.
+- **Why it matters:** half precision can lose enough range or detail to disturb world-space and procedural calculations without producing a compile error.
+- **Do:** keep `highp` in each material fragment body. Relax a particular shader to `mediump` only after measuring it on the target GPU.
+- **Talk?** no

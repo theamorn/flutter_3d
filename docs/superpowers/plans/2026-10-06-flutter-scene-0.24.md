@@ -1868,7 +1868,7 @@ git commit -m "feat(hotel): Auto render scale, GI probe view, depth layers for c
 **Files:**
 - Modify: `learning.md`, `docs/island/06-island-scene.md`, `docs/island/FLUTTER-3D-PLAYBOOK.md`, `skills/flutter-3d-in-apps/SKILL.md`, `skills/flutter-3d-in-apps/references/*`, `README.md`
 
-- [ ] **Step 1: `learning.md`.** Make sure there is one entry for each of:
+- [x] **Step 1: `learning.md`.** Make sure there is one entry for each of:
   - mediump material bodies;
   - scene fps vs Flutter fps under pacing;
   - `displayReferred` pages;
@@ -1878,15 +1878,15 @@ git commit -m "feat(hotel): Auto render scale, GI probe view, depth layers for c
   - anything a task flagged.
 
   Use the existing format: Found, Why it matters, Do, Talk?.
-- [ ] **Step 2: `06-island-scene.md`.**
+- [x] **Step 2: `06-island-scene.md`.**
   - "Repo facts": flutter_scene 0.24.0.
   - "Draw calls" finding: now real draws, from `Scene.renderStats`.
   - Mark findings 2 (unlit and engine inputs), 6 and the seagull trap 1 (hook cache), and 10 (diagnostics) with what 0.24 changed.
   - Add the new modes' switches (campfire shadows, X-ray, decals, pacing, Auto, frame cap, scene copies) to the Super Ultra table and the debug section.
-- [ ] **Step 3: `FLUTTER-3D-PLAYBOOK.md` §4.** Add the rule `precision highp float;` in every `.fmat` body under 0.24, and why it's invisible on Metal and the emulator.
-- [ ] **Step 4: `skills/flutter-3d-in-apps`.** Say it's written against 0.24.0. Mark `measured-costs.md` numbers as 0.23 and paced-out (pre-pacing), and rename or extend `traps-0.23.md` with the still-open traps from the spec's "Still broken" table.
-- [ ] **Step 5: `README.md`.** Requirements: flutter_scene 0.24.0. Under the profile commands, note that frame rates are now scene fps.
-- [ ] **Step 6: Commit**
+- [x] **Step 3: `FLUTTER-3D-PLAYBOOK.md` §4.** Add the rule `precision highp float;` in every `.fmat` body under 0.24, and why it's invisible on Metal and the emulator.
+- [x] **Step 4: `skills/flutter-3d-in-apps`.** Say it's written against 0.24.0. Mark `measured-costs.md` numbers as 0.23 and paced-out (pre-pacing), and rename or extend `traps-0.23.md` with the still-open traps from the spec's "Still broken" table.
+- [x] **Step 5: `README.md`.** Requirements: flutter_scene 0.24.0. Under the profile commands, note that frame rates are now scene fps.
+- [x] **Step 6: Commit**
 
 ```bash
 git add learning.md docs skills README.md
