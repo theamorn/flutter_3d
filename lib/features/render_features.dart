@@ -1,4 +1,5 @@
 import 'package:flutter_scene/scene.dart';
+
 import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
 import '../hotel/look.dart';
@@ -40,7 +41,8 @@ class SunShadows {
 
   /// Call every frame: configures a sun that replaced the one we set up.
   void sync(LookState look) {
-    if (_enabled && !identical(look.sunLight, _configured)) _configure(look.sunLight);
+    if (_enabled && !identical(look.sunLight, _configured))
+      _configure(look.sunLight);
   }
 
   void _configure(SunLight? sun) {
@@ -88,8 +90,10 @@ const String kAaGroup = 'aa';
 /// The mode to leave behind when the feature that set [mine] unmounts: off,
 /// unless another mode has already taken over. Per-feature reconcile chains
 /// can mount the new mode before the old one unmounts.
-AntiAliasingMode aaAfterUnmount(AntiAliasingMode current, AntiAliasingMode mine) =>
-    current == mine ? AntiAliasingMode.none : current;
+AntiAliasingMode aaAfterUnmount(
+  AntiAliasingMode current,
+  AntiAliasingMode mine,
+) => current == mine ? AntiAliasingMode.none : current;
 
 /// One anti-aliasing mode. The context starts at `none` (HotelContext), so
 /// off really is off.
@@ -103,11 +107,14 @@ abstract class AaFeature extends HotelFeature {
   String? get exclusiveGroup => kAaGroup;
 
   @override
-  Future<void> mount(HotelContext ctx) async => ctx.scene.antiAliasingMode = mode;
+  Future<void> mount(HotelContext ctx) async =>
+      ctx.scene.antiAliasingMode = mode;
 
   @override
-  void unmount(HotelContext ctx) =>
-      ctx.scene.antiAliasingMode = aaAfterUnmount(ctx.scene.antiAliasingMode, mode);
+  void unmount(HotelContext ctx) => ctx.scene.antiAliasingMode = aaAfterUnmount(
+    ctx.scene.antiAliasingMode,
+    mode,
+  );
 }
 
 class MsaaFeature extends AaFeature {
@@ -173,11 +180,16 @@ abstract class RenderScaleFeature extends HotelFeature {
   CostTier get tier => CostTier.free;
 
   @override
-  Future<void> mount(HotelContext ctx) async => ctx.scene.renderScale = scale;
+  Future<void> mount(HotelContext ctx) async {
+    ctx.renderScaleControl.selectFixed(id, scale);
+    ctx.applyRenderScale();
+  }
 
   @override
-  void unmount(HotelContext ctx) =>
-      ctx.scene.renderScale = renderScaleAfterUnmount(ctx.scene.renderScale, scale);
+  void unmount(HotelContext ctx) {
+    if (!ctx.renderScaleControl.release(id)) return;
+    ctx.applyRenderScale();
+  }
 }
 
 class RenderScale85Feature extends RenderScaleFeature {
@@ -211,8 +223,42 @@ class GpuPacing2Feature extends HotelFeature {
   bool get defaultOn => false;
 
   @override
-  Future<void> mount(HotelContext ctx) async => ctx.scene.maxGpuFramesInFlight = 2;
+  Future<void> mount(HotelContext ctx) async =>
+      ctx.scene.maxGpuFramesInFlight = 2;
 
   @override
   void unmount(HotelContext ctx) => ctx.scene.maxGpuFramesInFlight = 1;
+}
+
+/// Starts at full resolution and lets flutter_scene 0.24 lower the render scale
+/// (down to 60%) whenever frames miss 60 fps, recovering when they keep it.
+/// In no preset: its numbers aren't reproducible, which is the point of the
+/// fixed scales.
+class RenderScaleAutoFeature extends HotelFeature {
+  @override
+  String get id => 'render_scale_auto';
+  @override
+  String get label => 'Render scale: Auto (adaptive, 60 fps target)';
+  @override
+  CostTier get tier => CostTier.free;
+  @override
+  bool get defaultOn => false;
+  @override
+  String? get exclusiveGroup => kRenderScaleGroup;
+
+  @override
+  Future<void> mount(HotelContext ctx) async {
+    ctx.renderScaleControl.selectAuto(id);
+    ctx.applyRenderScale();
+    ctx.scene.renderQuality
+      ..targetFrameRate = 60
+      ..minRenderScale = 0.6
+      ..maxRenderScale = 1.0;
+  }
+
+  @override
+  void unmount(HotelContext ctx) {
+    if (!ctx.renderScaleControl.release(id)) return;
+    ctx.applyRenderScale();
+  }
 }

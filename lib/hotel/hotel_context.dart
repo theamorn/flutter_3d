@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
+
 import '../features/interaction_registry.dart';
 import '../math/colliders.dart';
 import '../math/floor_plan.dart';
 import 'look.dart';
+import 'render_scale_control.dart';
 
 /// Shared state handed to every feature.
 class HotelContext {
@@ -15,6 +17,13 @@ class HotelContext {
     scene.antiAliasingMode = AntiAliasingMode.none;
   }
   final Scene scene;
+  final RenderScaleControl renderScaleControl = RenderScaleControl();
+
+  /// Apply the selected owner's policy to the renderer.
+  void applyRenderScale() {
+    scene.renderScale = renderScaleControl.scale;
+    scene.renderQuality.adaptive = renderScaleControl.adaptive;
+  }
 
   /// Punctual shadow casters rejected by the renderer atlas budget.
   int get shadowCasterOverflowCount => scene.shadowCasterOverflowCount;

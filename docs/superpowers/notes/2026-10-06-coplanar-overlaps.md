@@ -52,3 +52,18 @@ The hotel tour ran all 8 stops (both rooms, the balcony, the bathroom, the
 entrance) and began a second lap; the island tour cycled normal, ultra and
 superUltra twice. Not run: the Home tab (no scene), and any device or the iOS
 simulator.
+
+## Task 10 overlay inspection (2026-10-06)
+
+Step 4 is inspected and skipped: none of these reported pairs is an eligible
+TV poster, book backdrop, rug or wall/floor overlay with a 1–5 mm separating
+offset. No geometry or depth layers were changed, and the reported structural
+intersections remain; this is not a claim that the overlap log is clear.
+
+| Pair | Reason skipped |
+|---|---|
+| `sea_horizon_0` / `sea_horizon_1` | Intersecting exterior horizon strips; geometry overlap, not a hotel overlay. |
+| `sea_horizon_0` / `sea_horizon_2` | Intersecting exterior horizon strips; geometry overlap, not a hotel overlay. |
+| `room_a/bed` / itself | Faces within the bed model; no separate overlay offset named. |
+| `beach_palms` / itself | Instanced exterior palm geometry intersects neighboring instances; the engine's spacing hint concerns geometry. |
+| `room_a/trim` / `room_a/tv_unit` | Trim is actual 1.5 cm skirting and 4 cm crown moulding; the TV unit is a cabinet/body. Their intersection is structural, not a poster sitting on a screen. |

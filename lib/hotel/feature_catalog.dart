@@ -21,6 +21,7 @@ import '../features/instancing_feature.dart';
 import '../features/entrance_feature.dart';
 import '../features/light_probes_feature.dart';
 import '../features/dynamic_gi_feature.dart';
+import '../features/gi_probes_feature.dart';
 import '../features/auto_exposure_feature.dart';
 import '../features/static_shadows_feature.dart';
 import '../features/spot_lights_feature.dart';
@@ -41,9 +42,9 @@ List<HotelFeature> buildCatalog() => [
       WaterFxFeature(), RainFeature(), RainGlassFeature(), LightningFeature(),
       MirrorFeature(), SeaReflectionFeature(),
       ScreensFeature(), BooksFeature(), InstancingFeature(), EntranceFeature(),
-      LightProbesFeature(), DynamicGiFeature(), AutoExposureFeature(), StaticShadowsFeature(),
+      LightProbesFeature(), DynamicGiFeature(), GiProbesFeature(), AutoExposureFeature(), StaticShadowsFeature(),
       FxaaFeature(), SmaaFeature(), TaaFeature(),
-      RenderScale85Feature(), RenderScale75Feature(), GpuPacing2Feature(),
+      RenderScale85Feature(), RenderScale75Feature(), RenderScaleAutoFeature(), GpuPacing2Feature(),
       SpotLightsFeature(), AreaLightsFeature(), VolumetricFogFeature(),
       OcclusionFeature(),
     ];

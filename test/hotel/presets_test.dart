@@ -4,7 +4,7 @@ import 'package:flutter_3d/hotel/presets.dart';
 import 'package:flutter_3d/hotel/feature_catalog.dart';
 
 const aaModes = {'msaa', 'fxaa', 'smaa', 'taa'};
-const scaleIds = {'render_scale_85', 'render_scale_75'};
+const scaleIds = {'render_scale_85', 'render_scale_75', 'render_scale_auto'};
 
 void main() {
   test('the bath light shadow is an ultra feature', () {
@@ -40,7 +40,7 @@ void main() {
 
   test(
     'ultra enables every toggleable feature except the alternative AA modes, '
-    'the 75% scale, dynamic GI and the GPU pacing pick',
+    'the 75% scale and the manual GI, Auto and GPU pacing picks',
     () {
       final toggleable = buildCatalog()
           .where((f) => f.toggleable)
@@ -55,14 +55,18 @@ void main() {
           'render_scale_75',
           'dynamic_gi',
           'gpu_pacing_2',
+          'render_scale_auto',
+          'gi_probes',
         }),
       );
     },
   );
 
-  test('no preset turns on dynamic GI: it is a manual pick', () {
+  test('GI, probe view and Auto are manual picks in no preset', () {
     for (final p in Preset.values) {
-      expect(presetIds(p), isNot(contains('dynamic_gi')), reason: '$p');
+      for (final id in ['dynamic_gi', 'gi_probes', 'render_scale_auto']) {
+        expect(presetIds(p), isNot(contains(id)), reason: '$p: $id');
+      }
     }
   });
 

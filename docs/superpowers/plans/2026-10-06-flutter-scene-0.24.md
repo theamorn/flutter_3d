@@ -1581,6 +1581,8 @@ git commit -m "feat(island): Auto render scale, 60 fps cap, shared scene copies;
 
 ### Task 9: Hotel lights and startup
 
+Implementation complete; visual checks remain partial as recorded in Step 5.
+
 **Files:**
 - Modify: `lib/features/lamps_feature.dart` (bath light ~138, bedside lamps ~199)
 - Modify: `lib/features/spot_lights_feature.dart` (constants, `SpotLight(...)` ~53, overflow log)
@@ -1757,6 +1759,8 @@ git commit -m "feat(hotel): physical bulb sizes, bath light point shadows, tight
 
 ### Task 10: Hotel z-fighting, GI probe view, Auto render scale
 
+Implementation complete; visual checks used macOS debug GPU captures because simulator screenshots are black. No device/fps claims; Step 4 inspected and skipped as recorded below.
+
 **Files:**
 - Modify: `lib/features/placeholder_rooms.dart`, `lib/features/books_feature.dart` (only the pairs Task 2's note lists)
 - Create: `lib/features/gi_probes_feature.dart`
@@ -1768,7 +1772,7 @@ git commit -m "feat(hotel): physical bulb sizes, bath light point shadows, tight
 - Consumes: `docs/superpowers/notes/2026-10-06-coplanar-overlaps.md` (Task 2) and `ctx.scene.globalIlluminationProbeGrid`.
 - Produces: feature ids `gi_probes` and `render_scale_auto`, in no preset.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 In `test/features/render_scale_test.dart`, add:
 
@@ -1785,7 +1789,7 @@ In `presets_test.dart`, add `'render_scale_auto'` and `'gi_probes'` to the ultra
 
 Run: `fvm flutter test test/features/render_scale_test.dart test/hotel`. Expected: FAIL.
 
-- [ ] **Step 2: Auto render scale**
+- [x] **Step 2: Auto render scale**
 
 In `render_features.dart`, add:
 
@@ -1823,7 +1827,7 @@ class RenderScaleAutoFeature extends HotelFeature {
 
 Register it after `RenderScale75Feature()`.
 
-- [ ] **Step 3: GI probe view**
+- [x] **Step 3: GI probe view**
 
 Create `lib/features/gi_probes_feature.dart`:
 - a default-off `HotelFeature`: id `gi_probes`, label `Show GI probes`, tier `free`;
@@ -1835,7 +1839,7 @@ Use the `InstancedMesh` and `InstancedMeshComponent` pattern from `lib/features/
 
 Register it after `DynamicGiFeature()`. Check on the simulator: enable dynamic GI plus "Show GI probes", and a lattice of dots appears through both rooms, with planes on the walls and floor as described in learning.md's "Dynamic GI" entry.
 
-- [ ] **Step 4: Replace mm offsets with depth layers**
+- [x] **Step 4: Replace mm offsets with depth layers** (inspected and skipped: all five listed pairs are structural/model/exterior intersections, with no eligible overlay; per-pair reasons in the overlap note)
 
 For each pair in `docs/superpowers/notes/2026-10-06-coplanar-overlaps.md` that is a hotel overlay (TV poster on the screen, book backdrop, rug or panel on the floor or wall), do two things:
 - set `material.depthLayer = 1` on the overlay's material (0.24 `Material.depthLayer`; on `PhysicallyBasedMaterial` it's a field, and on a `.fmat` it's `depth_layer:` in the header);
@@ -1849,7 +1853,7 @@ Re-run the hotel and confirm two things:
 - the overlaps are gone from the debug log;
 - every changed surface still shows on top.
 
-- [ ] **Step 5: Test, commit**
+- [x] **Step 5: Test, commit**
 
 ```bash
 fvm flutter test && fvm flutter analyze lib test
