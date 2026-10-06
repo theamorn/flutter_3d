@@ -933,7 +933,7 @@ PhysicallyBasedMaterial _material(Finish f, RoomTextures? textures) {
 /// node (so features can restyle one node without touching another).
 Node _build(RoomNode spec, bool mirrored, RoomTextures? textures) {
   final node = Node(name: spec.name, localTransform: spec.localTransform)
-    ..castsShadows = spec.castsShadows;
+    ..shadowCastingMode = spec.castsShadows ? ShadowCastingMode.on : ShadowCastingMode.off;
   if (spec.parts.isNotEmpty) {
     final byFinish = <Finish, List<Part>>{};
     for (final p in spec.parts) {

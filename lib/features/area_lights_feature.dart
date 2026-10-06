@@ -51,7 +51,7 @@ class AreaLightsFeature extends HotelFeature {
   Future<void> mount(HotelContext ctx) async {
     for (final screen in ctx.nodesNamed('tv_screen')) {
       final glow = Node(name: 'tv_glow', localTransform: Matrix4.translationValues(0, 0, 0.01))
-        ..castsShadows = false
+        ..shadowCastingMode = ShadowCastingMode.off
         ..raycastable = false
         ..addComponent(RectAreaLightComponent(RectAreaLight(
           color: kTvGlowColor.clone(),
@@ -71,7 +71,7 @@ class AreaLightsFeature extends HotelFeature {
         range: kWindowLightRange,
       );
       final node = Node(name: 'window_light', localTransform: windowLightTransform())
-        ..castsShadows = false
+        ..shadowCastingMode = ShadowCastingMode.off
         ..raycastable = false
         ..addComponent(RectAreaLightComponent(light));
       roomContentsRoot(room).add(node);

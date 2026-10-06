@@ -233,7 +233,7 @@ class SkyFeature extends HotelFeature {
     _moonMaterial = UnlitMaterial(colorTexture: Texture2D.fromPixels(moonPixels(128), 128, 128));
     Node disc(String name, UnlitMaterial m) {
       final n = Node(name: name, mesh: Mesh(DiscGeometry(radius: 1, segments: 48), m))
-        ..castsShadows = false
+        ..shadowCastingMode = ShadowCastingMode.off
         ..raycastable = false
         ..layers = kRenderLayerDefault | kSeaReflectedLayer;
       ctx.scene.add(n);

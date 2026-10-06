@@ -196,7 +196,7 @@ class _Faucet {
         ..blendMode = SpriteBlendMode.alpha,
     )..facing = BillboardFacing.velocityStretched;
     streamNode = Node(name: 'faucet_stream')
-      ..castsShadows = false
+      ..shadowCastingMode = ShadowCastingMode.off
       ..raycastable = false
       ..addComponent(stream);
 
@@ -213,7 +213,7 @@ class _Faucet {
         0,
       ),
     )
-      ..castsShadows = false
+      ..shadowCastingMode = ShadowCastingMode.off
       ..raycastable = false
       ..addComponent(splash);
 
@@ -280,7 +280,7 @@ class _Shower {
         ..blendMode = SpriteBlendMode.alpha,
     )..facing = BillboardFacing.velocityStretched;
     streamNode = Node(name: 'shower_stream')
-      ..castsShadows = false
+      ..shadowCastingMode = ShadowCastingMode.off
       ..raycastable = false
       ..addComponent(stream);
 
@@ -290,7 +290,7 @@ class _Shower {
         ..blendMode = SpriteBlendMode.alpha,
     );
     steamNode = Node(name: 'shower_steam')
-      ..castsShadows = false
+      ..shadowCastingMode = ShadowCastingMode.off
       ..raycastable = false
       ..addComponent(steam);
 

@@ -27,7 +27,15 @@ class _HotelPageState extends State<HotelPage> {
         future: _ready,
         // expand: the overlay stubs are zero-sized, and a Stack sized by its
         // non-positioned children would collapse to 0x0 and hide everything.
-        builder: (context, snap) => Stack(fit: StackFit.expand, children: [
+        builder: (context, snap) => snap.hasError
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text('3D scene failed to start:\n${snap.error}',
+                      style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center),
+                ),
+              )
+            : Stack(fit: StackFit.expand, children: [
           Positioned.fill(
             child: TickerMode(
               enabled: ModalRoute.of(context)?.isCurrent ?? true,

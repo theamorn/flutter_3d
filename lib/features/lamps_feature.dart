@@ -146,7 +146,7 @@ class _BathLight {
           name: 'bath_light_source',
           localTransform: Matrix4.translationValues(0, -.15, 0),
         )
-        ..castsShadows = false
+        ..shadowCastingMode = ShadowCastingMode.off
         ..raycastable = false;
   final Map<PhysicallyBasedMaterial, Vector4> _diffusers = {};
   final Map<PhysicallyBasedMaterial, Vector4> _locators = {};
@@ -206,7 +206,7 @@ class _Lamp {
           name: 'lamp_light',
           localTransform: Matrix4.translationValues(0, .3, 0),
         )
-        ..castsShadows = false
+        ..shadowCastingMode = ShadowCastingMode.off
         ..raycastable = false;
   final Map<PhysicallyBasedMaterial, Vector4> _shades = {};
   late final Interactable interaction;

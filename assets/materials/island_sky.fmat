@@ -32,6 +32,9 @@ material {
 }
 
 sky {
+  // flutter_scene 0.24 defaults material fragments to mediump (half precision
+  // on Mali/Adreno/web). This body computes positions, phases and hashes.
+  precision highp float;
   // Small local noise instead of <noise.glsl>. That library's large constant
   // tables left this sky with no pipeline on the Android emulator's GLES
   // (it silently drew nothing, and the lighting baked from it was garbage);

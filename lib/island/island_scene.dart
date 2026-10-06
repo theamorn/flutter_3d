@@ -463,7 +463,7 @@ class IslandScene {
         markerMaterial,
       ),
     )
-      ..castsShadows = false
+      ..shadowCastingMode = ShadowCastingMode.off
       ..visible = false;
     _marker = TapMarkerComponent(markerMaterial);
     markerNode.addComponent(_marker!);
@@ -573,7 +573,7 @@ class IslandScene {
         0.32,
         IslandDimensions.campfireZ,
       );
-    _flameNode.castsShadows = false;
+    _flameNode.shadowCastingMode = ShadowCastingMode.off;
     scene.add(_flameNode);
 
     _flameEmitter = ParticleEmitterComponent(
@@ -611,7 +611,7 @@ class IslandScene {
         IslandDimensions.campfireZ,
       )
       ..visible = false
-      ..castsShadows = false
+      ..shadowCastingMode = ShadowCastingMode.off
       ..addComponent(_flameEmitter!);
     scene.add(_flameEmitterNode!);
 
@@ -649,7 +649,7 @@ class IslandScene {
         IslandDimensions.campfireZ,
       )
       ..visible = false
-      ..castsShadows = false
+      ..shadowCastingMode = ShadowCastingMode.off
       ..addComponent(_smokeEmitter!);
     scene.add(_smokeEmitterNode!);
 
@@ -687,7 +687,7 @@ class IslandScene {
         IslandDimensions.campfireZ,
       )
       ..visible = false
-      ..castsShadows = false
+      ..shadowCastingMode = ShadowCastingMode.off
       ..addComponent(_sparkEmitter!);
     scene.add(_sparkEmitterNode!);
 
@@ -721,7 +721,7 @@ class IslandScene {
     );
     if (_ballRoot == null) {
       _ballRoot = Node(name: 'physics_balls')
-        ..castsShadows = true
+        ..shadowCastingMode = ShadowCastingMode.on
         ..addComponent(InstancedMeshComponent(_ballBatch!))
         ..addComponent(
           PhysicsBallVisualComponent(
@@ -1176,7 +1176,7 @@ class IslandScene {
         initialSeaMat,
       ),
     )..position = vm.Vector3(0, IslandDimensions.seaY, 0);
-    _waterNode.castsShadows = false;
+    _waterNode.shadowCastingMode = ShadowCastingMode.off;
     _waterNode.shadowStatic = false;
     scene.add(_waterNode);
   }
@@ -1791,7 +1791,7 @@ class IslandScene {
 
     final root = Node(name: 'ultra_ground_cover');
     root.shadowStatic = true;
-    root.castsShadows = false;
+    root.shadowCastingMode = ShadowCastingMode.off;
 
     for (final primitive in primitives) {
       final batch = InstancedMesh(
@@ -2057,7 +2057,7 @@ class IslandScene {
     for (var i = 0; i < _flockSize; i++) {
       final model = await _loadProp('assets/models/seagull.glb');
       // Not inherited by children, so every node of the model.
-      _forEachNode(model, (node) => node.castsShadows = false);
+      _forEachNode(model, (node) => node.shadowCastingMode = ShadowCastingMode.off);
       final flight = model.findAnimationByName('Fast_Flying');
       AnimationClip? wingbeat;
       if (flight != null) {
@@ -2224,7 +2224,7 @@ class IslandScene {
         name: 'buoy_body_$i',
         mesh: crateMesh,
       )
-        ..castsShadows = false
+        ..shadowCastingMode = ShadowCastingMode.off
         ..addComponent(
           FloatingMotionComponent(
             hoverAmplitude: 0.05,
@@ -2287,7 +2287,7 @@ class IslandScene {
   }
 
   void _ensureDebrisPool() {
-    _debrisRoot ??= Node(name: 'ultra_debris')..castsShadows = false;
+    _debrisRoot ??= Node(name: 'ultra_debris')..shadowCastingMode = ShadowCastingMode.off;
     if (_debrisRoot!.parent == null) {
       scene.add(_debrisRoot!);
     }
@@ -2297,7 +2297,7 @@ class IslandScene {
     );
     _debrisPool ??= NodePool(
       () => Node(name: 'punch_chip', mesh: _chipMesh)
-        ..castsShadows = false,
+        ..shadowCastingMode = ShadowCastingMode.off,
       initialSize: 8,
       maxSize: 16,
     );

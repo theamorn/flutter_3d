@@ -29,6 +29,9 @@ material {
 }
 
 fragment {
+  // flutter_scene 0.24 defaults material fragments to mediump (half precision
+  // on Mali/Adreno/web). This body computes positions, phases and hashes.
+  precision highp float;
   void Surface(inout MaterialInputs material) {
     vec4 reflection = GetPlanarReflection();
     float f0 = material_params.reflectivity;

@@ -159,7 +159,7 @@ class LightningFeature extends HotelFeature {
       name: 'lightning_bolt',
       mesh: Mesh(geometry, material),
     )
-      ..castsShadows = false
+      ..shadowCastingMode = ShadowCastingMode.off
       ..visible = false
       ..layers = kRenderLayerDefault | kSeaReflectedLayer;
     ctx.scene.add(bolt);

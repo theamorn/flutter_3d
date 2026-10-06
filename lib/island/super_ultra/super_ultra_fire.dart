@@ -266,7 +266,7 @@ class SuperUltraFire {
       ),
     )
       ..position = base + vm.Vector3(0, 0.012, 0)
-      ..castsShadows = false;
+      ..shadowCastingMode = ShadowCastingMode.off;
     root.add(emberBed);
 
     final hazeNode = Node(
@@ -274,7 +274,7 @@ class SuperUltraFire {
       mesh: Mesh(_hazeQuad(width: 1.1, height: 1.9), hazeMaterial),
     )
       ..position = base + vm.Vector3(0, 0.45, 0)
-      ..castsShadows = false;
+      ..shadowCastingMode = ShadowCastingMode.off;
     root.add(hazeNode);
   }
 
@@ -305,7 +305,7 @@ class SuperUltraFire {
     root.add(
       Node(name: name)
         ..position = at
-        ..castsShadows = false
+        ..shadowCastingMode = ShadowCastingMode.off
         ..addComponent(emitter),
     );
     return emitter;

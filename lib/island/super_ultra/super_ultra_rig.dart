@@ -197,7 +197,7 @@ class SuperUltraRig {
       mesh: Mesh(MeshGeometry.fromMeshData(oceanData), _ocean),
     )
       ..position = vm.Vector3(0, seaY, 0)
-      ..castsShadows = false
+      ..shadowCastingMode = ShadowCastingMode.off
       // The GPU displaces it, so its flat bounds would be a lie; it is always
       // on screen anyway.
       ..frustumCulled = false
@@ -220,14 +220,14 @@ class SuperUltraRig {
       mesh: Mesh(MeshGeometry.fromMeshData(simpleSeaData), _simpleSea),
     )
       ..position = vm.Vector3(0, seaY, 0)
-      ..castsShadows = false
+      ..shadowCastingMode = ShadowCastingMode.off
       ..frustumCulled = false
       ..layers = kSuperUltraNoReflectLayer;
 
     final grass = _buildGrass(obstacles);
     grassTufts = grass.instanceCount;
     grassNode = Node(name: 'su_grass')
-      ..castsShadows = false
+      ..shadowCastingMode = ShadowCastingMode.off
       ..layers = kSuperUltraNoReflectLayer
       ..addComponent(InstancedMeshComponent(grass));
 

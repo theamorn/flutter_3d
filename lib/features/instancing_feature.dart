@@ -189,7 +189,7 @@ class InstancingFeature extends HotelFeature {
           name: 'beach_prop_${p.kind.name}',
           localTransform: transformFor(p),
           mesh: Mesh(geometry, material),
-        )..castsShadows = false;
+        )..shadowCastingMode = ShadowCastingMode.off;
         ctx.scene.add(node);
         _nodes.add(node);
       }
@@ -200,10 +200,10 @@ class InstancingFeature extends HotelFeature {
         (p.kind == PropKind.palm ? palmMesh : umbrellaMesh).addInstance(transformFor(p));
       }
       final palmNode = Node(name: 'beach_palms')
-        ..castsShadows = false
+        ..shadowCastingMode = ShadowCastingMode.off
         ..addComponent(InstancedMeshComponent(palmMesh));
       final umbrellaNode = Node(name: 'beach_umbrellas')
-        ..castsShadows = false
+        ..shadowCastingMode = ShadowCastingMode.off
         ..addComponent(InstancedMeshComponent(umbrellaMesh));
       for (final n in [palmNode, umbrellaNode]) {
         ctx.scene.add(n);

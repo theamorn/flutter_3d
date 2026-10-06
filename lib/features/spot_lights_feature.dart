@@ -64,7 +64,7 @@ class _ReadingLight {
     name: 'reading_light_source',
     localTransform: Matrix4.translation(kReadingLightSourceAt),
   )
-    ..castsShadows = false
+    ..shadowCastingMode = ShadowCastingMode.off
     ..raycastable = false;
   final Map<PhysicallyBasedMaterial, Vector4> _shades = {};
   late final Interactable interaction;

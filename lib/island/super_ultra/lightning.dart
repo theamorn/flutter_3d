@@ -288,7 +288,7 @@ class SuperUltraLightning {
     _boltNode = Node(
       name: 'su_lightning_bolt',
       mesh: Mesh.primitives(primitives: primitives),
-    )..castsShadows = false;
+    )..shadowCastingMode = ShadowCastingMode.off;
     root.add(_boltNode!);
 
     lightNode.lookAtFrom(top, vm.Vector3.zero());

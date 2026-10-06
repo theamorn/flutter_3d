@@ -32,6 +32,9 @@ vertex {
 }
 
 fragment {
+  // flutter_scene 0.24 defaults material fragments to mediump (half precision
+  // on Mali/Adreno/web). This body computes positions, phases and hashes.
+  precision highp float;
   // Local hash noise rather than <noise.glsl>, whose large constant tables
   // fail to link on some GLES drivers (see island_sky.fmat).
   float Hash12(vec2 p) {

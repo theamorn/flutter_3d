@@ -94,7 +94,7 @@ class OceanFeature extends HotelFeature {
     final facade = _box('hotel_facade', kFacade, _pbr(0.72, 0.70, 0.66, 0.85));
     // Far below the sun's shadow range and never shadowing the rooms: no casters.
     for (final n in [sea, ...horizon, beach, shore, facade]) {
-      n.castsShadows = false;
+      n.shadowCastingMode = ShadowCastingMode.off;
       ctx.scene.add(n);
       _nodes.add(n);
     }

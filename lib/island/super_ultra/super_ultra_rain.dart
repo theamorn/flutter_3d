@@ -120,7 +120,7 @@ class SuperUltraRain {
 
     Node emitterNode(String name, ParticleEmitterComponent emitter) =>
         Node(name: name)
-          ..castsShadows = false
+          ..shadowCastingMode = ShadowCastingMode.off
           ..addComponent(emitter);
     root
       ..add(emitterNode('su_rain_drops', _drops))
@@ -128,7 +128,7 @@ class SuperUltraRain {
       ..add(emitterNode('su_rain_steam', _steam))
       ..add(
         Node(name: 'su_rain_ripples')
-          ..castsShadows = false
+          ..shadowCastingMode = ShadowCastingMode.off
           ..addComponent(InstancedMeshComponent(_ripples)),
       )
       ..addComponent(_RainTick(this));

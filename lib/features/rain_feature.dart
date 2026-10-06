@@ -128,12 +128,12 @@ class RainFeature extends HotelFeature {
 
     _rainNode = Node(name: 'rain_particles')
       ..position = Vector3(0, rainEmitterY, rainEmitterZ)
-      ..castsShadows = false;
+      ..shadowCastingMode = ShadowCastingMode.off;
     _rainNode!.addComponent(rainComponent);
 
     _splashNode = Node(name: 'rain_splash_particles')
       ..position = Vector3(0, 0, splashEmitterZ)
-      ..castsShadows = false;
+      ..shadowCastingMode = ShadowCastingMode.off;
     _splashNode!.addComponent(splashComponent);
 
     _attached = false;
