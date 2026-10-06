@@ -18,6 +18,7 @@ import 'package:flutter_3d/island/super_ultra/lightning.dart';
 import 'package:flutter_3d/island/super_ultra/ocean_waves.dart';
 import 'package:flutter_3d/island/super_ultra/procedural_textures.dart';
 import 'package:flutter_3d/island/super_ultra/rain_collision.dart';
+import 'package:flutter_3d/island/super_ultra/stone_lighting.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_decals.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_fire.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_rain.dart';
@@ -79,6 +80,10 @@ class SuperUltraRig {
   late final PreprocessedMaterial _simpleSea;
   late final PreprocessedMaterial _grass;
 
+  /// The firepit stones' custom-indirect material and its binding. The
+  /// island binds it to the placed campfire while Super Ultra shows it.
+  late final StoneLightingBinding stones;
+
   int grassTufts = 0;
 
   /// 0 (dry) to 1 (raining). Wets the ground and grass, rings the sea with
@@ -118,11 +123,13 @@ class SuperUltraRig {
       loadFmatMaterial('assets/materials/ember_bed.fmat'),
       loadFmatMaterial('assets/materials/heat_haze.fmat'),
       loadFmatMaterial('assets/materials/ocean_simple.fmat'),
+      loadFmatMaterial('assets/materials/campfire_stone.fmat'),
     ]);
     _ground = materials[0];
     _ocean = materials[1];
     _grass = materials[2];
     _simpleSea = materials[5];
+    stones = StoneLightingBinding(materials[6]);
     sky = await loadFmatSky('assets/materials/island_sky.fmat');
     skybox = Skybox(sky);
     skyEnvironment = SkyEnvironment(
@@ -441,6 +448,7 @@ class SuperUltraRig {
       ..setVec4('caustic_light', vm.Vector4(caustic.x, caustic.y, caustic.z, 1.0))
       // w: wetness (darker, shinier ground, puddles).
       ..setVec4('water', vm.Vector4(seaY, 0.5 * (1.0 - 0.7 * weather), 1.0, weather));
+    stones.apply(stoneLightingFor(ambient: ambient, night: night, weather: weather));
   }
 
   void _tick(double deltaSeconds) {

@@ -22,6 +22,7 @@ import 'package:flutter_3d/island/super_ultra/super_ultra_effects.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_rig.dart';
 import 'package:flutter_3d/island/tap_to_move.dart';
 import 'package:flutter_3d/island/xray.dart';
+import 'package:flutter_3d/render/prewarm.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 /// Fixed dimensions of the island. The walkable disc and the visible grass cap
@@ -853,6 +854,11 @@ class IslandScene {
       scene.skyEnvironment?.invalidate();
     }
     _applyLighting();
+    if (isSuperUltra && !wasSuper) {
+      // Super Ultra swaps in its own materials (sea, grass, firepit stones,
+      // fire); compile them now, not on the frame each first shows up.
+      unawaited(prewarmPipelines(scene, camera));
+    }
     if (_cameraMode == IslandCameraMode.orbit) {
       _recount();
     }
@@ -869,6 +875,10 @@ class IslandScene {
       }
     } else {
       _superRig.unmount();
+      // The firepit stones go back to the imported material.
+      if (_superRig.isBuilt) {
+        _superRig.stones.release();
+      }
       // Rain stops with the mode, dry, so coming back does not replay a
       // shower frozen mid-air.
       _superRig.rain?.reset();
@@ -1197,6 +1207,11 @@ class IslandScene {
       for (final reflector
           in rig.oceanNode.getComponents<PlanarReflectorComponent>()) {
         reflector.enabled = !off(SuperUltraEffect.planarReflection);
+      }
+      if (off(SuperUltraEffect.stoneIndirect)) {
+        rig.stones.release();
+      } else {
+        rig.stones.bind([for (final prop in _props) prop.node]);
       }
     }
     final post = scene.postProcess;

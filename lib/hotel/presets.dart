@@ -12,7 +12,7 @@ const _high = {..._medium, 'bloom', 'ao', 'rain', 'lightning', 'spot_lights'};
 // iPhone 17 Pro Max (learning.md), so it stays a manual pick.
 const _ultra = {
   ..._high, 'god_rays', 'ssr', 'rain_glass', 'mirror', 'sea_reflection',
-  'volumetric_fog', 'bath_shadow',
+  'volumetric_fog', 'bath_shadow', 'cloth_lighting',
 };
 
 /// Each tier's one anti-aliasing mode (the `aa` exclusive group), or none.

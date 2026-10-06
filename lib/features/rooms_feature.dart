@@ -21,13 +21,15 @@ class RoomsFeature extends HotelFeature {
   @override
   Future<void> mount(HotelContext ctx) async {
     final textures = await RoomTextures.load(textureRefs(roomASpec()));
-    final a = buildRoomA(textures: textures)..name = 'room_a';
+    final bedding = <BeddingMaterialTarget>[];
+    final a = buildRoomA(textures: textures, bedding: bedding)..name = 'room_a';
     final b = Node(name: 'room_b', localTransform: Matrix4.diagonal3Values(-1, 1, 1))
-      ..add(buildRoomA(mirrored: true, textures: textures));
+      ..add(buildRoomA(mirrored: true, textures: textures, bedding: bedding));
     ctx.scene.add(a);
     ctx.scene.add(b);
     ctx.rooms[RoomId.a] = a;
     ctx.rooms[RoomId.b] = b;
+    ctx.beddingTargets = bedding;
     // One shared connecting door: hide room B's mirrored copy of the leaf.
     ctx.nodesNamed('door_connect').last.visible = false;
   }
@@ -38,5 +40,6 @@ class RoomsFeature extends HotelFeature {
       ctx.scene.remove(room);
     }
     ctx.rooms.clear();
+    ctx.beddingTargets = const [];
   }
 }

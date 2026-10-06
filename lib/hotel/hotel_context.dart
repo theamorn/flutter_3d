@@ -3,6 +3,7 @@ import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
 
 import '../features/interaction_registry.dart';
+import '../features/placeholder_rooms.dart' show BeddingMaterialTarget;
 import '../math/colliders.dart';
 import '../math/floor_plan.dart';
 import 'look.dart';
@@ -46,6 +47,11 @@ class HotelContext {
 
   /// Filled by the rooms feature (Task 9).
   final Map<RoomId, Node> rooms = {};
+
+  /// Both rooms' decorative bedding primitives, published by the rooms
+  /// feature as it builds them. Replaced (not edited) on every room mount,
+  /// so a feature can tell a remount by identity.
+  List<BeddingMaterialTarget> beddingTargets = const [];
 
   /// Task 17 writes.
   final ValueNotifier<bool> doorOpen = ValueNotifier(false);

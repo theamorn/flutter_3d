@@ -1,0 +1,94 @@
+// Decorative bedding (the jacquard pillows and the wool throw) in Hotel Ultra.
+// Same photo and normal textures as the room's own fabric material; the
+// difference is the lighting:
+//
+// Light(): a wrapped diffuse (wrap 0.2) so light rolls a little past the
+// terminator the way it does into a soft pile, plus a broad GGX highlight
+// whose roughness is floored rather than its gain raised.
+// Ambient(): keeps the engine's image-based light; damps the specular part
+// of it (fabric has no mirror) and keeps the diffuse part.
+// Composite(): sums the lobes and premultiplies by alpha, once.
+//
+// LightContext.radiance already carries each light's attenuation and shadow,
+// so neither is applied again here.
+material {
+  name: "ClothHooks",
+  shading_model: lit,
+  parameters: [
+    // rgb = linear tint (the Finish colour), a = alpha.
+    { type: vec4, name: base_color_factor, default: [1.0, 1.0, 1.0, 1.0] },
+    // x = roughness, y = normal-map strength, z = specular weight,
+    // w = rim (pile) strength.
+    { type: vec4, name: cloth, default: [0.8, 1.0, 0.5, 0.35] },
+    // x = diffuse IBL scale, y = specular IBL scale.
+    { type: vec4, name: ambient_scale, default: [1.0, 0.35, 0.0, 0.0] },
+    { type: sampler2D, name: base_color_texture, hint: default_white },
+    { type: sampler2D, name: normal_texture, hint: default_normal },
+  ],
+}
+
+fragment {
+  // flutter_scene 0.24 defaults material fragments to mediump (half precision
+  // on Mali/Adreno/web). The lobes below run in float32.
+  precision highp float;
+
+  const float kClothWrap = 0.2;
+
+  void Surface(inout MaterialInputs material) {
+    vec2 uv = GetUV0();
+    vec4 texel = texture(base_color_texture, uv);
+    vec3 albedo = SRGBToLinear(texel.rgb) * material_params.base_color_factor.rgb;
+    // Straight alpha; Composite() premultiplies.
+    material.base_color = vec4(albedo, texel.a * material_params.base_color_factor.a);
+    material.normal = PerturbNormal(normal_texture, GetWorldNormal(),
+                                    GetViewDirection(), uv,
+                                    material_params.cloth.y);
+    material.metallic = 0.0;
+    material.roughness = material_params.cloth.x;
+    material.specular = material_params.cloth.z;
+    material.occlusion = 1.0;
+  }
+
+  LightTerms Light(MaterialInputs material, LightContext light) {
+    LightTerms terms;
+    vec3 n = light.normal;
+    vec3 v = light.view;
+    vec3 l = light.light_vector;
+    float n_dot_l = dot(n, l);
+    // Wrapped Lambert, energy-normalised so a head-on light matches plain
+    // Lambert.
+    float wrapped = max((n_dot_l + kClothWrap) / (1.0 + kClothWrap), 0.0);
+    terms.diffuse = material.base_color.rgb * (1.0 / kPi) * light.radiance * wrapped;
+
+    terms.specular = vec3(0.0);
+    float lit = max(n_dot_l, 0.0);
+    vec3 h = l + v;
+    float h_len_sq = dot(h, h);
+    if (lit > 0.0 && h_len_sq > 1e-8) {
+      vec3 half_vector = h * inversesqrt(h_len_sq);
+      float roughness = max(material.roughness, 0.55);
+      float n_dot_v = max(dot(n, v), 1e-4);
+      float d = DistributionGGX(n, half_vector, roughness);
+      float vis = VisibilitySmithGGXCorrelated(n_dot_v, lit, roughness);
+      vec3 f = FresnelSchlick(max(dot(half_vector, v), 0.0), vec3(0.04));
+      // Pile catching grazing light: a soft rim tinted by the cloth.
+      float rim = pow(1.0 - n_dot_v, 4.0) * material_params.cloth.w;
+      terms.specular = (min(d * vis, 64.0) * f * material.specular +
+                        material.base_color.rgb * rim * (1.0 / kPi)) *
+                       light.radiance * lit;
+    }
+    return terms;
+  }
+
+  void Ambient(MaterialInputs material, inout AmbientContext ambient) {
+    ambient.irradiance *= material_params.ambient_scale.x;
+    ambient.radiance *= material_params.ambient_scale.y;
+  }
+
+  highp vec4 Composite(MaterialInputs material, LightingResult result) {
+    highp vec3 color = result.direct_diffuse + result.direct_specular +
+                       result.indirect_diffuse + result.indirect_specular +
+                       result.emissive;
+    return vec4(color, 1.0) * result.alpha;
+  }
+}

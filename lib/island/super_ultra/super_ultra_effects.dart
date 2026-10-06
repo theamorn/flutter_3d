@@ -184,6 +184,12 @@ enum SuperUltraEffect {
     'Point-light shadows: the casters draw again into six cube faces',
     SuperUltraEffectGroup.lighting,
   ),
+  stoneIndirect(
+    'Custom firepit light',
+    'The firepit stones light their own shadowed sides from the sky and '
+        'ground (material hooks). Off: the engine\'s baked sky light',
+    SuperUltraEffectGroup.lighting,
+  ),
   bloom(
     'Bloom',
     'Glow around bright things: a chain of small blur passes',

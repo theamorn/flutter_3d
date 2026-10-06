@@ -1,0 +1,87 @@
+// The Super Ultra firepit stones with their own indirect light.
+//
+// Ambient() replaces the engine's image-based light on this one small object
+// with a controlled sky/ground gradient (sky_upper above, sky_lower below),
+// which the island drives from its ambient schedule
+// (lib/island/super_ultra/stone_lighting.dart). The sun, the moon and the
+// campfire still light the stones through Light(), with their real
+// attenuation and shadows.
+//
+// The engine's own switch for this, `environment_lighting: false`, compiles
+// but draws nothing on Adreno/Vulkan in flutter_scene 0.24.0 (checked on a
+// device, 2026-10-06), so the environment stays bound and Ambient()
+// overwrites both of its terms instead of scaling them.
+//
+// LightContext.radiance already carries each light's attenuation and shadow,
+// so neither is applied again here.
+material {
+  name: "CampfireStone",
+  shading_model: lit,
+  parameters: [
+    // rgb = linear base colour (the imported stone colour).
+    { type: vec4, name: base_color, default: [0.72, 0.89, 0.91, 1.0] },
+    // rgb = sky radiance above the stones, w = ambient multiplier.
+    { type: vec4, name: sky_upper, default: [0.5, 0.6, 0.7, 1.0] },
+    // rgb = ground bounce below the stones.
+    { type: vec4, name: sky_lower, default: [0.15, 0.13, 0.1, 0.0] },
+    // x = roughness.
+    { type: vec4, name: stone, default: [0.85, 0.0, 0.0, 0.0] },
+  ],
+}
+
+fragment {
+  // flutter_scene 0.24 defaults material fragments to mediump (half precision
+  // on Mali/Adreno/web). The lobes below run in float32.
+  precision highp float;
+
+  void Surface(inout MaterialInputs material) {
+    // Straight alpha; Composite() premultiplies.
+    material.base_color = vec4(material_params.base_color.rgb, 1.0);
+    material.metallic = 0.0;
+    material.roughness = material_params.stone.x;
+    material.specular = 0.5;
+    material.occlusion = 1.0;
+  }
+
+  LightTerms Light(MaterialInputs material, LightContext light) {
+    LightTerms terms;
+    vec3 n = light.normal;
+    vec3 v = light.view;
+    vec3 l = light.light_vector;
+    float n_dot_l = max(dot(n, l), 0.0);
+    terms.diffuse = material.base_color.rgb * (1.0 / kPi) * light.radiance * n_dot_l;
+    terms.specular = vec3(0.0);
+    vec3 h = l + v;
+    float h_len_sq = dot(h, h);
+    if (n_dot_l > 0.0 && h_len_sq > 1e-8) {
+      vec3 half_vector = h * inversesqrt(h_len_sq);
+      float n_dot_v = max(dot(n, v), 1e-4);
+      float d = DistributionGGX(n, half_vector, material.roughness);
+      float vis = VisibilitySmithGGXCorrelated(n_dot_v, n_dot_l, material.roughness);
+      vec3 f = FresnelSchlick(max(dot(half_vector, v), 0.0), vec3(0.04));
+      terms.specular = min(d * vis, 64.0) * f * material.specular *
+                       light.radiance * n_dot_l;
+    }
+    return terms;
+  }
+
+  // The stones' sky: lower colour facing down, upper facing up.
+  vec3 StoneSky(vec3 direction) {
+    float up = clamp(direction.y * 0.5 + 0.5, 0.0, 1.0);
+    return mix(material_params.sky_lower.rgb, material_params.sky_upper.rgb, up) *
+           material_params.sky_upper.w;
+  }
+
+  void Ambient(MaterialInputs material, inout AmbientContext ambient) {
+    // Overwrite, never scale: the baked sky must not leak in.
+    ambient.irradiance = StoneSky(ambient.normal);
+    ambient.radiance = StoneSky(ambient.reflection);
+  }
+
+  highp vec4 Composite(MaterialInputs material, LightingResult result) {
+    highp vec3 color = result.direct_diffuse + result.direct_specular +
+                       result.indirect_diffuse + result.indirect_specular +
+                       result.emissive;
+    return vec4(color, 1.0) * result.alpha;
+  }
+}

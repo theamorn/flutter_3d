@@ -12,6 +12,11 @@ void main() {
     expect(presetIds(Preset.high), isNot(contains('bath_shadow')));
   });
 
+  test('cloth lighting hooks are an ultra feature, standard bedding below', () {
+    expect(presetIds(Preset.ultra), contains('cloth_lighting'));
+    expect(presetIds(Preset.high), isNot(contains('cloth_lighting')));
+  });
+
   test('each preset is a superset of the one below, outside the AA group', () {
     for (var i = 1; i < Preset.values.length; i++) {
       final hi = presetIds(Preset.values[i]).difference(aaModes);

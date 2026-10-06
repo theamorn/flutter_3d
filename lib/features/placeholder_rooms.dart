@@ -56,6 +56,11 @@ enum Shading {
   brushed,
 }
 
+/// Which decorative bedding a finish dresses, for the cloth lighting
+/// feature: it relights only these primitives and leaves the sleeping linen
+/// and every other surface alone.
+enum BeddingMaterialRole { none, jacquardPillow, woolThrow }
+
 /// Surface look of a part: linear RGB base colour plus PBR factors. With a
 /// [texture], the colour tints it (the fabrics ship grey, so the tint is
 /// their colour) and the part's UVs run in metres. [layer] (0..1) scales the
@@ -68,10 +73,12 @@ class Finish {
       this.alpha = 1,
       this.texture,
       this.shading = Shading.standard,
-      this.layer = 1});
+      this.layer = 1,
+      this.bedding = BeddingMaterialRole.none});
   final double r, g, b, roughness, metallic, alpha, layer;
   final TextureRef? texture;
   final Shading shading;
+  final BeddingMaterialRole bedding;
 }
 
 /// The engine material settings a [Finish] asks for. Pure data, so the
@@ -166,9 +173,11 @@ const _whiteTiles = TextureRef('long_white_tiles', 1.27, 1.27);
 const _headboardVelvet =
     Finish(0.05, 0.20, 0.22, roughness: 0.95, texture: _velvet, shading: Shading.sheen);
 const _pillowJacquard = Finish(0.85, 0.70, 0.45,
-    roughness: 0.7, texture: _jacquard, shading: Shading.sheen, layer: 0.7);
+    roughness: 0.7, texture: _jacquard, shading: Shading.sheen, layer: 0.7,
+    bedding: BeddingMaterialRole.jacquardPillow);
 const _throwWool = Finish(0.15, 0.15, 0.16,
-    roughness: 0.9, texture: _woolWeave, shading: Shading.sheen, layer: 0.5);
+    roughness: 0.9, texture: _woolWeave, shading: Shading.sheen, layer: 0.5,
+    bedding: BeddingMaterialRole.woolThrow);
 const _benchLeather =
     Finish(1, 1, 1, roughness: 0.5, texture: _leather, shading: Shading.clearcoat, layer: 0.3);
 const _rugTeddy = Finish(1, 1, 1, roughness: 1, texture: _teddy, shading: Shading.matte);
@@ -929,25 +938,87 @@ PhysicallyBasedMaterial _material(Finish f, RoomTextures? textures) {
   return m;
 }
 
+/// [parts] grouped by finish, in first-appearance order: the builder makes
+/// one mesh primitive per entry, so an entry's index is its primitive's.
+Map<Finish, List<Part>> _byFinish(List<Part> parts) {
+  final byFinish = <Finish, List<Part>>{};
+  for (final p in parts) {
+    (byFinish[p.finish] ??= []).add(p);
+  }
+  return byFinish;
+}
+
+/// The finish of each mesh primitive the builder makes from [parts].
+List<Finish> primitiveFinishes(List<Part> parts) => _byFinish(parts).keys.toList();
+
+/// One primitive of a built node that wears decorative bedding.
+class BeddingSlot {
+  const BeddingSlot(this.primitive, this.role, this.finish);
+  final int primitive;
+  final BeddingMaterialRole role;
+  final Finish finish;
+}
+
+/// The primitives built from [parts] whose finish is tagged as bedding.
+List<BeddingSlot> beddingSlots(List<Part> parts) {
+  final finishes = primitiveFinishes(parts);
+  return [
+    for (var i = 0; i < finishes.length; i++)
+      if (finishes[i].bedding != BeddingMaterialRole.none)
+        BeddingSlot(i, finishes[i].bedding, finishes[i]),
+  ];
+}
+
+/// A built node's bedding primitives, with what they were built with so a
+/// feature can relight them and put them back: the authored material and
+/// the photo textures of each slot.
+class BeddingMaterialTarget {
+  BeddingMaterialTarget(this.node, this.slots, this.originals,
+      {required this.colorTextures, required this.normalTextures});
+  final Node node;
+  final List<BeddingSlot> slots;
+
+  /// Per slot: the material the builder gave it.
+  final List<Material> originals;
+
+  /// Per slot: its base-colour and normal photo textures, null when not
+  /// loaded.
+  final List<TextureSource?> colorTextures, normalTextures;
+}
+
 /// Builds [spec] into nodes: one primitive per finish, a fresh material per
-/// node (so features can restyle one node without touching another).
-Node _build(RoomNode spec, bool mirrored, RoomTextures? textures) {
+/// node (so features can restyle one node without touching another). Every
+/// node with bedding slots is added to [bedding].
+Node _build(RoomNode spec, bool mirrored, RoomTextures? textures,
+    List<BeddingMaterialTarget>? bedding) {
   final node = Node(name: spec.name, localTransform: spec.localTransform)
     ..shadowCastingMode = spec.castsShadows ? ShadowCastingMode.on : ShadowCastingMode.off;
   if (spec.parts.isNotEmpty) {
-    final byFinish = <Finish, List<Part>>{};
-    for (final p in spec.parts) {
-      (byFinish[p.finish] ??= []).add(p);
-    }
-    node.mesh = Mesh.primitives(primitives: [
-      for (final MapEntry(key: f, value: parts) in byFinish.entries)
+    final mesh = node.mesh = Mesh.primitives(primitives: [
+      for (final MapEntry(key: f, value: parts) in _byFinish(spec.parts).entries)
         MeshPrimitive(
             MeshGeometry.fromMeshData(partsMeshData(parts, mirrored: mirrored)),
             _material(f, textures)),
     ]);
+    final slots = beddingSlots(spec.parts);
+    if (bedding != null && slots.isNotEmpty) {
+      bedding.add(BeddingMaterialTarget(
+        node,
+        slots,
+        [for (final s in slots) mesh.primitives[s.primitive].material],
+        colorTextures: [
+          for (final s in slots)
+            s.finish.texture == null ? null : textures?.color(s.finish.texture!)
+        ],
+        normalTextures: [
+          for (final s in slots)
+            s.finish.texture == null ? null : textures?.normal(s.finish.texture!)
+        ],
+      ));
+    }
   }
   for (final c in spec.children) {
-    node.add(_build(c, mirrored, textures));
+    node.add(_build(c, mirrored, textures, bedding));
   }
   return node;
 }
@@ -956,5 +1027,9 @@ Node _build(RoomNode spec, bool mirrored, RoomTextures? textures) {
 /// `Scene.initializeStaticResources()`). Pass [mirrored] for the copy that
 /// becomes room B under a scale.x = −1 parent, and the loaded [textures]
 /// (see [textureRefs]); without them every part shows its plain colour.
-Node buildRoomA({bool mirrored = false, RoomTextures? textures}) =>
-    _build(roomASpec(), mirrored, textures);
+/// The bed's decorative bedding primitives are appended to [bedding].
+Node buildRoomA(
+        {bool mirrored = false,
+        RoomTextures? textures,
+        List<BeddingMaterialTarget>? bedding}) =>
+    _build(roomASpec(), mirrored, textures, bedding);
