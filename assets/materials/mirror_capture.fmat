@@ -1,0 +1,54 @@
+// The custom bathroom mirror (lib/features/custom_mirror_feature.dart):
+// shows a linear-HDR capture rendered from the mirrored camera
+// (PlanarReflectionCamera into a RenderTexture with linearColor: true).
+//
+// The feature hands over each completed capture together with the
+// view-projection it was rendered with, so a fragment projects its own world
+// position through that matrix to find its texel. The capture is scene
+// radiance, not a display image: it is shown as is, and the screen view's
+// resolve applies exposure and tone mapping once.
+//
+// Until a capture is bound (capture_ready 0) the surface shows a plain dim
+// mirror colour; the feature keeps the authored mirror on until then, so this
+// is only a safety net.
+material {
+  name: "MirrorCapture",
+  shading_model: unlit,
+  culling: back,
+  parameters: [
+    // The fallback colour, linear.
+    { type: vec4, name: base_color, default: [0.2, 0.2, 0.21, 1.0] },
+    // 1 once a capture and its matrix are bound.
+    { type: float, name: capture_ready, default: 0.0 },
+    // Share of the capture shown: 1 is a perfect mirror.
+    { type: float, name: reflectivity, default: 0.95 },
+    { type: mat4, name: capture_view_projection },
+    { type: sampler2D, name: capture, hint: default_black },
+  ],
+}
+
+fragment {
+  // flutter_scene 0.24 defaults material fragments to mediump (half precision
+  // on Mali/Adreno/web). The projection below needs float32.
+  precision highp float;
+
+  void Surface(inout MaterialInputs material) {
+    vec3 fallback = material_params.base_color.rgb;
+    if (material_params.capture_ready < 0.5) {
+      material.base_color = vec4(fallback, 1.0);
+      return;
+    }
+    highp vec4 clip = material_params.capture_view_projection *
+                      vec4(GetWorldPosition(), 1.0);
+    if (clip.w <= 0.0) {
+      material.base_color = vec4(fallback, 1.0);
+      return;
+    }
+    // The engine's own planar-capture lookup: clip space to texture space,
+    // y down.
+    highp vec2 uv = vec2(0.5 + 0.5 * clip.x / clip.w, 0.5 - 0.5 * clip.y / clip.w);
+    uv = clamp(uv, vec2(0.001), vec2(0.999));
+    vec3 reflection = texture(capture, uv).rgb;
+    material.base_color = vec4(reflection * material_params.reflectivity, 1.0);
+  }
+}

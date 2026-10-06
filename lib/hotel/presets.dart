@@ -13,7 +13,7 @@ const _high = {
 // Dynamic GI is in no preset: it cost up to half of ultra's frame on the
 // iPhone 17 Pro Max (learning.md), so it stays a manual pick.
 const _ultra = {
-  ..._high, 'god_rays', 'ssr', 'rain_glass', 'mirror', 'sea_reflection',
+  ..._high, 'god_rays', 'ssr', 'rain_glass', 'mirror_custom', 'sea_reflection',
   'volumetric_fog', 'bath_shadow', 'cloth_lighting',
 };
 

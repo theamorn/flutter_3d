@@ -14,6 +14,11 @@ import '../math/floor_plan.dart';
 /// for its own instance of [kMirrorFmat] (one per reflector: a material
 /// shared between reflectors shows one of their captures at random).
 
+/// The exclusive group of the two bathroom-mirror backends: the engine's
+/// planar reflector ([MirrorFeature]) and the custom HDR capture
+/// (`CustomMirrorFeature`).
+const String kBathroomReflectionGroup = 'bathroom_reflection';
+
 /// The capture-sampling material, compiled by the build hook.
 const String kMirrorFmat = 'assets/materials/mirror.fmat';
 
@@ -130,6 +135,8 @@ class MirrorFeature extends HotelFeature {
   CostTier get tier => CostTier.expensive;
   @override
   bool get defaultOn => false;
+  @override
+  String? get exclusiveGroup => kBathroomReflectionGroup;
 
   /// One capture material per mirror, loaded once and reused across toggles.
   final List<PreprocessedMaterial> _materials = [];

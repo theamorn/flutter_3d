@@ -16,6 +16,7 @@ import '../features/rain_feature.dart';
 import '../features/rain_glass_feature.dart';
 import '../features/lightning_feature.dart';
 import '../features/reflection_features.dart';
+import '../features/custom_mirror_feature.dart';
 import '../features/screens_feature.dart';
 import '../features/books_feature.dart';
 import '../features/instancing_feature.dart';
@@ -42,7 +43,7 @@ List<HotelFeature> buildCatalog() => [
       LampsFeature(), FixtureShadowsFeature(), BathShadowFeature(), DoorFeature(), PortalCullingFeature(), CurtainsFeature(),
       ClothLightingFeature(),
       WaterFxFeature(), RainFeature(), RainGlassFeature(), LightningFeature(), LightningRippleFeature(),
-      MirrorFeature(), SeaReflectionFeature(),
+      MirrorFeature(), CustomMirrorFeature(), SeaReflectionFeature(),
       ScreensFeature(), BooksFeature(), InstancingFeature(), EntranceFeature(),
       LightProbesFeature(), DynamicGiFeature(), GiProbesFeature(), AutoExposureFeature(), StaticShadowsFeature(),
       FxaaFeature(), SmaaFeature(), TaaFeature(),

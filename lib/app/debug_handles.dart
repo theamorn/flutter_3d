@@ -3,7 +3,8 @@
 /// camera, read a counter). App code never reads these.
 library;
 
-import 'dart:ui' show FrameTiming, Offset;
+import 'dart:io' show Directory, File;
+import 'dart:ui' show Canvas, FrameTiming, ImageByteFormat, Offset, PictureRecorder, Rect;
 
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/scheduler.dart';
@@ -265,4 +266,31 @@ String debugIslandGrassCount() {
 String debugIslandRipples() {
   final d = debugIsland!.scene.screenDistortion;
   return 'pulses ${d.pulses.length} enabled ${d.enabled} strikes ${debugIsland!.lightningStrikes}';
+}
+
+/// Renders the hotel scene once more, offscreen, at [width] x [height]
+/// logical pixels from the player's camera, saves it as a PNG named [name]
+/// in the app's temp directory and prints `shot: <path>`.
+void debugHotelShot(String name, {double width = 800, double height = 520}) {
+  final hotel = debugHotel!;
+  final recorder = PictureRecorder();
+  hotel.scene.render(hotel.ctx.camera, Canvas(recorder),
+      viewport: Rect.fromLTWH(0, 0, width, height), pixelRatio: 1);
+  recorder
+      .endRecording()
+      .toImage(width.round(), height.round())
+      .then((image) => image.toByteData(format: ImageByteFormat.png))
+      .then((bytes) {
+    final file = File('${Directory.systemTemp.path}/$name.png')
+      ..writeAsBytesSync(bytes!.buffer.asUint8List());
+    debugPrint('shot: ${file.path}');
+  });
+}
+
+/// Runs [frames] hotel ticks of 1/60 s by hand (features, player, occlusion),
+/// for checks while the window is covered and the display link is paused.
+void debugHotelStep([int frames = 10]) {
+  for (var i = 0; i < frames; i++) {
+    debugHotel!.tick(1 / 60);
+  }
 }

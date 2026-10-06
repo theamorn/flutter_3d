@@ -89,19 +89,21 @@ class OcclusionFeature extends HotelFeature {
       }
     }
 
-    // What each visible mirror reflects is on screen too.
+    // What each visible mirror reflects is on screen too: the engine's
+    // planar reflectors and the custom mirror captures alike.
     final seenByAny = {for (final e in main.entries) e.key: [...e.value]};
     for (final (node, box, cell) in contents) {
-      final mirror = node.getComponent<PlanarReflectorComponent>();
-      if (mirror == null || !mirror.enabled || !seen(main, cell, box)) continue;
-      final reflected = mirrorCells(eye, mirror.worldPlane(), box, portals);
+      final plane = _mirrorPlane(ctx, node);
+      if (plane == null || !seen(main, cell, box)) continue;
+      final reflected = mirrorCells(eye, plane, box, portals);
       if (reflected != null) addCells(seenByAny, reflected);
     }
 
     final show = <MeshPrimitive>{}, hide = <MeshPrimitive>{};
     final hideNodes = <Node>{};
     for (final (node, box, cell) in contents) {
-      if (node.getComponent<PlanarReflectorComponent>() != null) {
+      if (node.getComponent<PlanarReflectorComponent>() != null ||
+          ctx.reflectionCaptures[node] != null) {
         // The mirror feature copies the glass's visibility into the mesh it
         // swaps in, so the primitives stay on and the node carries it.
         if (!seen(main, cell, box)) hideNodes.add(node);
@@ -120,6 +122,13 @@ class OcclusionFeature extends HotelFeature {
 
     final sea = findSea(ctx.scene.root)?.getComponent<PlanarReflectorComponent>();
     if (sea != null) sea.layerMask = kSeaReflectedLayer;
+  }
+
+  /// The plane [node] mirrors across, if it is a live mirror of either kind.
+  static Plane? _mirrorPlane(HotelContext ctx, Node node) {
+    final reflector = node.getComponent<PlanarReflectorComponent>();
+    if (reflector != null) return reflector.enabled ? reflector.worldPlane() : null;
+    return ctx.reflectionCaptures[node];
   }
 
   static void _primitives(Node node, Set<MeshPrimitive> into) {

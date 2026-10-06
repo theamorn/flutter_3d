@@ -4,6 +4,7 @@ import 'package:vector_math/vector_math.dart';
 
 import '../features/interaction_registry.dart';
 import '../features/placeholder_rooms.dart' show BeddingMaterialTarget;
+import '../math/mirror_capture_layout.dart';
 import '../render/shadow_channels.dart' show kFixtureExcludedCasterMask;
 import '../render/shockwave_pool.dart';
 import '../math/colliders.dart';
@@ -49,6 +50,11 @@ class HotelContext {
 
   /// Filled by the rooms feature (Task 9).
   final Map<RoomId, Node> rooms = {};
+
+  /// The custom bathroom mirrors' planes, by mirror node, owned by the
+  /// feature that captures them. Occlusion culling keeps what an unhidden
+  /// mirror reflects drawn, as it does for the engine's planar reflectors.
+  final ReflectionCaptureRegistry<Plane> reflectionCaptures = ReflectionCaptureRegistry<Plane>();
 
   /// Screen ripples from lightning strikes; on while the lightning-ripple
   /// feature is mounted. The lightning feature fills and drives the pool.

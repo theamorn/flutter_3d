@@ -76,6 +76,7 @@ void main() {
           'render_scale_auto',
           'gi_probes',
           'fixture_shadows',
+          'mirror',
         }),
       );
     },
