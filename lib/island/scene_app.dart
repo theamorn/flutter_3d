@@ -12,6 +12,7 @@ import 'package:flutter_scene/scene.dart' hide Material;
 import 'package:flutter_3d/island/island_scene.dart';
 import 'package:flutter_3d/island/particles.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_effects.dart';
+import 'package:flutter_3d/island/xray.dart';
 import 'package:flutter_3d/ui/hud.dart'
     show lastOnScreenFrame, onScreenDraws, renderedFrameCount;
 import 'package:flutter_3d/ui/scene_frame_meter.dart';
@@ -623,6 +624,14 @@ class _IslandSceneScreenState extends State<IslandSceneScreen>
                                       changes: _island.effectsMenuChanges,
                                       onTap: _openEffectsPanel,
                                     ),
+                                  if (_island.isUltraMode)
+                                    _XrayButton(
+                                      mode: _island.xray,
+                                      onTap: () => setState(
+                                        () =>
+                                            _island.setXray(_island.xray.next),
+                                      ),
+                                    ),
                                   _CameraSelector(
                                     cameraMode: _island.cameraMode,
                                     onCameraChanged: (mode) {
@@ -1177,6 +1186,38 @@ class _EffectsButton extends StatelessWidget {
           label: changes == 0 ? '🎛 Effects' : '🎛 Effects: $changes changed',
           active: changes > 0,
           activeColor: const Color(0xFFBF360C),
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
+}
+
+/// The presenter's X-ray: cycles off, wireframe, normals, base colour, each
+/// wiping across the island beside the lit image.
+class _XrayButton extends StatelessWidget {
+  const _XrayButton({required this.mode, required this.onTap});
+
+  final XrayMode mode;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.14),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: _PillTab(
+          label: mode.label,
+          active: mode != XrayMode.off,
+          activeColor: const Color(0xFF00838F),
           onTap: onTap,
         ),
       ),

@@ -21,6 +21,7 @@ import 'package:flutter_3d/island/super_ultra/sky_path.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_effects.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_rig.dart';
 import 'package:flutter_3d/island/tap_to_move.dart';
+import 'package:flutter_3d/island/xray.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 /// Fixed dimensions of the island. The walkable disc and the visible grass cap
@@ -206,6 +207,31 @@ class IslandScene {
   IslandQuality get quality => _quality;
   bool get isUltraMode => _quality != IslandQuality.normal;
   bool get isSuperUltra => _quality == IslandQuality.superUltra;
+
+  XrayMode _xray = XrayMode.off;
+  double _xrayClock = 0;
+  XrayMode get xray => _xray;
+
+  /// Switches the X-ray view. Ultra and Super Ultra only (the button hides in
+  /// Normal); leaving those modes switches it off.
+  void setXray(XrayMode mode) {
+    _xray = mode;
+    _xrayClock = 0;
+    final d = scene.debug;
+    d.overlays.clear();
+    d.splitOverlays.clear();
+    d.view = switch (mode) {
+      XrayMode.normals => const DebugView(
+        channel: SurfaceDebugChannel.worldNormal,
+      ),
+      XrayMode.baseColor => const DebugView(
+        channel: SurfaceDebugChannel.baseColor,
+      ),
+      _ => DebugView.none,
+    };
+    if (mode == XrayMode.wireframe) d.overlays.add(DebugOverlay.wireframe);
+    d.split = mode == XrayMode.off ? null : xraySplit(0);
+  }
 
   late final SuperUltraRig _superRig = SuperUltraRig(
     seaY: IslandDimensions.seaY,
@@ -798,6 +824,9 @@ class IslandScene {
     final wasUltra = isUltraMode;
     final wasSuper = isSuperUltra;
     _quality = quality;
+    if (quality == IslandQuality.normal && _xray != XrayMode.off) {
+      setXray(XrayMode.off);
+    }
     final ultra = isUltraMode;
     if (ultra != wasUltra) {
       physicsWorld.setupBalls(ultra ? 8 : 1);
@@ -2439,6 +2468,10 @@ class IslandScene {
   void tick(double deltaSeconds, {ui.Size? viewportSize}) {
     if (!_loaded) {
       return;
+    }
+    if (_xray != XrayMode.off) {
+      _xrayClock += deltaSeconds;
+      scene.debug.split = xraySplit(_xrayClock);
     }
     walker.advance(deltaSeconds);
 
