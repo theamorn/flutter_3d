@@ -57,6 +57,11 @@ void main() {
     expect(SuperUltraEffect.stoneIndirect.label, contains('firepit'));
   });
 
+  test('grass thinning by quality tier has a full-density comparison', () {
+    expect(SuperUltraEffect.grassThinning.group, SuperUltraEffectGroup.scene);
+    expect(SuperUltraEffect.grassThinning.cost, contains('75%'));
+  });
+
   test('GPU pacing picks are 1 and 2 frames in flight, 1 by default', () {
     expect(SuperUltraGpuPacing.values.map((p) => p.frames), [1, 2]);
     expect(SuperUltraGpuPacing.initial, SuperUltraGpuPacing.one);

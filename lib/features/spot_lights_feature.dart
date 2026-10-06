@@ -157,7 +157,10 @@ class SpotLightsFeature extends HotelFeature {
   void _shadowCameraRoom(HotelContext ctx) {
     final cameraInA = ctx.camera.position.x < 0;
     for (final l in _lights) {
-      l.light.castsShadow = l.inRoomA == cameraInA;
+      l.light
+        ..castsShadow = l.inRoomA == cameraInA
+        // The shade wraps the bulb: keep it out of its own shadow map.
+        ..shadowCasterChannelMask = ctx.fixtureCasterMask;
     }
   }
 

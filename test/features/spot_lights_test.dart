@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_math/vector_math.dart';
+import 'package:flutter_3d/render/shadow_channels.dart';
 import 'package:flutter_3d/features/interaction_registry.dart';
 import 'package:flutter_3d/features/spot_lights_feature.dart';
 import 'package:flutter_3d/hotel/hotel_context.dart';
@@ -14,6 +15,8 @@ class _Context extends Fake implements HotelContext {
   final Map<RoomId, Node> rooms = {};
   @override
   final InteractionRegistry interactions = InteractionRegistry();
+  @override
+  int fixtureCasterMask = kFixtureExcludedCasterMask;
   @override
   final ValueNotifier<int> lightingRevision = ValueNotifier(0);
   @override
@@ -88,6 +91,22 @@ void main() {
       expect(kReadingShadowFov, greaterThan(2 * kReadingLightInner));
     },
   );
+
+  test('reading lights leave their own shade out of the shadow map', () async {
+    final ctx = rooms();
+    final feature = SpotLightsFeature();
+    await feature.mount(ctx);
+    for (final fixture in ctx.nodesNamed('reading_light_left')) {
+      expect(spot(fixture).light.shadowCasterChannelMask, kFixtureExcludedCasterMask);
+      expect(spot(fixture).light.channelMask, kDirectLightMask);
+    }
+    ctx.fixtureCasterMask = kIncludeFixtureCasterMask;
+    feature.tick(ctx, 0.016);
+    for (final fixture in ctx.nodesNamed('reading_light_left')) {
+      expect(spot(fixture).light.shadowCasterChannelMask, kIncludeFixtureCasterMask);
+    }
+    feature.unmount(ctx);
+  });
 
   test('four shadowed reading lights, each aimed into its own room', () async {
     final ctx = rooms();

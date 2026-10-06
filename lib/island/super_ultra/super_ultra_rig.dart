@@ -13,6 +13,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_3d/island/ball_physics.dart';
+import 'package:flutter_3d/island/super_ultra/grass_draw_policy.dart';
 import 'package:flutter_3d/island/super_ultra/island_terrain.dart';
 import 'package:flutter_3d/island/super_ultra/lightning.dart';
 import 'package:flutter_3d/island/super_ultra/ocean_waves.dart';
@@ -88,6 +89,13 @@ class SuperUltraRig {
   late final InstancedMeshComponent _coveredLawn;
   late final InstancedMeshComponent _originalLawn;
   GrassCoverageMode _grassCoverage = GrassCoverageMode.initial;
+
+  /// The level the lawn thins to, read per draw. The island points it at
+  /// the scene's effective quality tier ([qualityLevelFor]).
+  QualityLevel Function() grassLevel = () => QualityLevel.high;
+
+  /// The comparison: every tuft at every tier.
+  bool grassFullDensity = false;
 
   /// The firepit stones' custom-indirect material and its binding. The
   /// island binds it to the placed campfire while Super Ultra shows it.
@@ -245,11 +253,27 @@ class SuperUltraRig {
       ..frustumCulled = false
       ..layers = kSuperUltraNoReflectLayer;
 
-    final tufts = _scatterGrass(obstacles);
+    final scattered = _scatterGrass(obstacles);
+    // Ordered once so that any prefix is spread over the whole lawn; the
+    // draw selector then picks the prefix length per tier.
+    final order = distributedOrder([
+      for (final (transform, _) in scattered)
+        (transform.getTranslation().x, transform.getTranslation().z),
+    ], seed: 29);
+    final tufts = [for (final i in order) scattered[i]];
     grassTufts = tufts.length;
     final tuft = _tuftGeometry();
-    _coveredLawn = InstancedMeshComponent(_lawn(tuft, _grassCovered, tufts));
-    _originalLawn = InstancedMeshComponent(_lawn(tuft, _grass, tufts));
+    final selector = grassSelector(
+      total: tufts.length,
+      level: () => grassLevel(),
+      full: () => grassFullDensity,
+    );
+    _coveredLawn = InstancedMeshComponent(
+      _lawn(tuft, _grassCovered, tufts)..drawSelector = selector,
+    );
+    _originalLawn = InstancedMeshComponent(
+      _lawn(tuft, _grass, tufts)..drawSelector = selector,
+    );
     grassNode = Node(name: 'su_grass')
       ..shadowCastingMode = ShadowCastingMode.off
       ..layers = kSuperUltraNoReflectLayer
@@ -650,3 +674,10 @@ double _smoothstep(double edge0, double edge1, double x) {
   final t = ((x - edge0) / (edge1 - edge0)).clamp(0.0, 1.0);
   return t * t * (3 - 2 * t);
 }
+
+/// The project's quality level for the engine's effective render tier.
+QualityLevel qualityLevelFor(RenderQualityTier tier) => switch (tier) {
+      RenderQualityTier.low => QualityLevel.low,
+      RenderQualityTier.medium => QualityLevel.medium,
+      RenderQualityTier.high => QualityLevel.high,
+    };

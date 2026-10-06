@@ -39,7 +39,7 @@ List<HotelFeature> buildCatalog() => [
       ToneMappingFeature(), FogFeature(), BloomFeature(), AoFeature(),
       GodRaysFeature(), SsrFeature(),
       ShadowsFeature(), MsaaFeature(),
-      LampsFeature(), BathShadowFeature(), DoorFeature(), PortalCullingFeature(), CurtainsFeature(),
+      LampsFeature(), FixtureShadowsFeature(), BathShadowFeature(), DoorFeature(), PortalCullingFeature(), CurtainsFeature(),
       ClothLightingFeature(),
       WaterFxFeature(), RainFeature(), RainGlassFeature(), LightningFeature(),
       MirrorFeature(), SeaReflectionFeature(),

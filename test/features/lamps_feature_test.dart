@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_scene/scene.dart';
+import 'package:flutter_3d/render/shadow_channels.dart';
 import 'package:flutter_3d/features/lamps_feature.dart';
 import 'package:flutter_3d/features/bath_shadow_feature.dart';
 import 'package:flutter_3d/features/interaction_registry.dart';
@@ -15,6 +16,8 @@ class _Context extends Fake implements HotelContext {
   final Map<RoomId, Node> rooms = {};
   @override
   final InteractionRegistry interactions = InteractionRegistry();
+  @override
+  int fixtureCasterMask = kFixtureExcludedCasterMask;
   @override
   final ValueNotifier<int> lightingRevision = ValueNotifier(0);
   @override
@@ -106,6 +109,36 @@ void main() {
     expect(LampsFeature.bathLights.every((l) => l.castsShadow), isTrue);
     shadows.unmount(ctx);
     expect(LampsFeature.bathLights.every((l) => !l.castsShadow), isTrue);
+    lamps.unmount(ctx);
+  });
+
+  test('fixture lights keep their shades out of their shadow maps until the comparison', () async {
+    final ctx = _Context();
+    for (final room in RoomId.values) {
+      ctx.rooms[room] = Node(name: room.name)
+        ..add(Node(name: 'lamp_bedside'))
+        ..add(Node(name: 'bath_light'))
+        ..add(Node(name: 'bath_switch'));
+    }
+    final lamps = LampsFeature();
+    await lamps.mount(ctx);
+    final lights = [
+      for (final i in ctx.interactions.all)
+        if (i.node.name == 'lamp_bedside')
+          i.node.children.single.getComponent<PointLightComponent>()!.light,
+      ...LampsFeature.bathLights,
+    ];
+    expect(lights, hasLength(4));
+    expect(lights.every((l) => l.shadowCasterChannelMask == kFixtureExcludedCasterMask), isTrue);
+    expect(lights.every((l) => l.channelMask == kDirectLightMask), isTrue);
+
+    final comparison = FixtureShadowsFeature();
+    await comparison.mount(ctx);
+    lamps.tick(ctx, 0.016);
+    expect(lights.every((l) => l.shadowCasterChannelMask == kIncludeFixtureCasterMask), isTrue);
+    comparison.unmount(ctx);
+    lamps.tick(ctx, 0.016);
+    expect(lights.every((l) => l.shadowCasterChannelMask == kFixtureExcludedCasterMask), isTrue);
     lamps.unmount(ctx);
   });
 

@@ -4,6 +4,7 @@ import 'package:vector_math/vector_math.dart';
 
 import '../features/interaction_registry.dart';
 import '../features/placeholder_rooms.dart' show BeddingMaterialTarget;
+import '../render/shadow_channels.dart' show kFixtureExcludedCasterMask;
 import '../math/colliders.dart';
 import '../math/floor_plan.dart';
 import 'look.dart';
@@ -47,6 +48,11 @@ class HotelContext {
 
   /// Filled by the rooms feature (Task 9).
   final Map<RoomId, Node> rooms = {};
+
+  /// The shadow casters of every fixture light (lamps, reading lights, bath
+  /// lights): all but the shades that wrap their own bulbs. The
+  /// fixture-shadow comparison widens it to every channel.
+  int fixtureCasterMask = kFixtureExcludedCasterMask;
 
   /// Both rooms' decorative bedding primitives, published by the rooms
   /// feature as it builds them. Replaced (not edited) on every room mount,

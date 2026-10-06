@@ -12,6 +12,12 @@ void main() {
     expect(presetIds(Preset.high), isNot(contains('bath_shadow')));
   });
 
+  test('the catalog offers the fixture-shadow comparison as a free toggle', () {
+    final f = buildCatalog().singleWhere((f) => f.id == 'fixture_shadows');
+    expect(f.toggleable, isTrue);
+    expect(f.defaultOn, isFalse);
+  });
+
   test('cloth lighting hooks are an ultra feature, standard bedding below', () {
     expect(presetIds(Preset.ultra), contains('cloth_lighting'));
     expect(presetIds(Preset.high), isNot(contains('cloth_lighting')));
@@ -62,14 +68,15 @@ void main() {
           'gpu_pacing_2',
           'render_scale_auto',
           'gi_probes',
+          'fixture_shadows',
         }),
       );
     },
   );
 
-  test('GI, probe view and Auto are manual picks in no preset', () {
+  test('GI, probe view, Auto and the fixture-shadow comparison are manual picks', () {
     for (final p in Preset.values) {
-      for (final id in ['dynamic_gi', 'gi_probes', 'render_scale_auto']) {
+      for (final id in ['dynamic_gi', 'gi_probes', 'render_scale_auto', 'fixture_shadows']) {
         expect(presetIds(p), isNot(contains(id)), reason: '$p: $id');
       }
     }

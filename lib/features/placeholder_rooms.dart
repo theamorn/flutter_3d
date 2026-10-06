@@ -4,6 +4,7 @@ import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
 import '../math/colliders.dart';
 import '../math/floor_plan.dart';
+import '../render/shadow_channels.dart' show kFixtureSelfShadowChannel;
 import 'bedding_mesh.dart';
 import 'room_textures.dart';
 
@@ -306,7 +307,8 @@ class RoomNode {
       Vector3? scale,
       this.parts = const [],
       this.children = const [],
-      this.castsShadows = true})
+      this.castsShadows = true,
+      this.lightChannelMask})
       : at = at ?? Vector3.zero(),
         scale = scale ?? Vector3.all(1);
   final String name;
@@ -314,6 +316,9 @@ class RoomNode {
   final List<Part> parts;
   final List<RoomNode> children;
   final bool castsShadows;
+
+  /// The node's `Node.lightChannelMask`, or null for the engine default.
+  final int? lightChannelMask;
 
   Matrix4 get localTransform =>
       Matrix4.translation(at)..scaleByVector3(scale);
@@ -628,8 +633,13 @@ List<RoomNode> _furnitureNodes() => [
       ]),
     ];
 
+/// [shadeChannel]: the shade's light channel, for a shade that wraps the
+/// lamp's light (see `lib/render/shadow_channels.dart`).
 RoomNode _lamp(String name, Vector3 at,
-        {required double stem, required double shadeY, required double shadeR}) =>
+        {required double stem,
+        required double shadeY,
+        required double shadeR,
+        int? shadeChannel}) =>
     RoomNode(name, at: at, parts: [
       CylinderPart(Vector3.zero(),
           bottomRadius: shadeR * 0.6, topRadius: shadeR * 0.6, height: 0.02, finish: _brass),
@@ -637,7 +647,7 @@ RoomNode _lamp(String name, Vector3 at,
           bottomRadius: 0.015, topRadius: 0.015, height: stem, finish: _brass),
     ], children: [
       // Task 16 lights the shade (emissive) when the lamp is on.
-      RoomNode('lamp_shade', at: Vector3(0, shadeY, 0), parts: [
+      RoomNode('lamp_shade', at: Vector3(0, shadeY, 0), lightChannelMask: shadeChannel, parts: [
         CylinderPart(Vector3.zero(),
             bottomRadius: shadeR, topRadius: shadeR * 0.65, height: shadeR * 1.4,
             finish: _shadeFabric),
@@ -658,7 +668,8 @@ List<RoomNode> _fixtures() {
           BoxPart(Vector3(-0.5, 0, -0.025), Vector3(0.5, _doorTop, 0.025), _doorWood),
           BoxPart(Vector3(0.33, 0.98, 0.025), Vector3(0.43, 1.02, 0.06), _brass),
         ]),
-    _lamp('lamp_bedside', Vector3(-7.7, 0.6, 5.6), stem: 0.3, shadeY: 0.22, shadeR: 0.14),
+    _lamp('lamp_bedside', Vector3(-7.7, 0.6, 5.6),
+        stem: 0.3, shadeY: 0.22, shadeR: 0.14, shadeChannel: kFixtureSelfShadowChannel),
     _lamp('lamp_floor', Vector3(-0.4, 0, 5.6), stem: 1.45, shadeY: 1.3, shadeR: 0.22),
     // Reading lights over the bed (the spot-lights feature lights them): a
     // brass plate on the outer wall, an arm, and a cone shade over each side
@@ -668,7 +679,10 @@ List<RoomNode> _fixtures() {
         BoxPart(Vector3(0, -0.06, -0.04), Vector3(0.012, 0.03, 0.04), _brass), // wall plate
         BoxPart(Vector3(0.012, -0.008, -0.008), Vector3(kReadingLightArm, 0.008, 0.008), _brass), // arm
       ], children: [
-        RoomNode('reading_light_shade', at: Vector3(kReadingLightArm, -0.13, 0), parts: [
+        RoomNode('reading_light_shade',
+            at: Vector3(kReadingLightArm, -0.13, 0),
+            lightChannelMask: kFixtureSelfShadowChannel,
+            parts: [
           CylinderPart(Vector3.zero(),
               bottomRadius: 0.07, topRadius: 0.03, height: 0.12, finish: _shadeFabric),
         ]),
@@ -993,6 +1007,8 @@ Node _build(RoomNode spec, bool mirrored, RoomTextures? textures,
     List<BeddingMaterialTarget>? bedding) {
   final node = Node(name: spec.name, localTransform: spec.localTransform)
     ..shadowCastingMode = spec.castsShadows ? ShadowCastingMode.on : ShadowCastingMode.off;
+  final channel = spec.lightChannelMask;
+  if (channel != null) node.lightChannelMask = channel;
   if (spec.parts.isNotEmpty) {
     final mesh = node.mesh = Mesh.primitives(primitives: [
       for (final MapEntry(key: f, value: parts) in _byFinish(spec.parts).entries)

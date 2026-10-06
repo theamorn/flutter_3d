@@ -221,6 +221,12 @@ enum SuperUltraEffect {
     '2,758 instanced tufts with wind in the vertex shader',
     SuperUltraEffectGroup.scene,
   ),
+  grassThinning(
+    'Grass thinning',
+    'Fewer tufts as the renderer lowers its quality tier: 75% on medium, '
+        '50% on low, spread over the whole lawn. Off: every tuft at every tier',
+    SuperUltraEffectGroup.scene,
+  ),
   grassCoverage(
     'Soft grass edges',
     'Blade edges and tips fade through alpha to coverage (MSAA samples, '

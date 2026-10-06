@@ -5,6 +5,7 @@ import 'package:vector_math/vector_math.dart';
 
 import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
+import '../render/shadow_channels.dart';
 import 'interaction_registry.dart';
 
 /// Lamp light and shade glow. Halved from the first cut (8 and 8, 6.24,
@@ -18,6 +19,11 @@ final Vector4 _shadeGlow = Vector4(4, 3.12, 2.2, 1);
 /// shadows can land there. The old 2.6 m cutoff excluded the entire floor.
 const double kBathLightIntensity = 1.5, kBathLightRange = 4.0;
 final Vector4 _diffuserGlow = Vector4(2, 1.7, 1.3, 1);
+
+/// A lamp's light in the lamp's frame, and the bath light's in its fixture's
+/// (just under the ceiling fitting).
+final Vector3 kLampLightSourceAt = Vector3(0, .3, 0);
+final Vector3 kBathLightSourceAt = Vector3(0, -.15, 0);
 
 /// How far the switch rocker tips when the light is off (radians).
 const double kRockerTip = 0.3;
@@ -62,8 +68,23 @@ class LampsFeature extends HotelFeature {
       bathLights.add(bath.light);
       ctx.interactions.register(bath.interaction);
     }
+    _applyCasterMask(ctx);
     // Switching the whole feature is a lighting change too.
     ctx.lightingRevision.value++;
+  }
+
+  /// Keeps each light's shadow casters on the context's fixture mask (the
+  /// bath shadow feature switches the bath lights' shadows on and off).
+  @override
+  void tick(HotelContext ctx, double dt) => _applyCasterMask(ctx);
+
+  void _applyCasterMask(HotelContext ctx) {
+    for (final lamp in _lamps) {
+      lamp.light.shadowCasterChannelMask = ctx.fixtureCasterMask;
+    }
+    for (final bath in _bathLights) {
+      bath.light.shadowCasterChannelMask = ctx.fixtureCasterMask;
+    }
   }
 
   @override
@@ -152,7 +173,7 @@ class _BathLight {
   final Node lightNode =
       Node(
           name: 'bath_light_source',
-          localTransform: Matrix4.translationValues(0, -.15, 0),
+          localTransform: Matrix4.translation(kBathLightSourceAt),
         )
         ..shadowCastingMode = ShadowCastingMode.off
         ..raycastable = false;
@@ -215,7 +236,7 @@ class _Lamp {
   final Node lightNode =
       Node(
           name: 'lamp_light',
-          localTransform: Matrix4.translationValues(0, .3, 0),
+          localTransform: Matrix4.translation(kLampLightSourceAt),
         )
         ..shadowCastingMode = ShadowCastingMode.off
         ..raycastable = false;
@@ -237,5 +258,31 @@ class _Lamp {
       entry.key.emissiveFactor = entry.value;
     }
     _shades.clear();
+  }
+}
+
+/// The comparison for the fixture light channels: while on, every fixture
+/// light's shadow map takes every caster again, the shades around the bulbs
+/// included. Off (the default) leaves those shades out.
+class FixtureShadowsFeature extends HotelFeature {
+  @override
+  String get id => 'fixture_shadows';
+  @override
+  String get label => 'Lamp shades shadow their own light (comparison)';
+  @override
+  CostTier get tier => CostTier.free;
+  @override
+  bool get defaultOn => false;
+
+  @override
+  Future<void> mount(HotelContext ctx) async {
+    ctx.fixtureCasterMask = kIncludeFixtureCasterMask;
+    ctx.lightingRevision.value++;
+  }
+
+  @override
+  void unmount(HotelContext ctx) {
+    ctx.fixtureCasterMask = kFixtureExcludedCasterMask;
+    ctx.lightingRevision.value++;
   }
 }

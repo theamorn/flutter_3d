@@ -1209,6 +1209,9 @@ class IslandScene {
           in rig.oceanNode.getComponents<PlanarReflectorComponent>()) {
         reflector.enabled = !off(SuperUltraEffect.planarReflection);
       }
+      rig
+        ..grassLevel = (() => qualityLevelFor(scene.effectiveRenderQualityTier))
+        ..grassFullDensity = off(SuperUltraEffect.grassThinning);
       rig.setGrassCoverage(off(SuperUltraEffect.grassCoverage)
           ? GrassCoverageMode.original
           : GrassCoverageMode.covered);
