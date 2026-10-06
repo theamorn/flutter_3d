@@ -7,6 +7,11 @@ const aaModes = {'msaa', 'fxaa', 'smaa', 'taa'};
 const scaleIds = {'render_scale_85', 'render_scale_75'};
 
 void main() {
+  test('the bath light shadow is an ultra feature', () {
+    expect(presetIds(Preset.ultra), contains('bath_shadow'));
+    expect(presetIds(Preset.high), isNot(contains('bath_shadow')));
+  });
+
   test('each preset is a superset of the one below, outside the AA group', () {
     for (var i = 1; i < Preset.values.length; i++) {
       final hi = presetIds(Preset.values[i]).difference(aaModes);
@@ -24,21 +29,36 @@ void main() {
   });
 
   test('every id in a preset exists and is toggleable', () {
-    final toggleable = buildCatalog().where((f) => f.toggleable).map((f) => f.id).toSet();
+    final toggleable = buildCatalog()
+        .where((f) => f.toggleable)
+        .map((f) => f.id)
+        .toSet();
     for (final p in Preset.values) {
       expect(toggleable.containsAll(presetIds(p)), true, reason: '$p');
     }
   });
 
-  test('ultra enables every toggleable feature except the alternative AA modes, '
-      'the 75% scale, dynamic GI and the GPU pacing pick', () {
-    final toggleable = buildCatalog().where((f) => f.toggleable).map((f) => f.id).toSet();
-    expect(
-      presetIds(Preset.ultra),
-      toggleable.difference(
-          {'fxaa', 'smaa', 'taa', 'render_scale_75', 'dynamic_gi', 'gpu_pacing_2'}),
-    );
-  });
+  test(
+    'ultra enables every toggleable feature except the alternative AA modes, '
+    'the 75% scale, dynamic GI and the GPU pacing pick',
+    () {
+      final toggleable = buildCatalog()
+          .where((f) => f.toggleable)
+          .map((f) => f.id)
+          .toSet();
+      expect(
+        presetIds(Preset.ultra),
+        toggleable.difference({
+          'fxaa',
+          'smaa',
+          'taa',
+          'render_scale_75',
+          'dynamic_gi',
+          'gpu_pacing_2',
+        }),
+      );
+    },
+  );
 
   test('no preset turns on dynamic GI: it is a manual pick', () {
     for (final p in Preset.values) {

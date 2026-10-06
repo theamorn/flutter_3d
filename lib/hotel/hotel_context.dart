@@ -15,6 +15,9 @@ class HotelContext {
     scene.antiAliasingMode = AntiAliasingMode.none;
   }
   final Scene scene;
+
+  /// Punctual shadow casters rejected by the renderer atlas budget.
+  int get shadowCasterOverflowCount => scene.shadowCasterOverflowCount;
   final PerspectiveCamera camera = PerspectiveCamera(
     position: Vector3(-4, 1.6, 3),
     target: Vector3(-4, 1.6, 6),

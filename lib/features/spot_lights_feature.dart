@@ -1,6 +1,7 @@
-import 'dart:ui' show VoidCallback;
+import 'package:flutter/foundation.dart' show VoidCallback, debugPrint;
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
+
 import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
 import '../math/floor_plan.dart' show RoomId;
@@ -12,6 +13,14 @@ const double kReadingLightIntensity = 6, kReadingLightRange = 3;
 
 /// Cone half-angles in radians: about 17° full brightness, fading out by 34°.
 const double kReadingLightInner = 0.3, kReadingLightOuter = 0.6;
+
+/// The bulb inside the brass shade (flutter_scene 0.24 light radius: glossy
+/// highlights widen to it).
+const double kReadingBulbRadius = 0.03;
+
+/// Vertical FOV of each reading light's shadow frustum: the pillows sit in the
+/// core of the cone, so spend the 2048² tile there instead of on the soft rim.
+const double kReadingShadowFov = 1.0;
 
 /// Down and out from the wall toward the pillows, in the fixture's frame
 /// (room A's +X; room B's mirror flips it for free).
@@ -51,6 +60,8 @@ class _ReadingLight {
   /// Whether the fixture hangs in room A (at x < 0) rather than room B.
   final bool inRoomA;
   final SpotLight light = SpotLight(
+    radius: kReadingBulbRadius,
+    shadowFieldOfView: kReadingShadowFov,
     color: Vector3(1, .82, .6),
     intensity: kReadingLightIntensity,
     range: kReadingLightRange,
@@ -60,12 +71,13 @@ class _ReadingLight {
     castsShadow: true,
   );
 
-  final Node lightNode = Node(
-    name: 'reading_light_source',
-    localTransform: Matrix4.translation(kReadingLightSourceAt),
-  )
-    ..shadowCastingMode = ShadowCastingMode.off
-    ..raycastable = false;
+  final Node lightNode =
+      Node(
+          name: 'reading_light_source',
+          localTransform: Matrix4.translation(kReadingLightSourceAt),
+        )
+        ..shadowCastingMode = ShadowCastingMode.off
+        ..raycastable = false;
   final Map<PhysicallyBasedMaterial, Vector4> _shades = {};
   late final Interactable interaction;
   bool _on = true;
@@ -105,6 +117,7 @@ class SpotLightsFeature extends HotelFeature {
   CostTier get tier => CostTier.mid;
 
   final List<_ReadingLight> _lights = [];
+  int _lastOverflow = 0;
 
   @override
   Future<void> mount(HotelContext ctx) async {
@@ -125,13 +138,22 @@ class SpotLightsFeature extends HotelFeature {
   }
 
   @override
-  void tick(HotelContext ctx, double dt) => _shadowCameraRoom(ctx);
+  void tick(HotelContext ctx, double dt) {
+    _shadowCameraRoom(ctx);
+    assert(() {
+      final o = ctx.shadowCasterOverflowCount;
+      if (o != _lastOverflow) {
+        debugPrint('spot lights: $o shadowed light(s) over the atlas cap');
+        _lastOverflow = o;
+      }
+      return true;
+    }());
+  }
 
-  /// Only the camera's room's reading lights cast shadows. Spot shadows take
-  /// sun-sized tiles (2048) in the sun's shadow atlas: two cascades and four
-  /// spots make it 12288 wide, past the 8192 texture limit, and the frame
-  /// fails to draw. The other room's lights are behind a wall, or seen
-  /// through the connecting door, where their shadows barely show.
+  /// Only the camera's room's reading lights cast shadows, saving atlas
+  /// work for lights behind the other room's wall. 0.24 caps each punctual
+  /// caster type at four and exposes overflow rather than exceeding the
+  /// GPU texture limit.
   void _shadowCameraRoom(HotelContext ctx) {
     final cameraInA = ctx.camera.position.x < 0;
     for (final l in _lights) {

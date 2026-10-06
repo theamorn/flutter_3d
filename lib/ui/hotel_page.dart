@@ -43,6 +43,7 @@ class _HotelPageState extends State<HotelPage> {
                 key: EntranceFeature.scenePreviewKey,
                 child: SceneView(
                   hotel.scene,
+                  warmUp: true,
                   camera: hotel.ctx.camera,
                   onTick: (_, dt) => hotel.tick(dt),
                 ),

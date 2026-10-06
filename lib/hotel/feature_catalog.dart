@@ -7,6 +7,7 @@ import '../features/ocean_feature.dart';
 import '../features/post_features.dart';
 import '../features/render_features.dart';
 import '../features/lamps_feature.dart';
+import '../features/bath_shadow_feature.dart';
 import '../features/door_feature.dart';
 import '../features/curtains_feature.dart';
 import '../features/water_fx_feature.dart';
@@ -36,7 +37,7 @@ List<HotelFeature> buildCatalog() => [
       ToneMappingFeature(), FogFeature(), BloomFeature(), AoFeature(),
       GodRaysFeature(), SsrFeature(),
       ShadowsFeature(), MsaaFeature(),
-      LampsFeature(), DoorFeature(), PortalCullingFeature(), CurtainsFeature(),
+      LampsFeature(), BathShadowFeature(), DoorFeature(), PortalCullingFeature(), CurtainsFeature(),
       WaterFxFeature(), RainFeature(), RainGlassFeature(), LightningFeature(),
       MirrorFeature(), SeaReflectionFeature(),
       ScreensFeature(), BooksFeature(), InstancingFeature(), EntranceFeature(),

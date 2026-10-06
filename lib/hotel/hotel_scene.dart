@@ -18,7 +18,9 @@ class HotelScene {
   Future<void> start() async {
     // Geometry and materials touch the shader bundle, so features may only
     // build nodes once the engine's static resources are up.
-    await Scene.initializeStaticResources();
+    // Load physical-material extension shaders and SMAA tables before the
+    // tour instead of waiting for their first use.
+    await Scene.preload(physicalMaterials: true, smaa: true);
     ctx.applyLook();
     await registry.mountDefaults();
     await maybeStartDebugTour(this);

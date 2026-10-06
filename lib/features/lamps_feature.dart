@@ -10,6 +10,7 @@ import 'interaction_registry.dart';
 /// Lamp light and shade glow. Halved from the first cut (8 and 8, 6.24,
 /// 4.4): at the night exposure (2.5) they washed the room out.
 const double kLampIntensity = 4;
+const double kBulbRadius = 0.06;
 final Vector4 _shadeGlow = Vector4(4, 3.12, 2.2, 1);
 
 /// The bathroom's dim ceiling light: a low, warm glow that stays in the
@@ -34,6 +35,9 @@ class LampsFeature extends HotelFeature {
   final List<_Lamp> _lamps = [];
   final List<_BathLight> _bathLights = [];
 
+  /// Mounted bathroom PointLights for bath_shadow; empty when unmounted.
+  static final List<PointLight> bathLights = [];
+
   @override
   Future<void> mount(HotelContext ctx) async {
     for (final node in [
@@ -54,6 +58,7 @@ class LampsFeature extends HotelFeature {
         onSwitch: () => ctx.lightingRevision.value++,
       );
       _bathLights.add(bath);
+      bathLights.add(bath.light);
       ctx.interactions.register(bath.interaction);
     }
     // Switching the whole feature is a lighting change too.
@@ -72,6 +77,7 @@ class LampsFeature extends HotelFeature {
       bath.dispose();
     }
     _bathLights.clear();
+    bathLights.clear();
     ctx.lightingRevision.value++;
   }
 }
@@ -136,6 +142,7 @@ class _BathLight {
   Node? rocker;
   Matrix4? rockerRest;
   final PointLight light = PointLight(
+    radius: kBulbRadius,
     color: Vector3(1, .85, .68),
     intensity: kBathLightIntensity,
     range: kBathLightRange,
@@ -156,7 +163,9 @@ class _BathLight {
   void _apply() {
     light.intensity = _on ? kBathLightIntensity : 0;
     for (final entry in _diffusers.entries) {
-      entry.key.emissiveFactor = _on ? _diffuserGlow.clone() : entry.value.clone();
+      entry.key.emissiveFactor = _on
+          ? _diffuserGlow.clone()
+          : entry.value.clone();
     }
     final rest = rockerRest;
     if (rest != null) rocker?.localTransform = rockerPose(rest, on: _on);
@@ -197,6 +206,7 @@ class _Lamp {
   final Node node;
   final VoidCallback onSwitch;
   final PointLight light = PointLight(
+    radius: kBulbRadius,
     color: Vector3(1, .78, .55),
     intensity: kLampIntensity,
     range: 6,
@@ -216,9 +226,7 @@ class _Lamp {
     light.intensity = _on ? kLampIntensity : 0;
     for (final entry in _shades.entries) {
       // HDR shade radiance gives bloom a small, localized highlight.
-      entry.key.emissiveFactor = _on
-          ? _shadeGlow.clone()
-          : entry.value.clone();
+      entry.key.emissiveFactor = _on ? _shadeGlow.clone() : entry.value.clone();
     }
   }
 
