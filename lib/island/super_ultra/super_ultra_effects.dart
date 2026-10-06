@@ -221,6 +221,18 @@ enum SuperUltraEffect {
     '2,758 instanced tufts with wind in the vertex shader',
     SuperUltraEffectGroup.scene,
   ),
+  grassCoverage(
+    'Soft grass edges',
+    'Blade edges and tips fade through alpha to coverage (MSAA samples, '
+        'dithered otherwise). Off: the hard-edged grass material',
+    SuperUltraEffectGroup.scene,
+  ),
+  glowCard(
+    'Fire glow card',
+    'One camera-facing additive card for the fire\'s core glow, ordered '
+        'before the heat haze. Off: the old additive sprite emitter',
+    SuperUltraEffectGroup.scene,
+  ),
   fireVfx(
     'Campfire VFX',
     'Flame, ember, spark and smoke particles, coal bed, heat haze',

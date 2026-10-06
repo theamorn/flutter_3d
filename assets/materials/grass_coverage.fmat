@@ -1,0 +1,89 @@
+// Super Ultra grass tufts with soft blade edges: grass.fmat's wind, player
+// push and lighting, plus a narrow alpha ramp at each blade's edges and tip
+// that the GPU turns into sample coverage (alpha_to_coverage). Under MSAA the
+// edge resolves across the samples; without MSAA the engine dithers the same
+// alpha. Opaque, so blades still sort and depth-test like solid geometry, and
+// the depth and shadow passes cut out the same edge.
+//
+// The blade UVs (lib/island/super_ultra/super_ultra_rig.dart) run u across
+// the blade (0 and 1 at its edges) and v from root (0) to tip (1); the blade
+// keeps its full width to v = 0.5, then tapers to the tip.
+material {
+  name: "IslandGrassCovered",
+  shading_model: lit,
+  culling: none,
+  alpha_to_coverage: true,
+  parameters: [
+    { type: float, name: time, default: 0.0 },
+    // xy = wind direction * strength (m of tip travel), z = sway speed.
+    { type: vec4, name: wind, default: [0.16, 0.07, 1.0, 0.0] },
+    // xyz = player position, w = push radius (m).
+    { type: vec4, name: player, default: [0.0, -100.0, 0.0, 0.85] },
+    // xyz = direction toward the key light, w = wetness (rain).
+    { type: vec4, name: sun_dir, default: [0.4, 0.5, 0.6, 0.0] },
+    // rgb = key light colour * intensity.
+    { type: vec4, name: sun_color, default: [1.0, 1.0, 1.0, 0.0] },
+  ],
+  varyings: [
+    { type: float, name: v_height },
+  ],
+}
+
+vertex {
+  void Vertex(inout VertexInputs vertex) {
+    // Authored tufts are at most 0.6 m tall in object space.
+    float height = clamp(vertex.position.y / 0.6, 0.0, 1.0);
+    v_height = height;
+    vec3 root = vertex.world_position;
+    float time = material_params.time;
+    float phase = dot(root.xz, vec2(0.31, 0.23));
+    float gust = 0.55 + 0.45 * sin(time * 0.6 + root.x * 0.07 - root.z * 0.05);
+    float sway = 0.6 * sin(time * 1.9 * material_params.wind.z + phase) +
+                 0.2 * sin(time * 3.4 + phase * 2.3);
+    vec2 bend = material_params.wind.xy * (gust + sway);
+
+    vec2 away = root.xz - material_params.player.xz;
+    float distance = length(away);
+    float push = 1.0 - smoothstep(0.15, material_params.player.w, distance);
+    if (distance > 0.001) {
+      bend += away / distance * push * 0.45;
+    }
+
+    float k = height * height;
+    vertex.world_position.xz += bend * k;
+    // Keep blade length roughly constant as it leans.
+    vertex.world_position.y -= dot(bend, bend) * 0.4 * k;
+  }
+}
+
+fragment {
+  // flutter_scene 0.24 defaults material fragments to mediump (half precision
+  // on Mali/Adreno/web). This body computes positions, phases and hashes.
+  precision highp float;
+
+  // How far inside the blade a fragment is: 1 on the centre line, 0 on an
+  // edge, measured against the blade's half width at that height.
+  float BladeInset(vec2 uv) {
+    float half_width = uv.y <= 0.5 ? 0.5 : 0.5 * (1.0 - uv.y) / 0.5;
+    return clamp((half_width - abs(uv.x - 0.5)) / max(half_width, 1e-3), 0.0, 1.0);
+  }
+
+  void Surface(inout MaterialInputs material) {
+    float wet = material_params.sun_dir.w;
+    vec3 albedo = GetVertexColor().rgb * (1.0 - 0.18 * wet);
+    vec2 uv = GetUV0();
+    // A narrow ramp: the outer fifth of each half-blade and the last few
+    // centimetres of the tip.
+    float edge = smoothstep(0.0, 0.2, BladeInset(uv));
+    float tip = 1.0 - smoothstep(0.9, 1.0, uv.y);
+    material.base_color = vec4(albedo, edge * tip);
+    material.metallic = 0.0;
+    material.roughness = mix(0.8, 0.38, wet);
+    material.specular = mix(0.3, 0.7, wet);
+    material.occlusion = mix(0.4, 1.0, v_height);
+    vec3 to_light = normalize(material_params.sun_dir.xyz);
+    float behind = pow(clamp(dot(-GetViewDirection(), to_light), 0.0, 1.0), 4.0);
+    material.emissive = albedo * material_params.sun_color.rgb * behind *
+                        v_height * 0.8;
+  }
+}

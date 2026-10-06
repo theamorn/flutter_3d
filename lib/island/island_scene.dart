@@ -20,6 +20,7 @@ import 'package:flutter_3d/island/super_ultra/rain_collision.dart';
 import 'package:flutter_3d/island/super_ultra/sky_path.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_effects.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_rig.dart';
+import 'package:flutter_3d/island/super_ultra/transparency_order.dart';
 import 'package:flutter_3d/island/tap_to_move.dart';
 import 'package:flutter_3d/island/xray.dart';
 import 'package:flutter_3d/render/prewarm.dart';
@@ -1208,6 +1209,11 @@ class IslandScene {
           in rig.oceanNode.getComponents<PlanarReflectorComponent>()) {
         reflector.enabled = !off(SuperUltraEffect.planarReflection);
       }
+      rig.setGrassCoverage(off(SuperUltraEffect.grassCoverage)
+          ? GrassCoverageMode.original
+          : GrassCoverageMode.covered);
+      rig.fire.setCoreGlow(
+          off(SuperUltraEffect.glowCard) ? CoreGlowMode.sprite : CoreGlowMode.card);
       if (off(SuperUltraEffect.stoneIndirect)) {
         rig.stones.release();
       } else {

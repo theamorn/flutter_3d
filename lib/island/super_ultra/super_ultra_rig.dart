@@ -22,6 +22,7 @@ import 'package:flutter_3d/island/super_ultra/stone_lighting.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_decals.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_fire.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_rain.dart';
+import 'package:flutter_3d/island/super_ultra/transparency_order.dart';
 import 'package:flutter_3d/island/water_bump.dart';
 import 'package:flutter_scene/gpu.dart' show SamplerAddressMode;
 import 'package:flutter_scene/kit.dart';
@@ -79,6 +80,14 @@ class SuperUltraRig {
   late final PreprocessedMaterial _ocean;
   late final PreprocessedMaterial _simpleSea;
   late final PreprocessedMaterial _grass;
+  late final PreprocessedMaterial _grassCovered;
+
+  /// The lawn twice over the same instance list (an [InstancedMesh] keeps
+  /// its material for life): soft-edged blades, and the original material
+  /// for the comparison. [grassNode] carries one at a time.
+  late final InstancedMeshComponent _coveredLawn;
+  late final InstancedMeshComponent _originalLawn;
+  GrassCoverageMode _grassCoverage = GrassCoverageMode.initial;
 
   /// The firepit stones' custom-indirect material and its binding. The
   /// island binds it to the placed campfire while Super Ultra shows it.
@@ -124,12 +133,15 @@ class SuperUltraRig {
       loadFmatMaterial('assets/materials/heat_haze.fmat'),
       loadFmatMaterial('assets/materials/ocean_simple.fmat'),
       loadFmatMaterial('assets/materials/campfire_stone.fmat'),
+      loadFmatMaterial('assets/materials/grass_coverage.fmat'),
+      loadFmatMaterial('assets/materials/additive_glow.fmat'),
     ]);
     _ground = materials[0];
     _ocean = materials[1];
     _grass = materials[2];
     _simpleSea = materials[5];
     stones = StoneLightingBinding(materials[6]);
+    _grassCovered = materials[7];
     sky = await loadFmatSky('assets/materials/island_sky.fmat');
     skybox = Skybox(sky);
     skyEnvironment = SkyEnvironment(
@@ -233,12 +245,15 @@ class SuperUltraRig {
       ..frustumCulled = false
       ..layers = kSuperUltraNoReflectLayer;
 
-    final grass = _buildGrass(obstacles);
-    grassTufts = grass.instanceCount;
+    final tufts = _scatterGrass(obstacles);
+    grassTufts = tufts.length;
+    final tuft = _tuftGeometry();
+    _coveredLawn = InstancedMeshComponent(_lawn(tuft, _grassCovered, tufts));
+    _originalLawn = InstancedMeshComponent(_lawn(tuft, _grass, tufts));
     grassNode = Node(name: 'su_grass')
       ..shadowCastingMode = ShadowCastingMode.off
       ..layers = kSuperUltraNoReflectLayer
-      ..addComponent(InstancedMeshComponent(grass));
+      ..addComponent(_grassCoverage == GrassCoverageMode.covered ? _coveredLawn : _originalLawn);
 
     fire = SuperUltraFire(
       textures: FireTextures(
@@ -248,6 +263,7 @@ class SuperUltraRig {
       ),
       emberMaterial: materials[3],
       hazeMaterial: materials[4],
+      glowMaterial: materials[8],
       base: campfireBase,
     );
 
@@ -388,6 +404,20 @@ class SuperUltraRig {
     }
   }
 
+  GrassCoverageMode get grassCoverage => _grassCoverage;
+
+  /// Puts the soft-edged or the original lawn on [grassNode]. Both share
+  /// one instance list, so the swap moves no blade.
+  void setGrassCoverage(GrassCoverageMode mode) {
+    if (!_built || mode == _grassCoverage) return;
+    _grassCoverage = mode;
+    final (on, off) = mode == GrassCoverageMode.covered
+        ? (_coveredLawn, _originalLawn)
+        : (_originalLawn, _coveredLawn);
+    if (off.isAttached) grassNode.removeComponent(off);
+    if (!on.isAttached) grassNode.addComponent(on);
+  }
+
   /// Pushes the current lighting into the sky and the materials that shade
   /// themselves. Call whenever the clock moves.
   ///
@@ -422,13 +452,15 @@ class SuperUltraRig {
       ..setVec4('grade', vm.Vector4(0.5, 0.9, weather, 0.0));
 
     final key = keyDirection.normalized();
-    _grass.parameters
-      // w: how wet the blades are.
-      ..setVec4('sun_dir', vm.Vector4(key.x, key.y, key.z, weather))
-      ..setVec4(
-        'sun_color',
-        vm.Vector4(keyRadiance.x, keyRadiance.y, keyRadiance.z, 0.0),
-      );
+    for (final grass in [_grass, _grassCovered]) {
+      grass.parameters
+        // w: how wet the blades are.
+        ..setVec4('sun_dir', vm.Vector4(key.x, key.y, key.z, weather))
+        ..setVec4(
+          'sun_color',
+          vm.Vector4(keyRadiance.x, keyRadiance.y, keyRadiance.z, 0.0),
+        );
+    }
 
     // Light that reaches the water body and scatters back out of it: a share
     // of the key light plus the sky's ambient.
@@ -462,19 +494,35 @@ class SuperUltraRig {
     _ground.parameters.setFloat('time', _time);
     final player = playerPosition();
     final gust = 1.0 + 1.3 * weather;
-    _grass.parameters
-      ..setFloat('time', _time)
-      ..setVec4('player', vm.Vector4(player.x, player.y, player.z, 0.85))
-      ..setVec4('wind', vm.Vector4(0.16 * gust, 0.07 * gust, 1.0 + 0.6 * weather, 0.0));
+    for (final grass in [_grass, _grassCovered]) {
+      grass.parameters
+        ..setFloat('time', _time)
+        ..setVec4('player', vm.Vector4(player.x, player.y, player.z, 0.85))
+        ..setVec4('wind', vm.Vector4(0.16 * gust, 0.07 * gust, 1.0 + 0.6 * weather, 0.0));
+    }
     fire.update(intensity: campfireIntensity(), time: _time);
     sky.parameters.setVec4('extras', vm.Vector4(_time, 2.2, 1.0, 1.0));
   }
 
+  /// One lawn: [tufts] drawn as instances of [tuft] in [material].
+  static InstancedMesh _lawn(
+    MeshGeometry tuft,
+    Material material,
+    List<(vm.Matrix4, vm.Vector4)> tufts,
+  ) {
+    final batch = InstancedMesh(geometry: tuft, material: material);
+    for (final (transform, tint) in tufts) {
+      batch.addInstance(transform, color: tint);
+    }
+    return batch;
+  }
+
   /// A jittered-grid lawn over the flat top, thinned by a low-frequency
   /// density field so it clumps like real turf, and kept off the trail, the
-  /// campfire clearing and every prop's footprint.
-  InstancedMesh _buildGrass(List<IslandObstacle> obstacles) {
-    final batch = InstancedMesh(geometry: _tuftGeometry(), material: _grass);
+  /// campfire clearing and every prop's footprint. Each tuft's transform and
+  /// tint.
+  List<(vm.Matrix4, vm.Vector4)> _scatterGrass(List<IslandObstacle> obstacles) {
+    final tufts = <(vm.Matrix4, vm.Vector4)>[];
     final noise = TileableNoise(19);
     final random = math.Random(29);
     const spacing = 0.27;
@@ -522,22 +570,24 @@ class SuperUltraRig {
           (1.0 + 0.05 * dryness) * shade,
           (1.0 - 0.3 * dryness) * shade,
         );
-        batch.addInstance(
+        tufts.add((
           vm.Matrix4.compose(
             vm.Vector3(x, 0.0, z),
             vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), yaw),
             vm.Vector3.all(scale),
           ),
-          color: vm.Vector4(tint.x, tint.y, tint.z, 1.0),
-        );
+          vm.Vector4(tint.x, tint.y, tint.z, 1.0),
+        ));
       }
     }
-    return batch;
+    return tufts;
   }
 
   /// Three tapered, leaning blades. Normals are authored mostly up so the
   /// tuft shades like turf rather than like cards; colour runs dark at the
-  /// root to bright at the tip.
+  /// root to bright at the tip. UVs run u across each blade (0 and 1 on its
+  /// edges) and v from root (0) to tip (1), for grass_coverage.fmat's edge
+  /// ramp; the original grass material ignores them.
   static MeshGeometry _tuftGeometry() {
     final builder = GeometryBuilder(deduplicate: false);
     final random = math.Random(3);
@@ -562,13 +612,21 @@ class SuperUltraRig {
       final midRight = midCentre + side * (width * 0.36);
       final tipPoint = root + out * lean + vm.Vector3(0, height, 0);
 
-      builder.color(base);
+      builder
+        ..color(base)
+        ..texCoord(vm.Vector2(0, 0));
       final a = builder.addVertex(baseLeft);
+      builder.texCoord(vm.Vector2(1, 0));
       final b = builder.addVertex(baseRight);
-      builder.color(middle);
+      builder
+        ..color(middle)
+        ..texCoord(vm.Vector2(1, 0.5));
       final c = builder.addVertex(midRight);
+      builder.texCoord(vm.Vector2(0, 0.5));
       final d = builder.addVertex(midLeft);
-      builder.color(tip);
+      builder
+        ..color(tip)
+        ..texCoord(vm.Vector2(0.5, 1));
       final e = builder.addVertex(tipPoint);
       builder
         ..addTriangle(a, b, c)

@@ -6,14 +6,20 @@
 /// * flame tongues from a baked flipbook ([generateFlameAtlas]), upright
 ///   (`axisLocked`), licked sideways by curl-noise turbulence, and HDR hot so
 ///   bloom finds the core;
-/// * a bright core glow, long-lived turbulent embers streaking with their
-///   velocity, and occasional spark pops;
+/// * a bright core glow (one camera-facing additive card,
+///   `additive_glow.fmat`; the older additive sprite emitter stays for the
+///   comparison), long-lived turbulent embers streaking with their velocity,
+///   and occasional spark pops;
 /// * smoke from a puff atlas, warm at the base and grey above;
 /// * a bed of glowing coals under the logs (`ember_bed.fmat`);
 /// * heat shimmer above the flames (`heat_haze.fmat`).
+///
+/// The core glow, the haze and the smoke carry explicit render orders
+/// ([TransparencyOrderValues]) while the glow card shows.
 library;
 
 import 'package:flutter_3d/island/super_ultra/procedural_textures.dart';
+import 'package:flutter_3d/island/super_ultra/transparency_order.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
@@ -35,6 +41,7 @@ class SuperUltraFire {
     required FireTextures textures,
     required this.emberMaterial,
     required this.hazeMaterial,
+    required this.glowMaterial,
     required vm.Vector3 base,
   })  : _bedCentre = vm.Vector2(base.x, base.z),
         root = Node(name: 'super_ultra_fire') {
@@ -269,13 +276,25 @@ class SuperUltraFire {
       ..shadowCastingMode = ShadowCastingMode.off;
     root.add(emberBed);
 
-    final hazeNode = Node(
+    _hazeNode = Node(
       name: 'su_heat_haze',
       mesh: Mesh(_hazeQuad(width: 1.1, height: 1.9), hazeMaterial),
     )
       ..position = base + vm.Vector3(0, 0.45, 0)
       ..shadowCastingMode = ShadowCastingMode.off;
-    root.add(hazeNode);
+    root.add(_hazeNode);
+
+    // Same place and size as the sprite glow it replaces (sprites 0.7 to
+    // 0.95 m across around base + 0.22 m).
+    _glowCard = Node(
+      name: 'su_fire_glow_card',
+      mesh: Mesh(_glowQuad(), glowMaterial),
+    )
+      ..position = base + vm.Vector3(0, 0.22, 0)
+      ..scale = vm.Vector3.all(0.9)
+      ..shadowCastingMode = ShadowCastingMode.off;
+    root.add(_glowCard);
+    setCoreGlow(CoreGlowMode.initial);
   }
 
   static const double _bedRadius = 0.46;
@@ -284,6 +303,37 @@ class SuperUltraFire {
   final vm.Vector2 _bedCentre;
   final PreprocessedMaterial emberMaterial;
   final PreprocessedMaterial hazeMaterial;
+  final PreprocessedMaterial glowMaterial;
+  late final Node _hazeNode;
+  late final Node _glowCard;
+  CoreGlowMode _coreGlow = CoreGlowMode.initial;
+  bool _lit = true;
+  final RenderOrderLedger<Node> _order = RenderOrderLedger<Node>(
+    read: (node) => node.renderOrder,
+    write: (node, order) => node.renderOrder = order,
+  );
+
+  CoreGlowMode get coreGlow => _coreGlow;
+
+  /// Shows the glow card or the old sprite glow, never both. With the card,
+  /// the core, haze and smoke take their ranks; with the sprite, every node
+  /// gets its authored order back.
+  void setCoreGlow(CoreGlowMode mode) {
+    _coreGlow = mode;
+    final shown = coreGlowVisibility(mode);
+    _glowCard.visible = shown.card && _lit;
+    _core.paused = !(shown.sprite && _lit);
+    _core.node.visible = shown.sprite && _lit;
+    if (shown.card) {
+      _order.apply({
+        _glowCard: TransparencyOrderValues.core,
+        _hazeNode: TransparencyOrderValues.haze,
+        _smoke.node: TransparencyOrderValues.smoke,
+      });
+    } else {
+      _order.restore();
+    }
+  }
   late final ParticleEmitterComponent _flames;
   late final ParticleEmitterComponent _core;
   late final ParticleEmitterComponent _embers;
@@ -315,13 +365,18 @@ class SuperUltraFire {
   /// about 1.3 (flaring); [time] is seconds since the rig was built.
   void update({required double intensity, required double time}) {
     final lit = intensity > 0.02;
+    final sprite = coreGlowVisibility(_coreGlow).sprite;
     for (final emitter in _emitters) {
-      emitter.paused = !lit;
-      emitter.node.visible = lit;
+      final on = lit && (!identical(emitter, _core) || sprite);
+      emitter.paused = !on;
+      emitter.node.visible = on;
     }
+    _lit = lit;
+    _glowCard.visible = lit && !sprite;
     final strength = intensity.clamp(0.0, 1.4);
     _flames.material.tint = vm.Vector4(1, 1, 1, strength.clamp(0.0, 1.0));
     _core.material.tint = vm.Vector4.all(strength);
+    glowMaterial.parameters.setVec4('glow', vm.Vector4(1.0, 0.46, 0.12, strength));
     // The coals never go fully dark: a doused fire still smoulders.
     emberMaterial.parameters
       ..setFloat('time', time)
@@ -337,6 +392,25 @@ class SuperUltraFire {
     hazeMaterial.parameters
       ..setFloat('time', time)
       ..setVec4('haze', vm.Vector4(0.006, strength.clamp(0.0, 1.0), 0, 0));
+  }
+
+  /// A unit XY quad centred on the origin (uv 0..1 across it), for
+  /// `additive_glow.fmat` to turn toward the camera.
+  static MeshGeometry _glowQuad() {
+    final builder = GeometryBuilder(deduplicate: false)
+      ..normal(vm.Vector3(0, 0, 1));
+    builder.texCoord(vm.Vector2(0, 0));
+    final a = builder.addVertex(vm.Vector3(-0.5, -0.5, 0));
+    builder.texCoord(vm.Vector2(1, 0));
+    final b = builder.addVertex(vm.Vector3(0.5, -0.5, 0));
+    builder.texCoord(vm.Vector2(1, 1));
+    final c = builder.addVertex(vm.Vector3(0.5, 0.5, 0));
+    builder.texCoord(vm.Vector2(0, 1));
+    final d = builder.addVertex(vm.Vector3(-0.5, 0.5, 0));
+    builder
+      ..addTriangle(a, b, c)
+      ..addTriangle(a, c, d);
+    return builder.build();
   }
 
   /// An XY quad with its base on y = 0 and uv.y = 0 at the bottom, for
