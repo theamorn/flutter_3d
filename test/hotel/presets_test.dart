@@ -31,11 +31,12 @@ void main() {
   });
 
   test('ultra enables every toggleable feature except the alternative AA modes, '
-      'the 75% scale and dynamic GI', () {
+      'the 75% scale, dynamic GI and the GPU pacing pick', () {
     final toggleable = buildCatalog().where((f) => f.toggleable).map((f) => f.id).toSet();
     expect(
       presetIds(Preset.ultra),
-      toggleable.difference({'fxaa', 'smaa', 'taa', 'render_scale_75', 'dynamic_gi'}),
+      toggleable.difference(
+          {'fxaa', 'smaa', 'taa', 'render_scale_75', 'dynamic_gi', 'gpu_pacing_2'}),
     );
   });
 

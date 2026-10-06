@@ -69,6 +69,24 @@ enum SuperUltraRenderScale {
   final double scale;
 }
 
+/// How many frames of GPU work may be queued before the scene re-presents its
+/// last image instead of drawing a new one (`Scene.maxGpuFramesInFlight`,
+/// flutter_scene 0.24). One pick; the engine's 1 by default.
+enum SuperUltraGpuPacing {
+  one('1 frame', 'UI thread never waits on the GPU; about a tenth of GPU '
+      'throughput held back', 1),
+  two('2 frames', 'Full GPU throughput; the UI thread can still wait about '
+      'half as long as before 0.24', 2);
+
+  const SuperUltraGpuPacing(this.label, this.cost, this.frames);
+
+  static const SuperUltraGpuPacing initial = SuperUltraGpuPacing.one;
+
+  final String label;
+  final String cost;
+  final int frames;
+}
+
 /// Where an effect sits in the menu.
 enum SuperUltraEffectGroup {
   lighting('Lighting & shadows'),

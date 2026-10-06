@@ -195,3 +195,24 @@ class RenderScale75Feature extends RenderScaleFeature {
   @override
   String get label => 'Render at 75% (56% of the pixels)';
 }
+
+/// Lets two frames of GPU work queue before the scene re-presents its last
+/// image (flutter_scene 0.24 `Scene.maxGpuFramesInFlight`; the engine's
+/// default is 1). A measuring choice: full GPU throughput, at the cost of the
+/// UI thread waiting on the GPU again, about half as long as before 0.24.
+class GpuPacing2Feature extends HotelFeature {
+  @override
+  String get id => 'gpu_pacing_2';
+  @override
+  String get label => 'GPU pacing: 2 frames in flight';
+  @override
+  CostTier get tier => CostTier.free;
+  @override
+  bool get defaultOn => false;
+
+  @override
+  Future<void> mount(HotelContext ctx) async => ctx.scene.maxGpuFramesInFlight = 2;
+
+  @override
+  void unmount(HotelContext ctx) => ctx.scene.maxGpuFramesInFlight = 1;
+}

@@ -12,6 +12,9 @@ import 'package:flutter_scene/scene.dart' hide Material;
 import 'package:flutter_3d/island/island_scene.dart';
 import 'package:flutter_3d/island/particles.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_effects.dart';
+import 'package:flutter_3d/ui/hud.dart'
+    show lastOnScreenFrame, onScreenDraws, renderedFrameCount;
+import 'package:flutter_3d/ui/scene_frame_meter.dart';
 
 /// Off in every shipped build. Enable with
 /// `--dart-define=SCENE_AUTO_DEMO=true` to drive taps from a timer (there is
@@ -123,6 +126,9 @@ class _IslandSceneScreenState extends State<IslandSceneScreen>
     ui.Offset(0.82, 0.72),
   ];
 
+  /// Frames the scene rendered, not Flutter's: under flutter_scene 0.24's GPU
+  /// pacing the two diverge.
+  final SceneFrameMeter _sceneMeter = SceneFrameMeter();
   final List<int> _uiMicros = <int>[];
   final List<int> _rasterMicros = <int>[];
   Timer? _statsTimer;
@@ -172,18 +178,22 @@ class _IslandSceneScreenState extends State<IslandSceneScreen>
         await Future<void>.delayed(settle);
         _ablationUi.clear();
         _ablationRaster.clear();
+        final startFrames = renderedFrameCount(_island.scene);
+        final clock = Stopwatch()..start();
         _ablationRecording = true;
         await Future<void>.delayed(measure);
         _ablationRecording = false;
+        final sceneFrames = renderedFrameCount(_island.scene) - startFrames;
+        final seconds = clock.elapsedMicroseconds / 1e6;
         final u = mean(_ablationUi);
         final r = mean(_ablationRaster);
-        final f = _ablationUi.length / measure.inSeconds;
+        final f = sceneFrames / seconds;
         (ui[step] ??= <double>[]).add(u);
         (raster[step] ??= <double>[]).add(r);
         (fps[step] ??= <double>[]).add(f);
         debugPrint(
           'island ablation: round $round | $step | ui ${u.toStringAsFixed(2)} '
-          '| raster ${r.toStringAsFixed(2)} ms | ${f.toStringAsFixed(1)} fps',
+          '| raster ${r.toStringAsFixed(2)} ms | ${f.toStringAsFixed(1)} scene fps',
         );
       }
     }
@@ -205,7 +215,7 @@ class _IslandSceneScreenState extends State<IslandSceneScreen>
         'island ablation: ${step.padRight(32)} ui ${u.toStringAsFixed(2)} '
         '(${delta(u, baseUi)}) | raster ${r.toStringAsFixed(2)} '
         '(${delta(r, baseRaster)}) ms | '
-        '${median(fps[step]!).toStringAsFixed(1)} fps',
+        '${median(fps[step]!).toStringAsFixed(1)} scene fps',
       );
     }
     debugPrint('island ablation: done');
@@ -227,6 +237,8 @@ class _IslandSceneScreenState extends State<IslandSceneScreen>
     debugPrint(
       'island frames: n=${_uiMicros.length} '
       'ui ${summary(_uiMicros)} | raster ${summary(_rasterMicros)} '
+      '| scene ${_sceneMeter.sceneFps.toStringAsFixed(1)} fps '
+      'paced ${_sceneMeter.pacedPerSecond.toStringAsFixed(1)}/s '
       '| ${_island.quality.name}${_island.isRaining ? ' rain' : ''}'
       '${_island.isRaining && _island.isStorm ? ' storm' : ''}',
     );
@@ -346,6 +358,9 @@ class _IslandSceneScreenState extends State<IslandSceneScreen>
     if ((night - _nightBlend).abs() > 0.004) {
       setState(() => _nightBlend = night);
     }
+    _sceneMeter.add(DateTime.now().microsecondsSinceEpoch,
+        sceneFrames: renderedFrameCount(_island.scene),
+        pacedFrames: _island.scene.pacedFrameCount);
   }
 
   void _openEffectsPanel() {
@@ -557,7 +572,11 @@ class _IslandSceneScreenState extends State<IslandSceneScreen>
                                 builder: (context, _) {
                                   return _Readout(
                                     triangles: _island.triangleCount,
-                                    meshes: _island.meshCount,
+                                    draws: onScreenDraws(
+                                            lastOnScreenFrame(_island.scene))
+                                        ?.draws ??
+                                        -1,
+                                    sceneFps: _sceneMeter.sceneFps,
                                     timeOfDay: _timeOfDay,
                                     renderLoopActive: _renderLoopActive,
                                     quality: _island.quality,
@@ -741,7 +760,8 @@ class _ErrorPanel extends StatelessWidget {
 class _Readout extends StatelessWidget {
   const _Readout({
     required this.triangles,
-    required this.meshes,
+    required this.draws,
+    required this.sceneFps,
     required this.timeOfDay,
     required this.renderLoopActive,
     required this.quality,
@@ -756,7 +776,9 @@ class _Readout extends StatelessWidget {
   });
 
   final int triangles;
-  final int meshes;
+  /// On-screen draws in the last rendered frame; -1 when unknown.
+  final int draws;
+  final double sceneFps;
   final double timeOfDay;
   final bool renderLoopActive;
   final IslandQuality quality;
@@ -824,7 +846,7 @@ class _Readout extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-              Text('$meshes meshes'),
+              Text('${draws < 0 ? '–' : draws} draws · ${sceneFps.round()} fps'),
               Text('${_clock(timeOfDay)}  local'),
               const SizedBox(height: 3),
               Text(
@@ -1182,6 +1204,7 @@ class _EffectsPanel extends StatefulWidget {
 class _EffectsPanelState extends State<_EffectsPanel> {
   /// (vsync start, UI, raster) per frame, in microseconds.
   final List<(int, int, int)> _frames = <(int, int, int)>[];
+  final SceneFrameMeter _meter = SceneFrameMeter();
   Timer? _refresh;
   String _readout = 'measuring…';
 
@@ -1203,6 +1226,9 @@ class _EffectsPanelState extends State<_EffectsPanel> {
   }
 
   void _onTimings(List<ui.FrameTiming> timings) {
+    _meter.add(DateTime.now().microsecondsSinceEpoch,
+        sceneFrames: renderedFrameCount(widget.island.scene),
+        pacedFrames: widget.island.scene.pacedFrameCount);
     for (final timing in timings) {
       _frames.add((
         timing.timestampInMicroseconds(ui.FramePhase.vsyncStart),
@@ -1229,7 +1255,8 @@ class _EffectsPanelState extends State<_EffectsPanel> {
     setState(() {
       _readout = 'UI ${uiMs.toStringAsFixed(1)} ms · '
           'raster ${rasterMs.toStringAsFixed(1)} ms · '
-          '${fps.toStringAsFixed(0)} fps';
+          '${fps.toStringAsFixed(0)} flutter fps · '
+          '${_meter.sceneFps.toStringAsFixed(0)} scene fps';
     });
   }
 
@@ -1323,6 +1350,14 @@ class _EffectsPanelState extends State<_EffectsPanel> {
             label: (scale) => scale.label,
             cost: (scale) => scale.cost,
             onSelected: (scale) => _change(() => island.setRenderScale(scale)),
+          ),
+          _EffectsPicker<SuperUltraGpuPacing>(
+            title: 'GPU pacing',
+            options: SuperUltraGpuPacing.values,
+            selected: island.gpuPacing,
+            label: (p) => p.label,
+            cost: (p) => p.cost,
+            onSelected: (p) => _change(() => island.setGpuPacing(p)),
           ),
           for (final group in SuperUltraEffectGroup.values) ...<Widget>[
             header(group.label),

@@ -42,7 +42,7 @@ List<HotelFeature> buildCatalog() => [
       ScreensFeature(), BooksFeature(), InstancingFeature(), EntranceFeature(),
       LightProbesFeature(), DynamicGiFeature(), AutoExposureFeature(), StaticShadowsFeature(),
       FxaaFeature(), SmaaFeature(), TaaFeature(),
-      RenderScale85Feature(), RenderScale75Feature(),
+      RenderScale85Feature(), RenderScale75Feature(), GpuPacing2Feature(),
       SpotLightsFeature(), AreaLightsFeature(), VolumetricFogFeature(),
       OcclusionFeature(),
     ];

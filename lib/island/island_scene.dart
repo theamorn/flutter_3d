@@ -882,6 +882,7 @@ class IslandScene {
       _applySuperUltraLook();
       return;
     }
+    scene.maxGpuFramesInFlight = 1;
     sunLight.shadowCascadeCount = 1;
     sunLight.shadowMapResolution = 512;
     sunLight.shadowMaxDistance = 24.0;
@@ -959,6 +960,7 @@ class IslandScene {
     // behind it, which splits the scene pass, and with MSAA that split writes
     // the 4x depth buffer out to memory and reads it back every frame.
     scene.renderScale = _renderScale.scale;
+    scene.maxGpuFramesInFlight = _gpuPacing.frames;
     scene.antiAliasingMode = _antiAliasing.mode;
     scene.environmentSettings = EnvironmentSettings(
       skybox: _activeSkybox,
@@ -1007,6 +1009,7 @@ class IslandScene {
   final Set<SuperUltraEffect> _effectsOff = <SuperUltraEffect>{};
   SuperUltraAntiAliasing _antiAliasing = SuperUltraAntiAliasing.initial;
   SuperUltraRenderScale _renderScale = SuperUltraRenderScale.initial;
+  SuperUltraGpuPacing _gpuPacing = SuperUltraGpuPacing.initial;
 
   /// Whether the effects menu has [effect] on (all are, by default).
   bool isEffectOn(SuperUltraEffect effect) => !_effectsOff.contains(effect);
@@ -1017,12 +1020,16 @@ class IslandScene {
   /// The effects menu's render-scale pick.
   SuperUltraRenderScale get renderScale => _renderScale;
 
+  /// The effects menu's GPU-pacing pick.
+  SuperUltraGpuPacing get gpuPacing => _gpuPacing;
+
   /// How many menu entries differ from their default: effects switched off,
   /// plus each image-quality pick that has been changed.
   int get effectsMenuChanges =>
       _effectsOff.length +
       (_antiAliasing == SuperUltraAntiAliasing.initial ? 0 : 1) +
-      (_renderScale == SuperUltraRenderScale.initial ? 0 : 1);
+      (_renderScale == SuperUltraRenderScale.initial ? 0 : 1) +
+      (_gpuPacing == SuperUltraGpuPacing.initial ? 0 : 1);
 
   /// Switches one Super Ultra feature on or off, to read its cost off the
   /// frame times. Kept across mode switches until [resetEffects].
@@ -1051,7 +1058,17 @@ class IslandScene {
     _refreshEffects();
   }
 
-  /// Every effect back on and both image-quality picks back to default.
+  /// Picks how many GPU frames may queue before the scene re-presents its
+  /// last image. Kept until [resetEffects].
+  void setGpuPacing(SuperUltraGpuPacing value) {
+    if (value == _gpuPacing) {
+      return;
+    }
+    _gpuPacing = value;
+    _refreshEffects();
+  }
+
+  /// Every effect back on and every image-quality pick back to default.
   void resetEffects() {
     if (effectsMenuChanges == 0) {
       return;
@@ -1059,6 +1076,7 @@ class IslandScene {
     _effectsOff.clear();
     _antiAliasing = SuperUltraAntiAliasing.initial;
     _renderScale = SuperUltraRenderScale.initial;
+    _gpuPacing = SuperUltraGpuPacing.initial;
     _refreshEffects();
   }
 
