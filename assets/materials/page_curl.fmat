@@ -23,15 +23,8 @@ vertex {
       p.x = axis + r * sin(theta) - flat_arc;
       p.z = vertex.position.z + r * (1.0 - cos(theta));
     }
-    vec3 delta = p - vertex.position;
-    if (dot(vertex.world_tangent.xyz, vertex.world_tangent.xyz) > 1e-4) {
-      vec3 right = normalize(vertex.world_tangent.xyz);
-      vec3 normal = normalize(vertex.world_normal);
-      vec3 up = cross(normal, right) * (vertex.world_tangent.w != 0.0 ? vertex.world_tangent.w : 1.0);
-      vertex.world_position += delta.x * right + delta.y * up + delta.z * normal;
-    } else {
-      vertex.world_position += delta;
-    }
+    // 0.24: place the curled object-space point ourselves.
+    vertex.world_position = (vertex.model_transform * vec4(p, 1.0)).xyz;
   }
 }
 

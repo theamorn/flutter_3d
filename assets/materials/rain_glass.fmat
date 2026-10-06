@@ -3,15 +3,18 @@
 // lib/features/rain_glass_feature.dart); dry glass keeps its own material.
 material {
   name: "rain_glass",
-  // engine_inputs need a lit model. Albedo and specular are zeroed below, so
-  // the lighting adds nothing and the pane shows only its emissive.
-  shading_model: lit,
+  // Unlit: since flutter_scene 0.24 an unlit material may read scene_color.
+  shading_model: unlit,
   blending: alpha,
   // The viewer inside the room sees the pane's back face (its normal points
   // out to sea), and the balcony sees the front.
   culling: none,
   depth_write: false,
   engine_inputs: [scene_color],
+  // The drops refract at most 0.03 of the screen; in metres on a 1.2 m pane
+  // that is well under 0.1. Bounded reach lets both rooms' panes share one
+  // scene-colour capture when they don't overlap on screen.
+  scene_color_reach: 0.1,
   parameters: [
     { type: float, name: time },
     { type: float, name: wetness }
@@ -62,9 +65,6 @@ fragment {
     float have_scene = any(greaterThan(behind, vec3(0.0))) ? 1.0 : 0.0;
     // base_color alpha is straight; the framework premultiplies. Alpha 1
     // replaces what is behind with the refracted copy of it.
-    material.base_color = vec4(0.0, 0.0, 0.0, have_scene);
-    material.emissive = behind * mix(1.0, 0.85, m);
-    material.specular = 0.0;
-    material.roughness = 0.05;
+    material.base_color = vec4(behind * mix(1.0, 0.85, m), have_scene);
   }
 }
