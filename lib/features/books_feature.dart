@@ -393,6 +393,9 @@ class BooksFeature extends HotelFeature {
       worldHeight: kPageHeight,
       update: WidgetUpdatePolicy.everyFrame,
       input: WidgetInput.automatic,
+      // Paper, not a screen: take exposure, tone mapping and fog like the
+      // book around it. 0.24 made WidgetComponent display-referred by default.
+      displayReferred: false,
     );
     leftNode.addComponent(leftComp);
     _leftComponent = leftComp;
@@ -410,6 +413,9 @@ class BooksFeature extends HotelFeature {
       worldHeight: kPageHeight,
       update: WidgetUpdatePolicy.everyFrame,
       input: WidgetInput.automatic,
+      // Paper, not a screen: take exposure, tone mapping and fog like the
+      // book around it. 0.24 made WidgetComponent display-referred by default.
+      displayReferred: false,
       bind: (tex) {
         _curlMaterial?.parameters.setTexture('page_tex', tex);
       },
