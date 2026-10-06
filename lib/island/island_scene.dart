@@ -13,6 +13,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_scene/kit.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:flutter_3d/island/ball_physics.dart';
+import 'package:flutter_3d/island/campfire_shadows.dart';
 import 'package:flutter_3d/island/island_components.dart';
 import 'package:flutter_3d/island/super_ultra/lightning.dart';
 import 'package:flutter_3d/island/super_ultra/rain_collision.dart';
@@ -113,6 +114,7 @@ class IslandScene {
   late final DayNightCycleComponent dayNight;
 
   late final PointLight campfireLight;
+  bool _campfireBuilt = false;
   late final Node campfireNode;
   late final Node _flameNode;
   late final PhysicallyBasedMaterial _flameMaterial;
@@ -546,7 +548,12 @@ class IslandScene {
       intensity: 5.2,
       range: 14.0,
       falloffExponent: 1.8,
+      radius: kCampfireLightRadius,
+      shadowMapResolution: kCampfireShadowResolution,
+      shadowNear: kCampfireShadowNear,
     );
+    _campfireBuilt = true;
+    _applyCampfireShadow();
     campfireNode = Node(name: 'campfire_light')
       ..addComponent(PointLightComponent(campfireLight))
       ..position = vm.Vector3(
@@ -877,7 +884,19 @@ class IslandScene {
   SkyEnvironment? get _activeSkyEnvironment =>
       isSuperUltra && _superRig.isBuilt ? _superRig.skyEnvironment : null;
 
+  void _applyCampfireShadow() {
+    campfireLight.castsShadow = campfireCastsShadow(
+      ultraOrAbove: isUltraMode,
+      effectOn: isEffectOn(SuperUltraEffect.fireShadows),
+    );
+  }
+
   void _applyEnvironmentSettings() {
+    // The first call (from [_buildEnvironment]) runs before the campfire
+    // exists; [_buildCampfireLighting] applies it once it does.
+    if (_campfireBuilt) {
+      _applyCampfireShadow();
+    }
     if (isSuperUltra) {
       _applySuperUltraLook();
       return;

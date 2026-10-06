@@ -129,6 +129,11 @@ enum SuperUltraEffect {
     'Blocker search plus a wide filter per shadowed pixel',
     SuperUltraEffectGroup.lighting,
   ),
+  fireShadows(
+    'Campfire shadows',
+    'Point-light shadows: the casters draw again into six cube faces',
+    SuperUltraEffectGroup.lighting,
+  ),
   bloom(
     'Bloom',
     'Glow around bright things: a chain of small blur passes',
