@@ -492,8 +492,13 @@ class SuperUltraRig {
     // Light that reaches the water body and scatters back out of it: a share
     // of the key light plus the sky's ambient.
     final elevation = math.max(key.y, 0.0);
-    final skyTint = vm.Vector3(0.55, 0.66, 0.78) * (ambient * 0.9);
-    final water = keyRadiance * (0.12 + 0.2 * elevation) + skyTint;
+    final golden = _smoothstep(-0.04, 0.07, sun.y) *
+        (1.0 - _smoothstep(0.14, 0.29, sun.y)) *
+        (1.0 - weather);
+    final skyTint = (vm.Vector3(0.55, 0.66, 0.78) * (1.0 - 0.35 * golden) +
+            vm.Vector3(0.82, 0.58, 0.38) * (0.35 * golden)) *
+        (ambient * 0.9);
+    final water = keyRadiance * (0.14 + 0.22 * elevation) + skyTint;
     _ocean.parameters
       ..setVec4('water_light', vm.Vector4(water.x, water.y, water.z, 1.0))
       // w: raindrop rings across the whole sea; rain also roughens the
@@ -502,11 +507,11 @@ class SuperUltraRig {
     _simpleSea.parameters
         .setVec4('water_light', vm.Vector4(water.x, water.y, water.z, 1.0));
     // Moonlight is far too weak to throw visible caustics.
-    final caustic = keyRadiance * (0.35 + 0.65 * elevation) * (1.0 - 0.85 * night);
+    final caustic = keyRadiance * (0.38 + 0.65 * elevation) * (1.0 - 0.85 * night);
     _ground.parameters
       ..setVec4('caustic_light', vm.Vector4(caustic.x, caustic.y, caustic.z, 1.0))
       // w: wetness (darker, shinier ground, puddles).
-      ..setVec4('water', vm.Vector4(seaY, 0.5 * (1.0 - 0.7 * weather), 1.0, weather));
+      ..setVec4('water', vm.Vector4(seaY, 0.65 * (1.0 - 0.7 * weather), 1.0, weather));
     stones.apply(stoneLightingFor(ambient: ambient, night: night, weather: weather));
   }
 

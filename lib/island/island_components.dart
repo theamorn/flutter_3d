@@ -62,7 +62,14 @@ class CampfireFlickerComponent extends Component {
           0.08 * math.sin(_phase * 23.7 + 1.3) +
           0.06 * math.sin(_phase * 37.1 + 0.4) +
           0.1 * math.sin(_phase * 1.7);
-      light.intensity = 6.0 * intensity * flicker;
+      final flare = ((flicker - 0.75) / 0.55).clamp(0.0, 1.0);
+      light
+        ..color = vm.Vector3(
+          1.0,
+          0.45 + 0.13 * flare,
+          0.08 + 0.09 * flare * flare,
+        )
+        ..intensity = 6.2 * intensity * flicker;
       flameNode.visible = false;
       flameEmitter?.paused = true;
       flameEmitterNode?.visible = false;
@@ -74,7 +81,14 @@ class CampfireFlickerComponent extends Component {
       final flicker = 1.0 +
           0.20 * math.sin(_phase * 15.0) +
           0.10 * math.cos(_phase * 27.0);
-      light.intensity = 5.5 * intensity * flicker;
+      final flare = ((flicker - 0.75) / 0.55).clamp(0.0, 1.0);
+      light
+        ..color = vm.Vector3(
+          1.0,
+          0.46 + 0.11 * flare,
+          0.09 + 0.07 * flare * flare,
+        )
+        ..intensity = 5.5 * intensity * flicker;
       final useParticles = isUltra();
       flameNode.visible = !useParticles;
       flameEmitter?.paused = !useParticles;

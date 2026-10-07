@@ -76,4 +76,9 @@ void main() {
     expect(SuperUltraGpuPacing.values.map((p) => p.frames), [1, 2]);
     expect(SuperUltraGpuPacing.initial, SuperUltraGpuPacing.one);
   });
+
+  test('ground decals (scorch and footprints) are scene content, on by default', () {
+    expect(SuperUltraEffect.decals.group, SuperUltraEffectGroup.scene);
+    expect(SuperUltraEffect.decals.cost, contains('scorch'));
+  });
 }

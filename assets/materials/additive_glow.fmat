@@ -56,8 +56,11 @@ fragment {
   void Surface(inout MaterialInputs material) {
     vec2 p = GetUV0() * 2.0 - 1.0;
     float r2 = dot(p, p);
-    // Gaussian-like core reaching zero at the card's rim.
-    float falloff = exp(-r2 * material_params.shape.x) * (1.0 - smoothstep(0.7, 1.0, r2));
+    // Gaussian-like core reaching zero at the card's rim, with an incandescent
+    // white-gold heart fading into the warm amber outer halo.
+    float rim = 1.0 - smoothstep(0.7, 1.0, r2);
+    float falloff = exp(-r2 * material_params.shape.x) * rim;
+    float hot_core = exp(-r2 * material_params.shape.x * 2.8) * rim;
     // Soft contact: fade where the card is close in front of an opaque
     // surface (planar view depth, the same measure the depth target holds).
     highp float opaque_depth = GetSceneDepth(vec2(0.0));
@@ -68,7 +71,10 @@ fragment {
     // Straight alpha; the framework premultiplies, and additive blending adds
     // rgb * alpha onto the scene. The flicker scales the colour, not the
     // alpha, so a flare above 1 is not clipped.
-    material.base_color = vec4(material_params.glow.rgb * material_params.glow.w,
+    vec3 core_tint = mix(material_params.glow.rgb,
+                         vec3(1.55, 1.05, 0.48),
+                         hot_core * 0.65);
+    material.base_color = vec4(core_tint * material_params.glow.w,
                                falloff * contact);
   }
 }

@@ -530,7 +530,7 @@ class IslandScene {
 
   /// Builds the whole scene. Safe to await before the first frame is shown.
   Future<void> load() async {
-    await Scene.initializeStaticResources();
+    await Scene.preload(physicalMaterials: true, smaa: true);
 
     _buildEnvironment();
     _buildTerrain();
@@ -922,9 +922,7 @@ class IslandScene {
       // fire); compile them now, not on the frame each first shows up.
       unawaited(prewarmPipelines(scene, camera));
     }
-    if (_cameraMode == IslandCameraMode.orbit) {
-      _recount();
-    }
+    _recount();
   }
 
   /// Mounts or unmounts the Super Ultra content and swaps what it replaces:
@@ -1281,6 +1279,9 @@ class IslandScene {
       mount(rig.simpleSeaNode, off(SuperUltraEffect.sea));
       mount(rig.grassNode, !off(SuperUltraEffect.grass));
       mount(rig.fire.root, !off(SuperUltraEffect.fireVfx));
+      final decalsOn = !off(SuperUltraEffect.decals);
+      rig.decals.root.visible = decalsOn;
+      mount(rig.decals.root, decalsOn);
       for (final reflector
           in rig.oceanNode.getComponents<PlanarReflectorComponent>()) {
         reflector.enabled = !off(SuperUltraEffect.planarReflection);
@@ -1605,6 +1606,9 @@ class IslandScene {
       ..addAll(settings.off);
     _antiAliasing = settings.antiAliasing;
     _renderScale = settings.renderScale;
+    _gpuPacing = SuperUltraGpuPacing.initial;
+    _frameCap = SuperUltraFrameCap.initial;
+    _sceneCopies = SuperUltraSceneCopies.initial;
     _refreshEffects();
   }
 
@@ -1798,7 +1802,8 @@ class IslandScene {
       )
       // Uniform only: a non-uniform scale silently breaks lighting.
       ..scale = vm.Vector3.all(placement.size);
-    instance.shadowStatic = true;
+    // shadowStatic is per mesh-bearing node, not inherited by glTF child nodes.
+    _forEachNode(instance, (node) => node.shadowStatic = true);
     scene.add(instance);
 
     final (heightOffset, radius) = switch (placement.kind) {
@@ -1885,11 +1890,24 @@ class IslandScene {
       );
     }
 
-    final root = Node(name: 'ultra_scatter');
-    root.shadowStatic = true;
+    // Separate swaying trees from static rocks/bushes so TreeSway.bind only
+    // clears shadowStatic on the vertex-displaced tree batches.
+    final staticScatter = Node(name: 'ultra_scatter_static')
+      ..shadowStatic = true;
+    final treeScatter = Node(name: 'ultra_scatter_trees')
+      ..shadowStatic = true;
     for (final entry in byKind.entries) {
-      _addInstancedKind(root, entry.key, entry.value);
+      final isTree = entry.key == 'palm' || entry.key == 'pine';
+      _addInstancedKind(
+        isTree ? treeScatter : staticScatter,
+        entry.key,
+        entry.value,
+      );
     }
+    final root = Node(name: 'ultra_scatter')
+      ..shadowStatic = true
+      ..add(staticScatter)
+      ..add(treeScatter);
     scene.add(root);
     _ultraScatterRoot = root;
 
@@ -2005,9 +2023,10 @@ class IslandScene {
           RainProp('bush', points[i].x, points[i].y, 0.42 + (i % 5) * 0.055),
       ]);
 
-    final root = Node(name: 'ultra_ground_cover');
-    root.shadowStatic = true;
-    root.shadowCastingMode = ShadowCastingMode.off;
+    final root = Node(name: 'ultra_ground_cover')
+      ..layers = kSuperUltraNoReflectLayer
+      ..shadowStatic = true
+      ..shadowCastingMode = ShadowCastingMode.off;
 
     for (final primitive in primitives) {
       final batch = InstancedMesh(
@@ -2046,8 +2065,8 @@ class IslandScene {
       return;
     }
 
-    final dry = _flatMaterial(0.76, 0.61, 0.38, roughness: 0.9);
-    final wet = _flatMaterial(0.48, 0.36, 0.24, roughness: 0.42);
+    final dry = _flatMaterial(0.74, 0.60, 0.40, roughness: 0.84);
+    final wet = _flatMaterial(0.42, 0.34, 0.25, roughness: 0.22);
     const collarHeight = 0.42;
 
     final beach = Node(
@@ -2760,8 +2779,18 @@ class IslandScene {
       keyDirection = moonDirection;
       keyRadiance = moonLight.color * sunLight.intensity;
     } else {
+      final golden = goldenHourFactor(sunDirection.y);
+      final warmColor = vm.Vector3(
+        lighting.sunColor.x,
+        lighting.sunColor.y * (1.0 - 0.12 * golden) + 0.64 * (0.12 * golden),
+        lighting.sunColor.z * (1.0 - 0.28 * golden) + 0.24 * (0.28 * golden),
+      );
+      final warmBoost = 1.0 + 0.28 * golden;
+      sunLight
+        ..color = warmColor
+        ..intensity = lighting.sunIntensity * warmBoost;
       keyDirection = sunDirection;
-      keyRadiance = lighting.sunColor * lighting.sunIntensity;
+      keyRadiance = warmColor * sunLight.intensity;
     }
 
     // Rain clouds: a dimmer key light, almost no shafts, thicker grey haze.
@@ -2780,16 +2809,20 @@ class IslandScene {
     // Horizon haze follows the light: blue-grey by day, warm at golden hour,
     // navy at night. The sky-colour influence does most of the work; this is
     // the fallback where the environment is dark.
-    final warm = (1.0 - (sunDirection.y / 0.45).clamp(0.0, 1.0)) * (1.0 - night);
+    final golden = goldenHourFactor(sunDirection.y) * (1.0 - night);
+    final warm = math.max(
+      (1.0 - (sunDirection.y / 0.45).clamp(0.0, 1.0)) * (1.0 - night),
+      golden,
+    );
     final clearFog = vm.Vector3(0.52, 0.62, 0.74) * (1.0 - night) * (1.0 - warm) +
-        vm.Vector3(0.85, 0.55, 0.36) * warm +
+        vm.Vector3(0.88, 0.56, 0.34) * warm +
         vm.Vector3(0.02, 0.035, 0.07) * night;
     final rainFog = vm.Vector3(0.36, 0.39, 0.43) * (1.0 - night) +
         vm.Vector3(0.02, 0.025, 0.035) * night;
     scene.fog
       ..color = clearFog * (1.0 - rain) + rainFog * rain
       ..density = 0.003 + 0.013 * rain
-      ..sunInScatter = 0.3 * (1.0 - rain);
+      ..sunInScatter = (0.3 + 0.18 * golden) * (1.0 - rain);
 
     _superRig.applyLighting(
       sunDirection: sunDirection,
@@ -2856,6 +2889,9 @@ class IslandScene {
 
   // ------------------------------------------------------------------ utils
 
+  final Map<UnlitMaterial, PhysicallyBasedMaterial> _relitUnlitCache =
+      <UnlitMaterial, PhysicallyBasedMaterial>{};
+
   /// Rewrites imported materials so they respond to the sun.
   ///
   /// Two problems, both silent: Kenney's glTF exports declare `metallic 1 /
@@ -2871,11 +2907,14 @@ class IslandScene {
           material.metallicFactor = 0.0;
           material.roughnessFactor = math.max(material.roughnessFactor, 0.75);
         } else if (material is UnlitMaterial) {
-          primitive.material = PhysicallyBasedMaterial()
-            ..baseColorTexture = material.baseColorTexture
-            ..baseColorFactor = material.baseColorFactor
-            ..metallicFactor = 0.0
-            ..roughnessFactor = 0.85;
+          primitive.material = _relitUnlitCache.putIfAbsent(
+            material,
+            () => PhysicallyBasedMaterial()
+              ..baseColorTexture = material.baseColorTexture
+              ..baseColorFactor = material.baseColorFactor
+              ..metallicFactor = 0.0
+              ..roughnessFactor = 0.85,
+          );
         }
       }
     }

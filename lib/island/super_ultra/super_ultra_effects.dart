@@ -250,6 +250,12 @@ enum SuperUltraEffect {
     'Campfire VFX',
     'Flame, ember, spark and smoke particles, coal bed, heat haze',
     SuperUltraEffectGroup.scene,
+  ),
+  decals(
+    'Ground decals',
+    'Projected scorch ring under the campfire and footprints behind the player '
+        '(reads scene depth)',
+    SuperUltraEffectGroup.scene,
   );
 
   const SuperUltraEffect(this.label, this.cost, this.group);

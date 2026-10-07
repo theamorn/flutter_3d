@@ -30,7 +30,7 @@ class TreeSway {
 
   final List<PreprocessedMaterial> _pool;
   final Map<Material, PreprocessedMaterial> _byOriginal = {};
-  final MaterialBindingPolicy<Node, Mesh> _meshes = MaterialBindingPolicy();
+  final MaterialBindingPolicy<Node, (Mesh, bool)> _meshes = MaterialBindingPolicy();
   final Map<Node, (List<InstancedMeshComponent>, List<InstancedMeshComponent>, bool)> _batches = {};
 
   bool get isBound => _meshes.bound.isNotEmpty || _batches.isNotEmpty;
@@ -59,7 +59,9 @@ class TreeSway {
           ..visible = own.primitives[i].visible
           ..castsShadow = own.primitives[i].castsShadow,
     ]);
-    _meshes.bind(node, own);
+    // A displaced caster must not live in the cached static shadows.
+    _meshes.bind(node, (own, node.shadowStatic));
+    node.shadowStatic = false;
   }
 
   void _bindBatches(Node node, TreeSwayStyle? Function(Material) styleFor) {
@@ -122,8 +124,9 @@ class TreeSway {
 
   /// Every tree back in its own material, every batch rebuilt as it was.
   void release() {
-    for (final (node, own) in _meshes.releaseAll()) {
+    for (final (node, (own, wasStatic)) in _meshes.releaseAll()) {
       if (!identical(node.mesh, own)) node.mesh = own;
+      node.shadowStatic = wasStatic;
     }
     _batches.forEach((node, entry) {
       final (removed, added, wasStatic) = entry;

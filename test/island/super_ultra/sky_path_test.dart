@@ -59,4 +59,10 @@ void main() {
     expect(moonIsKeyLight(0.2), isFalse);
     expect(moonIsKeyLight(0.8), isTrue);
   });
+
+  test('goldenHourFactor peaks at low sun elevation and vanishes at noon/night', () {
+    expect(goldenHourFactor(-0.15), 0.0);
+    expect(goldenHourFactor(0.10), closeTo(1.0, 1e-5));
+    expect(goldenHourFactor(0.35), 0.0);
+  });
 }

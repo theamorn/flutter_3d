@@ -61,3 +61,19 @@ double elevationOf(vm.Vector3 direction) {
   }
   return math.asin((direction.y / length).clamp(-1.0, 1.0));
 }
+
+/// Smooth 0..1 weight for the low-sun golden-hour band.
+///
+/// In Super Ultra the sun peaks near sin(22°) ≈ 0.375 at noon, and sets
+/// across y ≈ 0.0. This rises as the sun drops below y = 0.28, peaks around
+/// y = 0.06..0.14, and fades out after sunset (y < -0.04).
+double goldenHourFactor(double sunElevationY) {
+  final rise = _smoothstep(-0.04, 0.07, sunElevationY);
+  final fall = 1.0 - _smoothstep(0.14, 0.29, sunElevationY);
+  return (rise * fall).clamp(0.0, 1.0);
+}
+
+double _smoothstep(double edge0, double edge1, double x) {
+  final t = ((x - edge0) / (edge1 - edge0)).clamp(0.0, 1.0);
+  return t * t * (3.0 - 2.0 * t);
+}

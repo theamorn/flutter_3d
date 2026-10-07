@@ -64,30 +64,30 @@ class SuperUltraFire {
           ColorOverLifeModule(
             GradientColor(
               ColorGradient(<ColorStop>[
-                ColorStop(0.0, vm.Vector4(3.6, 2.5, 1.2, 0.0)),
-                ColorStop(0.08, vm.Vector4(3.4, 2.0, 0.75, 1.0)),
-                ColorStop(0.4, vm.Vector4(2.6, 1.05, 0.22, 0.95)),
-                ColorStop(0.75, vm.Vector4(1.2, 0.3, 0.05, 0.6)),
-                ColorStop(1.0, vm.Vector4(0.25, 0.04, 0.01, 0.0)),
+                ColorStop(0.0, vm.Vector4(3.8, 3.1, 2.0, 0.0)),
+                ColorStop(0.08, vm.Vector4(3.6, 2.5, 1.35, 1.0)),
+                ColorStop(0.38, vm.Vector4(2.9, 1.35, 0.36, 0.96)),
+                ColorStop(0.74, vm.Vector4(1.4, 0.34, 0.06, 0.64)),
+                ColorStop(1.0, vm.Vector4(0.28, 0.04, 0.01, 0.0)),
               ]),
             ),
           ),
           SizeOverLifeModule(
             CurveFloat(
               ParticleCurve(<ParticleKeyframe>[
-                ParticleKeyframe(0.0, 0.7),
-                ParticleKeyframe(0.35, 1.05),
-                ParticleKeyframe(1.0, 0.8),
+                ParticleKeyframe(0.0, 0.72),
+                ParticleKeyframe(0.32, 1.08),
+                ParticleKeyframe(1.0, 0.78),
               ]),
             ),
           ),
         ],
         lifetime: const UniformFloat(0.55, 0.95),
-        startSpeed: const UniformFloat(0.45, 0.9),
-        startSize: const UniformFloat(0.34, 0.54),
+        startSpeed: const UniformFloat(0.48, 0.95),
+        startSize: const UniformFloat(0.35, 0.56),
         startRotation: const UniformFloat(-0.25, 0.25),
         startAngularVelocity: const UniformFloat(-0.6, 0.6),
-        gravity: vm.Vector3(0, 1.0, 0),
+        gravity: vm.Vector3(0, 1.08, 0),
         prewarm: 1.0,
         seed: 3,
       ),
@@ -112,9 +112,9 @@ class SuperUltraFire {
           ColorOverLifeModule(
             GradientColor(
               ColorGradient(<ColorStop>[
-                ColorStop(0.0, vm.Vector4(2.8, 1.3, 0.35, 0.0)),
-                ColorStop(0.3, vm.Vector4(2.8, 1.3, 0.35, 0.4)),
-                ColorStop(1.0, vm.Vector4(1.6, 0.5, 0.1, 0.0)),
+                ColorStop(0.0, vm.Vector4(3.1, 1.5, 0.42, 0.0)),
+                ColorStop(0.3, vm.Vector4(3.1, 1.5, 0.42, 0.42)),
+                ColorStop(1.0, vm.Vector4(1.7, 0.55, 0.12, 0.0)),
               ]),
             ),
           ),
@@ -136,21 +136,21 @@ class SuperUltraFire {
       system: ParticleSystem(
         maxParticles: 70,
         shape: const ConeEmitterShape(angle: 0.45, radius: 0.18),
-        spawner: Spawner(rate: 22),
+        spawner: Spawner(rate: 24),
         modules: <ParticleModule>[
           TurbulenceModule(
-            strength: 2.6,
-            frequency: 0.9,
-            scroll: vm.Vector3(0, 0.8, 0),
+            strength: 2.8,
+            frequency: 0.95,
+            scroll: vm.Vector3(0, 0.85, 0),
             seed: 73,
           ),
-          LinearDragModule(0.6),
+          LinearDragModule(0.58),
           ColorOverLifeModule(
             GradientColor(
               ColorGradient(<ColorStop>[
-                ColorStop(0.0, vm.Vector4(6.0, 2.6, 0.7, 1.0)),
-                ColorStop(0.45, vm.Vector4(4.0, 1.2, 0.2, 0.9)),
-                ColorStop(1.0, vm.Vector4(1.0, 0.15, 0.02, 0.0)),
+                ColorStop(0.0, vm.Vector4(6.8, 3.4, 1.0, 1.0)),
+                ColorStop(0.45, vm.Vector4(4.4, 1.35, 0.22, 0.92)),
+                ColorStop(1.0, vm.Vector4(1.1, 0.16, 0.02, 0.0)),
               ]),
             ),
           ),
@@ -159,9 +159,9 @@ class SuperUltraFire {
           ),
         ],
         lifetime: const UniformFloat(1.4, 2.8),
-        startSpeed: const UniformFloat(1.1, 2.3),
-        startSize: const UniformFloat(0.022, 0.042),
-        gravity: vm.Vector3(0, 0.55, 0),
+        startSpeed: const UniformFloat(1.15, 2.4),
+        startSize: const UniformFloat(0.024, 0.044),
+        gravity: vm.Vector3(0, 0.58, 0),
         prewarm: 2.0,
         seed: 7,
       ),
@@ -169,7 +169,7 @@ class SuperUltraFire {
         ..blendMode = SpriteBlendMode.additive,
       configure: (emitter) => emitter
         ..facing = BillboardFacing.velocityStretched
-        ..velocityStretch = 0.035,
+        ..velocityStretch = 0.042,
     );
 
     _sparks = _emitter(
@@ -189,16 +189,16 @@ class SuperUltraFire {
           ColorOverLifeModule(
             GradientColor(
               ColorGradient(<ColorStop>[
-                ColorStop(0.0, vm.Vector4(8.0, 5.0, 1.6, 1.0)),
-                ColorStop(0.5, vm.Vector4(5.0, 1.8, 0.3, 0.9)),
-                ColorStop(1.0, vm.Vector4(1.5, 0.2, 0.02, 0.0)),
+                ColorStop(0.0, vm.Vector4(8.5, 5.6, 2.0, 1.0)),
+                ColorStop(0.5, vm.Vector4(5.4, 2.0, 0.35, 0.92)),
+                ColorStop(1.0, vm.Vector4(1.6, 0.22, 0.02, 0.0)),
               ]),
             ),
           ),
         ],
         lifetime: const UniformFloat(0.35, 0.75),
         startSpeed: const UniformFloat(2.4, 4.6),
-        startSize: const UniformFloat(0.018, 0.03),
+        startSize: const UniformFloat(0.019, 0.032),
         gravity: vm.Vector3(0, -3.2, 0),
         duration: 6.2,
         seed: 11,
@@ -207,7 +207,7 @@ class SuperUltraFire {
         ..blendMode = SpriteBlendMode.additive,
       configure: (emitter) => emitter
         ..facing = BillboardFacing.velocityStretched
-        ..velocityStretch = 0.06,
+        ..velocityStretch = 0.065,
     );
 
     _smoke = _emitter(
@@ -234,9 +234,9 @@ class SuperUltraFire {
           ColorOverLifeModule(
             GradientColor(
               ColorGradient(<ColorStop>[
-                ColorStop(0.0, vm.Vector4(0.62, 0.38, 0.22, 0.0)),
-                ColorStop(0.12, vm.Vector4(0.44, 0.38, 0.34, 0.34)),
-                ColorStop(0.55, vm.Vector4(0.34, 0.34, 0.36, 0.2)),
+                ColorStop(0.0, vm.Vector4(0.68, 0.42, 0.24, 0.0)),
+                ColorStop(0.12, vm.Vector4(0.46, 0.39, 0.34, 0.36)),
+                ColorStop(0.55, vm.Vector4(0.34, 0.34, 0.36, 0.22)),
                 ColorStop(1.0, vm.Vector4(0.3, 0.3, 0.33, 0.0)),
               ]),
             ),
@@ -273,6 +273,7 @@ class SuperUltraFire {
       ),
     )
       ..position = base + vm.Vector3(0, 0.012, 0)
+      ..layers = _noReflectLayer
       ..shadowCastingMode = ShadowCastingMode.off;
     root.add(emberBed);
 
@@ -281,6 +282,7 @@ class SuperUltraFire {
       mesh: Mesh(_hazeQuad(width: 1.1, height: 1.9), hazeMaterial),
     )
       ..position = base + vm.Vector3(0, 0.45, 0)
+      ..layers = _noReflectLayer
       ..shadowCastingMode = ShadowCastingMode.off;
     root.add(_hazeNode);
 
@@ -298,6 +300,7 @@ class SuperUltraFire {
   }
 
   static const double _bedRadius = 0.46;
+  static const int _noReflectLayer = 1 << 1;
 
   final Node root;
   final vm.Vector2 _bedCentre;
