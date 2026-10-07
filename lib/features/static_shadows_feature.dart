@@ -1,16 +1,20 @@
 import 'package:flutter_scene/scene.dart';
 import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
+import 'wind_feature.dart' show kBalconyFlagName;
 
 /// Room nodes that move while mounted, with everything under them: they stay
 /// dynamic shadow casters. The door leaf moves to the scene root once the
-/// door feature mounts, but is listed in case it has not yet.
+/// door feature mounts, but is listed in case it has not yet. The wind
+/// feature's balcony flag waves in its vertex stage, which a cached shadow
+/// would not follow.
 const Set<String> kShadowMovers = {
   'door_connect',
   'curtain_left',
   'curtain_right',
   'faucet_lever',
   'bath_switch_rocker',
+  kBalconyFlagName,
 };
 
 /// Marks [root]'s subtree as static shadow casters, skipping [movers] and

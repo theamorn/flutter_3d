@@ -30,6 +30,16 @@ Node named(Node n, String name) {
 }
 
 void main() {
+  test('a balcony flag, waved by its vertex stage, never joins the static shadow cache', () {
+    final room = Node(name: 'room')
+      ..add(Node(name: 'balcony_flag')..add(Node(name: 'balcony_flag_flag')))
+      ..add(Node(name: 'wall'));
+    final marked = markStaticShadows(room);
+    expect(marked.map((n) => n.name), containsAll(['room', 'wall']));
+    expect(marked.map((n) => n.name), isNot(contains('balcony_flag')));
+    expect(marked.map((n) => n.name), isNot(contains('balcony_flag_flag')));
+  });
+
   test('everything static is marked; movers and their subtrees stay dynamic', () {
     final root = tree();
     final marked = markStaticShadows(root);

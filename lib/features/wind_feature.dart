@@ -10,6 +10,9 @@ import '../render/tree_sway.dart';
 import '../render/wind.dart';
 import 'occlusion_feature.dart' show roomContentsRoot;
 
+/// The balcony flagpoles' node name (static shadows leave them dynamic).
+const String kBalconyFlagName = 'balcony_flag';
+
 /// Each balcony flag's foot, in room A space: by the rail, just left of the
 /// window, so the flag flies across the view from inside the room. (The
 /// rooms are 90 m above the beach, where a flag would be a speck.)
@@ -41,7 +44,7 @@ class WindFeature extends HotelFeature {
   Future<void> mount(HotelContext ctx) async {
     for (final id in RoomId.values) {
       if (_flags[id] == null) {
-        _flags[id] = await Flagpole.build(name: 'balcony_flag', poleHeight: 2.3, flagLength: 1.2);
+        _flags[id] = await Flagpole.build(name: kBalconyFlagName, poleHeight: 2.3, flagLength: 1.2);
       }
       _flags[id]!.root.position = kBalconyFlagFoot;
     }
