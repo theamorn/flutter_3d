@@ -280,13 +280,15 @@ class IslandScene {
 
   /// How each imported tree material sways in the wind: palms bend more and
   /// their fronds flutter; bark bends with the tree but does not flutter.
+  /// Bend and flutter are world metres, so they grow with [_treeScale].
   TreeSwayStyle? _treeSway(Material material) {
     final palm = _treeHeight('palm'), pine = _treeHeight('pine');
+    const s = _treeScale;
     return switch (material.name) {
-      'leafsGreen' => TreeSwayStyle(height: palm, bend: 0.35, flutter: 0.05),
-      'woodBark' => TreeSwayStyle(height: palm, bend: 0.35),
-      'leafsDark' => TreeSwayStyle(height: pine, bend: 0.18, flutter: 0.025),
-      'woodBarkDark' => TreeSwayStyle(height: pine, bend: 0.18),
+      'leafsGreen' => TreeSwayStyle(height: palm, bend: 0.35 * s, flutter: 0.05 * s),
+      'woodBark' => TreeSwayStyle(height: palm, bend: 0.35 * s),
+      'leafsDark' => TreeSwayStyle(height: pine, bend: 0.18 * s, flutter: 0.025 * s),
+      'woodBarkDark' => TreeSwayStyle(height: pine, bend: 0.18 * s),
       _ => null,
     };
   }
@@ -382,7 +384,7 @@ class IslandScene {
         await _superRig.ensureRain(
           props: <RainProp>[
             for (final placement in _normalPlacements)
-              RainProp(placement.kind, placement.x, placement.z, placement.scale),
+              RainProp(placement.kind, placement.x, placement.z, placement.size),
             ..._scatterRainProps,
             ..._coverRainProps,
           ],
@@ -986,11 +988,23 @@ class IslandScene {
       isSuperUltra && _superRig.isBuilt ? _superRig.skyEnvironment : null;
 
   void _applyCampfireShadow() {
-    campfireLight.castsShadow = campfireCastsShadow(
+    final casts = campfireCastsShadow(
       ultraOrAbove: isUltraMode,
       effectOn: isEffectOn(SuperUltraEffect.fireShadows),
+      godRaysOn: _godRaysOn,
     );
+    if (campfireLight.castsShadow != casts) {
+      campfireLight.castsShadow = casts;
+    }
   }
+
+  /// God rays are Super Ultra's by day. At night the campfire's shadow
+  /// takes the atlas instead (see [campfireCastsShadow]): it matters more
+  /// than faint moon shafts.
+  bool get _godRaysOn =>
+      isSuperUltra &&
+      isEffectOn(SuperUltraEffect.godRays) &&
+      !moonIsKeyLight(nightBlend);
 
   void _applyEnvironmentSettings() {
     // The first call (from [_buildEnvironment]) runs before the campfire
@@ -1124,10 +1138,11 @@ class IslandScene {
       fogSunInScatterExponent: 12.0,
       godRaysEnabled: true,
       godRaysIntensity: 0.8,
-      godRaysDensity: 0.18,
-      godRaysAnisotropy: 0.78,
+      godRaysDensity: 0.15,
+      godRaysAnisotropy: 0.75,
       godRaysStepCount: 24,
-      godRaysMaxDistance: 60.0,
+      // Refitted every frame by _fitGodRaysMarch.
+      godRaysMaxDistance: 43.0,
     );
     _applyEffectsMenu();
   }
@@ -1687,11 +1702,13 @@ class IslandScene {
     );
   }
 
-  /// Rotates the over-the-shoulder camera around the character by dragging.
+  /// Rotates the over-the-shoulder camera around the character by dragging:
+  /// sideways turns it, up and down tilts the view (up to about 55 degrees
+  /// above level, to look up through the treetops at the sun).
   void rotateOtsCamera(double deltaX, double deltaY) {
     if (_cameraMode != IslandCameraMode.overTheShoulder) return;
     _otsOrbitAngle -= deltaX * 0.007;
-    _otsPitch = (_otsPitch - deltaY * 0.005).clamp(-0.25, 0.55);
+    _otsPitch = (_otsPitch - deltaY * 0.005).clamp(-0.45, 1.05);
   }
 
   // ------------------------------------------------------------------ props
@@ -1780,17 +1797,17 @@ class IslandScene {
         placement.yaw,
       )
       // Uniform only: a non-uniform scale silently breaks lighting.
-      ..scale = vm.Vector3.all(placement.scale);
+      ..scale = vm.Vector3.all(placement.size);
     instance.shadowStatic = true;
     scene.add(instance);
 
     final (heightOffset, radius) = switch (placement.kind) {
-      'palm' => (1.8 * placement.scale, 2.6 * placement.scale),
-      'pine' => (1.4 * placement.scale, 2.2 * placement.scale),
-      'rockLarge' => (0.6 * placement.scale, 1.8 * placement.scale),
-      'rockSmall' => (0.3 * placement.scale, 1.2 * placement.scale),
-      'campfire' => (0.35 * placement.scale, 1.3 * placement.scale),
-      _ => (0.5 * placement.scale, 1.4 * placement.scale),
+      'palm' => (1.8 * placement.size, 2.6 * placement.size),
+      'pine' => (1.4 * placement.size, 2.2 * placement.size),
+      'rockLarge' => (0.6 * placement.size, 1.8 * placement.size),
+      'rockSmall' => (0.3 * placement.size, 1.2 * placement.size),
+      'campfire' => (0.35 * placement.size, 1.3 * placement.size),
+      _ => (0.5 * placement.size, 1.4 * placement.size),
     };
 
     dest.add(_PropInstance(
@@ -1849,11 +1866,10 @@ class IslandScene {
       final point = points[i];
       final kind = _ultraScatterKinds[i % _ultraScatterKinds.length];
       final yaw = (i * 2.399) % (math.pi * 2.0);
-      final scale = 0.82 + (i % 5) * 0.06;
-      byKind.putIfAbsent(kind, () => <_Placement>[]).add(
-            _Placement(kind, point.x, point.y, yaw, scale),
-          );
-      _scatterRainProps.add(RainProp(kind, point.x, point.y, scale));
+      final placement =
+          _Placement(kind, point.x, point.y, yaw, 0.82 + (i % 5) * 0.06);
+      byKind.putIfAbsent(kind, () => <_Placement>[]).add(placement);
+      _scatterRainProps.add(RainProp(kind, point.x, point.y, placement.size));
       hulls.add(
         IslandObstacle(
           name: 'ultra_$i',
@@ -1862,6 +1878,7 @@ class IslandScene {
           radius: switch (kind) {
             'rockLarge' => 0.6,
             'rockSmall' => 0.4,
+            'palm' || 'pine' => 0.45,
             _ => 0.35,
           },
         ),
@@ -1879,11 +1896,11 @@ class IslandScene {
     for (final entry in byKind.entries) {
       for (final placement in entry.value) {
         final (heightOffset, radiusHull) = switch (placement.kind) {
-          'palm' => (1.8 * placement.scale, 2.6 * placement.scale),
-          'pine' => (1.4 * placement.scale, 2.2 * placement.scale),
-          'rockLarge' => (0.6 * placement.scale, 1.8 * placement.scale),
-          'rockSmall' => (0.3 * placement.scale, 1.2 * placement.scale),
-          _ => (0.5 * placement.scale, 1.4 * placement.scale),
+          'palm' => (1.8 * placement.size, 2.6 * placement.size),
+          'pine' => (1.4 * placement.size, 2.2 * placement.size),
+          'rockLarge' => (0.6 * placement.size, 1.8 * placement.size),
+          'rockSmall' => (0.3 * placement.size, 1.2 * placement.size),
+          _ => (0.5 * placement.size, 1.4 * placement.size),
         };
         _ultraProps.add(
           _PropInstance(
@@ -1920,7 +1937,7 @@ class IslandScene {
             placement.z,
           ),
           vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), placement.yaw),
-          vm.Vector3.all(placement.scale),
+          vm.Vector3.all(placement.size),
         )..multiply(primitive.local);
         batch.addInstance(model);
       }
@@ -2269,17 +2286,23 @@ class IslandScene {
           ..play();
       }
       wingbeats.add(wingbeat);
-      // The body sits about 2.25 units up and 0.2 back in the model; centre
-      // it on the bird's position so climb and bank pivot about it.
+      // The import turns the glTF's +Z-facing model to face -Z (the
+      // character gets the same half turn); turn it back so the beak leads
+      // along +Z, the way [FlockBirdMotion.attitude] flies it. The body
+      // sits about 2.25 units up and 0.2 back in the model; centre it on the
+      // bird's position so climb and bank pivot about it.
       final inner = Node(name: 'seagull_model_$i')
         ..scale = vm.Vector3.all(_birdScale)
+        ..rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), math.pi)
         ..position = vm.Vector3(0, -2.25 * _birdScale, 0.2 * _birdScale)
         ..add(model);
       nodes.add(Node(name: 'seagull_$i')..add(inner));
 
+      // Above the 4-5 m palms and pines, whose crowns reach past the rim
+      // the flock circles.
       final angle = i / _flockSize * math.pi * 2.0;
       final radius = 11.4 + (i % 3) * 0.7;
-      final height = 5.2 + (i % 4) * 0.45;
+      final height = 7.4 + (i % 4) * 0.45;
       final tangent = vm.Vector3(math.cos(angle), 0, -math.sin(angle));
       birds.add(
         FlockBirdMotion(
@@ -2291,6 +2314,8 @@ class IslandScene {
           velocity: tangent * 6.2,
           orbitRadius: radius,
           cruiseHeight: height,
+          minHeight: 6.2,
+          maxHeight: 10.5,
         ),
       );
     }
@@ -2661,10 +2686,23 @@ class IslandScene {
     _sitBallsOnWaves();
     _tickRain(deltaSeconds);
     _tickLightning();
+    if (isSuperUltra) {
+      _fitGodRaysMarch();
+    }
 
     if (_cameraMode == IslandCameraMode.overTheShoulder) {
       _cullOffscreenNodes(viewportSize ?? const ui.Size(393, 852));
     }
+  }
+
+  /// Ends the god-ray march at the island's far shore. A shaft is the share
+  /// of a pixel's march that lies in a tree's shadow; open air past the
+  /// island is lit everywhere, so marching it only thins the shafts into an
+  /// even glow around the sun.
+  void _fitGodRaysMarch() {
+    final eye = cameraNode.globalTransform.getTranslation();
+    scene.godRays.maxDistance =
+        math.sqrt(eye.x * eye.x + eye.z * eye.z) + IslandDimensions.topRadius;
   }
 
   /// Applies the day/night model's evaluated lighting, with two departures
@@ -2694,9 +2732,9 @@ class IslandScene {
   }
 
   /// Super Ultra's additions to [_applyLighting]: the visible moon, the moon
-  /// taking over the one shadow-casting light at night (moon shadows and
-  /// moonlit god rays), god-ray and fog tint following the key light, and
-  /// the light the self-shading materials need.
+  /// taking over the one shadow-casting light at night (moon shadows), god
+  /// rays by day and the campfire's shadow by night, fog tint following the
+  /// key light, and the light the self-shading materials need.
   void _applySuperUltraLighting(AtmosphericLighting lighting) {
     final night = nightBlend;
     final sunDirection = dayNight.sunDirection;
@@ -2733,8 +2771,12 @@ class IslandScene {
 
     final shaftColor = sunLight.color.clone();
     scene.godRays
+      ..enabled = _godRaysOn
       ..color = shaftColor
-      ..intensity = (moonIsKeyLight(night) ? 0.5 : 0.8) * (1.0 - 0.85 * rain);
+      ..intensity = 0.8 * (1.0 - 0.85 * rain);
+    if (_campfireBuilt) {
+      _applyCampfireShadow();
+    }
     // Horizon haze follows the light: blue-grey by day, warm at golden hour,
     // navy at night. The sky-colour influence does most of the work; this is
     // the fallback where the environment is dark.
@@ -2857,8 +2899,18 @@ class _Placement {
   final double x;
   final double z;
   final double yaw;
+
+  /// This instance's variation on its kind's size.
   final double scale;
+
+  /// The uniform scale the model is drawn at.
+  double get size => scale * (kind == 'palm' || kind == 'pine' ? _treeScale : 1.0);
 }
+
+/// The palm and pine models are 1.36 and 1.25 units tall. At this scale they
+/// stand 4-5 m over the 1 m character, so from the shoulder camera you look
+/// up through their crowns at the sun and its shafts.
+const double _treeScale = 3.6;
 
 class _Buoy {
   const _Buoy({

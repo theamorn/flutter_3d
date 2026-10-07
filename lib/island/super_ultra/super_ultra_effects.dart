@@ -181,7 +181,8 @@ enum SuperUltraEffect {
   ),
   fireShadows(
     'Campfire shadows',
-    'Point-light shadows: the casters draw again into six cube faces',
+    'Point-light shadows: the casters draw again into six cube faces '
+        '(at night; by day the god rays need the shadow atlas)',
     SuperUltraEffectGroup.lighting,
   ),
   stoneIndirect(

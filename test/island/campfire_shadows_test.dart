@@ -9,6 +9,13 @@ void main() {
     expect(campfireCastsShadow(ultraOrAbove: true, effectOn: false), isFalse);
   });
 
+  test('gives the shadow atlas to the god rays while they draw', () {
+    expect(
+      campfireCastsShadow(ultraOrAbove: true, effectOn: true, godRaysOn: true),
+      isFalse,
+    );
+  });
+
   test('fire shadows is a lighting effect in the menu', () {
     expect(SuperUltraEffect.fireShadows.group, SuperUltraEffectGroup.lighting);
   });

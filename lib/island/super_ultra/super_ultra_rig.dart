@@ -74,7 +74,11 @@ class SuperUltraRig {
   late final Node grassNode;
   late final SuperUltraFire fire;
   late final SuperUltraDecals decals;
+  /// The sky drawn on screen. [_lightingSky] is the same shader graded for
+  /// the lighting bake, so the visible sky can read clearer than the light
+  /// it gives.
   late final PreprocessedSky sky;
+  late final PreprocessedSky _lightingSky;
   late final Skybox skybox;
   late final SkyEnvironment skyEnvironment;
   late final IslandTerrain terrain;
@@ -151,9 +155,10 @@ class SuperUltraRig {
     _simpleSea = materials[5];
     stones = StoneLightingBinding(materials[6]);
     sky = await loadFmatSky('assets/materials/island_sky.fmat');
+    _lightingSky = await loadFmatSky('assets/materials/island_sky.fmat');
     skybox = Skybox(sky);
     skyEnvironment = SkyEnvironment(
-      sky,
+      _lightingSky,
       refresh: SkyEnvironmentRefresh.manual,
       faceResolution: 64,
       equirectWidth: 256,
@@ -447,19 +452,33 @@ class SuperUltraRig {
     }
     final sun = sunDirection.normalized();
     final moon = moonDirection.normalized();
-    sky.parameters
-      ..setVec4('sun_direction', vm.Vector4(sun.x, sun.y, sun.z, kSunDiscRadius))
-      ..setVec4(
-        'moon_direction',
-        vm.Vector4(moon.x, moon.y, moon.z, kMoonDiscRadius),
-      )
-      // Turbidity 3 rather than the physical sky's hazy 10: the camera looks
-      // toward a low sun here, and a hazy sky turns the whole upper frame
-      // into one white Mie glare with the sun lost inside it.
+    for (final target in [sky, _lightingSky]) {
+      target.parameters
+        ..setVec4('sun_direction', vm.Vector4(sun.x, sun.y, sun.z, kSunDiscRadius))
+        ..setVec4(
+          'moon_direction',
+          vm.Vector4(moon.x, moon.y, moon.z, kMoonDiscRadius),
+        );
+    }
+    // The light the island gets. Turbidity 3 rather than the physical sky's
+    // hazy 10; z of grade: how overcast (rain clouds hide the sun, moon and
+    // stars).
+    _lightingSky.parameters
       ..setVec4('sky_params', vm.Vector4(3.0, 0.72, 1.0, night))
       ..setVec4('mie', vm.Vector4(0.69, 0.73, 0.81, 0.004))
-      // z: how overcast (rain clouds hide the sun, moon and stars).
       ..setVec4('grade', vm.Vector4(0.5, 0.9, weather, 0.0));
+    // The sky you see, facing a sun that never climbs past about 22
+    // degrees. Its colour comes from 1 - extinction, which goes white in
+    // every channel along the long low paths around such a sun, so: a
+    // thinner, bluer Rayleigh layer that stays blue there; the haze glow
+    // pulled in close to the disk (eccentricity 0.85); and the glow held
+    // down by a harder knee and a lower exposure, so the disk stands clear
+    // of it instead of melting into one white sheet.
+    sky.parameters
+      ..setVec4('rayleigh', vm.Vector4(0.22, 0.41, 0.66, 1.0))
+      ..setVec4('sky_params', vm.Vector4(3.0, 0.85, 1.0, night))
+      ..setVec4('mie', vm.Vector4(0.69, 0.73, 0.81, 0.003))
+      ..setVec4('grade', vm.Vector4(0.4, 3.0, weather, 0.0));
 
     final key = keyDirection.normalized();
     _grass.parameters

@@ -391,7 +391,7 @@ Evidence: the sky region read exactly the Scaffold colour `(7, 19, 31)` in every
 
 **3. GLSL `pow()` with a negative base is NaN, and one NaN in a sky takes out the frame.** `pow(dot(dir, n) / 0.2, 2.0)` in the Milky Way band left the sky transparent. Through the IBL bake it also blew every lit surface out to white. Square it by hand.
 
-**4. Framed on a low sun, the physical sky model is a white sheet.** Its forward-scatter glow runs 4–50× the zenith radiance toward the sun (evaluated numerically for the exact parameters). The Super Ultra sky compresses daylight luminance above a knee at 1, multiplies the daylight sky (not the sun disk) by 0.5, and uses turbidity 3.
+**4. Framed on a low sun, the physical sky model is a white sheet.** Its forward-scatter glow runs 4–50× the zenith radiance toward the sun (evaluated numerically for the exact parameters). The Super Ultra sky compresses daylight luminance above a knee at 1, multiplies the daylight sky (not the sun disk) by 0.5, and uses turbidity 3. That still reads as a white sheet around a sun held near 22°: the shader's colour comes from `1 − extinction`, which saturates in every channel along those long low paths. So the sky on screen is a second instance of the same shader with its own grade (Rayleigh coefficient 1.0 with a bluer tint, Mie eccentricity 0.85, knee 3, exposure 0.4), while the instance that bakes the island's lighting keeps the values above.
 
 **5. Stars need pixel-sized falloff and a window inside their cell.** Sized in `1 - cos` units, a star wider than its hash cell is clipped square by the cell edge. The water's reflection then stretches those squares into streaks.
 

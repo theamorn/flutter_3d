@@ -27,12 +27,12 @@ class IslandObstacle {
   /// Default obstacle layout matching the fixed prop placements in `island_scene.dart`.
   static List<IslandObstacle> defaultObstacles() {
     return const <IslandObstacle>[
-      IslandObstacle(name: 'palm_1', x: 6.15, z: -3.75, radius: 0.35),
-      IslandObstacle(name: 'palm_2', x: -6.75, z: 2.55, radius: 0.35),
-      IslandObstacle(name: 'palm_3', x: 1.35, z: -7.35, radius: 0.35),
-      IslandObstacle(name: 'pine_1', x: -4.65, z: -5.85, radius: 0.35),
-      IslandObstacle(name: 'pine_2', x: -1.65, z: -7.65, radius: 0.35),
-      IslandObstacle(name: 'pine_3', x: 7.05, z: 4.05, radius: 0.35),
+      IslandObstacle(name: 'palm_1', x: 6.15, z: -3.75, radius: 0.45),
+      IslandObstacle(name: 'palm_2', x: -6.75, z: 2.55, radius: 0.45),
+      IslandObstacle(name: 'palm_3', x: 1.35, z: -7.35, radius: 0.45),
+      IslandObstacle(name: 'pine_1', x: -4.65, z: -5.85, radius: 0.45),
+      IslandObstacle(name: 'pine_2', x: -1.65, z: -7.65, radius: 0.45),
+      IslandObstacle(name: 'pine_3', x: 7.05, z: 4.05, radius: 0.45),
       IslandObstacle(name: 'rock_large_1', x: 3.3, z: 5.85, radius: 0.65),
       IslandObstacle(name: 'rock_large_2', x: -7.8, z: -1.05, radius: 0.55),
       IslandObstacle(name: 'rock_small_1', x: 5.25, z: 1.65, radius: 0.40),
@@ -49,12 +49,12 @@ class IslandObstacle {
   /// Extra Ultra-only trunks and rocks on the outer ring of the larger island.
   static List<IslandObstacle> ultraObstacles() {
     return const <IslandObstacle>[
-      IslandObstacle(name: 'ultra_palm_1', x: 8.2, z: 2.4, radius: 0.35),
-      IslandObstacle(name: 'ultra_palm_2', x: -8.0, z: -3.2, radius: 0.35),
-      IslandObstacle(name: 'ultra_palm_3', x: 3.8, z: 8.1, radius: 0.35),
-      IslandObstacle(name: 'ultra_pine_1', x: -3.2, z: 7.8, radius: 0.35),
-      IslandObstacle(name: 'ultra_pine_2', x: 7.6, z: -5.4, radius: 0.35),
-      IslandObstacle(name: 'ultra_pine_3', x: -7.4, z: 6.2, radius: 0.35),
+      IslandObstacle(name: 'ultra_palm_1', x: 8.2, z: 2.4, radius: 0.45),
+      IslandObstacle(name: 'ultra_palm_2', x: -8.0, z: -3.2, radius: 0.45),
+      IslandObstacle(name: 'ultra_palm_3', x: 3.8, z: 8.1, radius: 0.45),
+      IslandObstacle(name: 'ultra_pine_1', x: -3.2, z: 7.8, radius: 0.45),
+      IslandObstacle(name: 'ultra_pine_2', x: 7.6, z: -5.4, radius: 0.45),
+      IslandObstacle(name: 'ultra_pine_3', x: -7.4, z: 6.2, radius: 0.45),
       IslandObstacle(name: 'ultra_rock_large_1', x: 0.8, z: 7.4, radius: 0.65),
       IslandObstacle(name: 'ultra_rock_large_2', x: -5.6, z: -7.0, radius: 0.55),
       IslandObstacle(name: 'ultra_rock_small_1', x: 6.4, z: 6.6, radius: 0.40),

@@ -15,5 +15,14 @@ const int kCampfireShadowResolution = 512;
 /// just outside the flame.
 const double kCampfireShadowNear = 0.1;
 
-bool campfireCastsShadow({required bool ultraOrAbove, required bool effectOn}) =>
-    ultraOrAbove && effectOn;
+/// Whether the campfire casts its point-light shadow. Never while
+/// [godRaysOn]: flutter_scene 0.24's god-ray pass reads the shared shadow
+/// atlas as if it held only the sun's cascades, so the fire's two cube tiles
+/// shift every lookup it makes and the march finds sunlight everywhere (a
+/// flat glow around the sun, no shafts).
+bool campfireCastsShadow({
+  required bool ultraOrAbove,
+  required bool effectOn,
+  bool godRaysOn = false,
+}) =>
+    ultraOrAbove && effectOn && !godRaysOn;
