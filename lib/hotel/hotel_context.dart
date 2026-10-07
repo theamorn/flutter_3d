@@ -7,6 +7,7 @@ import '../features/placeholder_rooms.dart' show BeddingMaterialTarget;
 import '../math/mirror_capture_layout.dart';
 import '../render/shadow_channels.dart' show kFixtureExcludedCasterMask;
 import '../render/shockwave_pool.dart';
+import '../render/wind.dart';
 import '../math/colliders.dart';
 import '../math/floor_plan.dart';
 import 'look.dart';
@@ -55,6 +56,10 @@ class HotelContext {
   /// feature that captures them. Occlusion culling keeps what an unhidden
   /// mirror reflects drawn, as it does for the engine's planar reflectors.
   final ReflectionCaptureRegistry<Plane> reflectionCaptures = ReflectionCaptureRegistry<Plane>();
+
+  /// The beach wind while the wind feature is on (null: still air). The
+  /// rain on the windows slants with it and the falling rain drifts.
+  Wind? wind;
 
   /// Screen ripples from lightning strikes; on while the lightning-ripple
   /// feature is mounted. The lightning feature fills and drives the pool.

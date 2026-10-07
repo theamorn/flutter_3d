@@ -25,6 +25,12 @@ void main() {
     expect(presetIds(Preset.medium), isNot(contains('lightning_ripple')));
   });
 
+  test('the beach wind (flag, swaying palms, slanted rain) comes from High up', () {
+    expect(presetIds(Preset.high), contains('wind'));
+    expect(presetIds(Preset.ultra), contains('wind'));
+    expect(presetIds(Preset.medium), isNot(contains('wind')));
+  });
+
   test('cloth lighting hooks are an ultra feature, standard bedding below', () {
     expect(presetIds(Preset.ultra), contains('cloth_lighting'));
     expect(presetIds(Preset.high), isNot(contains('cloth_lighting')));

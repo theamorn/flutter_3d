@@ -26,6 +26,7 @@ import 'package:flutter_3d/island/xray.dart';
 import 'package:flutter_3d/render/prewarm.dart';
 import 'package:flutter_3d/render/shockwave_apply.dart';
 import 'package:flutter_3d/render/shockwave_pool.dart';
+import 'package:flutter_3d/render/tree_sway.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 /// Fixed dimensions of the island. The walkable disc and the visible grass cap
@@ -275,6 +276,33 @@ class IslandScene {
   void setStorm(bool on) {
     _stormWanted = on;
     _superRig.lightning?.enabled = on;
+  }
+
+  /// How each imported tree material sways in the wind: palms bend more and
+  /// their fronds flutter; bark bends with the tree but does not flutter.
+  TreeSwayStyle? _treeSway(Material material) {
+    final palm = _treeHeight('palm'), pine = _treeHeight('pine');
+    return switch (material.name) {
+      'leafsGreen' => TreeSwayStyle(height: palm, bend: 0.35, flutter: 0.05),
+      'woodBark' => TreeSwayStyle(height: palm, bend: 0.35),
+      'leafsDark' => TreeSwayStyle(height: pine, bend: 0.18, flutter: 0.025),
+      'woodBarkDark' => TreeSwayStyle(height: pine, bend: 0.18),
+      _ => null,
+    };
+  }
+
+  /// The top of the [kind] prop's meshes, in their own units.
+  double _treeHeight(String kind) {
+    var top = 0.0;
+    void visit(Node n) {
+      final bounds = n.mesh?.localBounds;
+      if (bounds != null && bounds.max.y > top) top = bounds.max.y;
+      n.children.forEach(visit);
+    }
+
+    final source = _propSources?[kind];
+    if (source != null) visit(source);
+    return top > 0 ? top : 3.0;
   }
 
   /// A short screen ripple per lightning strike in view (Super Ultra's
@@ -908,9 +936,10 @@ class IslandScene {
       }
     } else {
       _superRig.unmount();
-      // The firepit stones go back to the imported material.
+      // The firepit stones and the trees go back to the imported materials.
       if (_superRig.isBuilt) {
         _superRig.stones.release();
+        _superRig.trees.release();
       }
       // Rain stops with the mode, dry, so coming back does not replay a
       // shower frozen mid-air.
@@ -1247,6 +1276,16 @@ class IslandScene {
         ..grassFullDensity = off(SuperUltraEffect.grassThinning);
       rig.fire.setCoreGlow(
           off(SuperUltraEffect.glowCard) ? CoreGlowMode.sprite : CoreGlowMode.card);
+      final windOn = !off(SuperUltraEffect.wind);
+      mount(rig.flag.root, windOn);
+      if (windOn) {
+        rig.trees.bind([
+          for (final prop in _props) prop.node,
+          ?_ultraScatterRoot,
+        ], _treeSway);
+      } else {
+        rig.trees.release();
+      }
       if (off(SuperUltraEffect.stoneIndirect)) {
         rig.stones.release();
       } else {

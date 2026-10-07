@@ -1,6 +1,12 @@
 import 'package:flutter_scene/scene.dart';
+import 'package:vector_math/vector_math.dart';
 import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
+import '../render/wind.dart';
+
+/// The world direction in which the window panes' u grows: +X in both rooms
+/// (room B's builder flips its u back; see `QuadPart` in placeholder_rooms).
+final Vector3 kWindowPaneUAxis = Vector3(1, 0, 0);
 
 /// At or below this weather the panes keep their own glass material.
 const double kRainGlassMinWeather = 0.001;
@@ -66,9 +72,12 @@ class RainGlassFeature extends HotelFeature {
     // mount after this feature.
     if (_ownMesh.isEmpty) _wear(ctx, rain);
     _clock = advanceRainGlassClock(_clock, dt);
+    final wind = ctx.wind;
     rain.parameters
       ..setFloat('time', _clock)
-      ..setFloat('wetness', weather);
+      ..setFloat('wetness', weather)
+      // With the beach wind on, the drops run sideways as they slide down.
+      ..setFloat('wind_skew', wind == null ? 0 : rainGlassSkew(wind, uAxis: kWindowPaneUAxis));
   }
 
   void _wear(HotelContext ctx, Material rain) {

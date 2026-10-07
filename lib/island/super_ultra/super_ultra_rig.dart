@@ -24,6 +24,9 @@ import 'package:flutter_3d/island/super_ultra/super_ultra_decals.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_fire.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_rain.dart';
 import 'package:flutter_3d/island/water_bump.dart';
+import 'package:flutter_3d/render/flagpole.dart';
+import 'package:flutter_3d/render/tree_sway.dart';
+import 'package:flutter_3d/render/wind.dart';
 import 'package:flutter_scene/gpu.dart' show SamplerAddressMode;
 import 'package:flutter_scene/kit.dart';
 import 'package:flutter_scene/scene.dart';
@@ -87,6 +90,14 @@ class SuperUltraRig {
 
   /// The comparison: every tuft at every tier.
   bool grassFullDensity = false;
+
+  /// A flag in the shared wind, on the north edge of the flat top. The
+  /// island mounts it with the Wind effect.
+  late final Flagpole flag;
+
+  /// The palms' and pines' sway materials (palm leaves and bark, pine leaves
+  /// and bark); the island binds them with the Wind effect.
+  late final TreeSway trees;
 
   /// The firepit stones' custom-indirect material and its binding. The
   /// island binds it to the placed campfire while Super Ultra shows it.
@@ -203,6 +214,9 @@ class SuperUltraRig {
           sampler: groundMasks.sampledSampler);
 
     terrain = IslandTerrain(seed: 5, seaLevel: seaY);
+    flag = await Flagpole.build(name: 'su_flag');
+    flag.root.position = vm.Vector3(-1.0, terrain.height(-1.0, 8.6), 8.6);
+    trees = await TreeSway.load(4);
     final terrainData = await terrainFuture;
     terrainNode = Node(
       name: 'su_terrain',
@@ -487,11 +501,13 @@ class SuperUltraRig {
     _simpleSea.parameters.setFloat('time', oceanTime);
     _ground.parameters.setFloat('time', _time);
     final player = playerPosition();
-    final gust = 1.0 + 1.3 * weather;
     _grass.parameters
       ..setFloat('time', _time)
       ..setVec4('player', vm.Vector4(player.x, player.y, player.z, 0.85))
-      ..setVec4('wind', vm.Vector4(0.16 * gust, 0.07 * gust, 1.0 + 0.6 * weather, 0.0));
+      ..setVec4('wind', grassWindVector(weather));
+    final wind = windFor(weather: weather, time: _time);
+    flag.apply(wind);
+    trees.apply(wind);
     fire.update(intensity: campfireIntensity(), time: _time);
     sky.parameters.setVec4('extras', vm.Vector4(_time, 2.2, 1.0, 1.0));
   }

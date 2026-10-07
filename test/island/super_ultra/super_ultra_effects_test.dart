@@ -67,6 +67,11 @@ void main() {
     expect(SuperUltraEffect.lightningRipple.label, contains('ripple'));
   });
 
+  test('the wind (flag and swaying trees) is scene content, on by default', () {
+    expect(SuperUltraEffect.wind.group, SuperUltraEffectGroup.scene);
+    expect(SuperUltraEffect.wind.cost, contains('flag'));
+  });
+
   test('GPU pacing picks are 1 and 2 frames in flight, 1 by default', () {
     expect(SuperUltraGpuPacing.values.map((p) => p.frames), [1, 2]);
     expect(SuperUltraGpuPacing.initial, SuperUltraGpuPacing.one);

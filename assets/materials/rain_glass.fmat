@@ -17,7 +17,10 @@ material {
   scene_color_reach: 0.1,
   parameters: [
     { type: float, name: time },
-    { type: float, name: wetness }
+    { type: float, name: wetness },
+    // Sideways drift per unit slid down: the wind across the pane
+    // (lib/render/wind.dart rainGlassSkew).
+    { type: float, name: wind_skew, default: 0.0 }
   ]
 }
 
@@ -52,6 +55,10 @@ fragment {
 
   void Surface(inout MaterialInputs material) {
     vec2 uv = GetUV0();
+    // Wind across the pane pushes the drops sideways as they run down: the
+    // pattern is looked up at u - skew * v, so a drop's own u grows by skew
+    // per unit it slides down.
+    uv.x -= material_params.wind_skew * uv.y;
     float t = material_params.time;
     float wet = material_params.wetness;
     vec3 a = DropLayer(uv, t, 1.0);

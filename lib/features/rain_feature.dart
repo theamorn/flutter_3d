@@ -4,6 +4,7 @@ import 'package:vector_math/vector_math.dart';
 import '../hotel/feature.dart';
 import '../hotel/feature_registry.dart';
 import '../hotel/hotel_context.dart';
+import '../render/wind.dart';
 import '../math/floor_plan.dart';
 import '../math/schedulers.dart';
 
@@ -159,6 +160,12 @@ class RainFeature extends HotelFeature {
     // Retint by current daylight so rain doesn't glow white at night.
     final sunIntensity = ctx.look.sunLight?.intensity ?? 1.0;
     rainSys.startColor = ConstantColor(_rainColor(sunIntensity));
+
+    // The beach wind drifts the falling rain downwind; still air drops it
+    // straight down (the system's own gravity is zero: drops fall at their
+    // start speed).
+    final wind = ctx.wind;
+    rainSys.gravity.setFrom(wind == null ? Vector3.zero() : rainDriftAcceleration(wind));
 
     if (ctx.rainRequested.value) {
       _offTimer = 0;

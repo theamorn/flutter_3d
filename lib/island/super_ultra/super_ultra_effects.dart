@@ -233,6 +233,12 @@ enum SuperUltraEffect {
         '50% on low, spread over the whole lawn. Off: every tuft at every tier',
     SuperUltraEffectGroup.scene,
   ),
+  wind(
+    'Wind',
+    'A flag on a pole and palms and pines swaying in the wind (vertex '
+        'stages); the storm blows harder. Off: no flag, still trees',
+    SuperUltraEffectGroup.scene,
+  ),
   glowCard(
     'Fire glow card',
     'One camera-facing additive card for the fire\'s core glow, ordered '
