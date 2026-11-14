@@ -1,0 +1,142 @@
+// Retro CRT / VHS glass tube material for the Hotel room TV and PC screens,
+// adapted from bdero/flutter_scene's crt_effect.fmat.
+//
+// Uses shading_model: lit so the dark curved glass tube catches specular
+// reflections from the bedroom lamps and balcony window while emitting the
+// phosphor scanline image via material.emissive.
+material {
+  name: "CrtScreen",
+  shading_model: lit,
+  parameters: [
+    { type: sampler2D, name: screen_texture, hint: default_white },
+    { type: float, name: time, default: 0.0 },
+    { type: float, name: distortion, default: 0.12 },
+    { type: float, name: scanline_intensity, default: 0.28 },
+    { type: float, name: scanline_count, default: 220.0 },
+    { type: float, name: chromatic_aberration, default: 0.0035 },
+    { type: float, name: vignette, default: 0.32 },
+    { type: float, name: brightness, default: 1.45 },
+    { type: float, name: flicker, default: 0.03 },
+    { type: float, name: phosphor_intensity, default: 0.22 },
+    { type: float, name: vhs_intensity, default: 0.35 },
+    { type: float, name: bloom_amount, default: 0.32 },
+    { type: float, name: roughness, default: 0.22 },
+  ],
+}
+
+fragment {
+  // flutter_scene 0.24 defaults material fragments to mediump (half precision
+  // on Mali/Adreno/web). Keep float32 for scanline and VHS phase math.
+  precision highp float;
+
+  vec2 CrtCurve(vec2 uv, float k) {
+    vec2 c = uv * 2.0 - 1.0;
+    vec2 offset = abs(c.yx) / vec2(6.0, 4.0);
+    c = c + c * offset * offset * k;
+    return c * 0.5 + 0.5;
+  }
+
+  float Hash11(float p) {
+    p = fract(p * 0.1031);
+    p *= p + 33.33;
+    p *= p + p;
+    return fract(p);
+  }
+
+  float Hash12(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
+
+  float VhsNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = Hash12(i);
+    float b = Hash12(i + vec2(1.0, 0.0));
+    float c = Hash12(i + vec2(0.0, 1.0));
+    float d = Hash12(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  }
+
+  void Surface(inout MaterialInputs material) {
+    float t = material_params.time;
+    float vhs = material_params.vhs_intensity;
+    vec2 uv = CrtCurve(GetUV0(), material_params.distortion);
+
+    float in_bounds = step(0.0, uv.x) * step(uv.x, 1.0) *
+                      step(0.0, uv.y) * step(uv.y, 1.0);
+    vec2 sample_uv = clamp(uv, vec2(0.0), vec2(1.0));
+
+    // VHS horizontal tracking wave + rolling tape crease + bottom head-switch.
+    float wave = (VhsNoise(vec2(sample_uv.y * 8.0, t * 2.5)) - 0.5) * 0.0025 +
+                 (VhsNoise(vec2(sample_uv.y * 60.0, t * 20.0)) - 0.5) * 0.001;
+
+    float crease_pos = fract(t * 0.14);
+    float crease_dist = abs(sample_uv.y - crease_pos);
+    float crease = smoothstep(0.04, 0.0, crease_dist) *
+                   smoothstep(0.0, 0.008, crease_dist);
+    float crease_jitter = (Hash11(floor(t * 30.0)) - 0.5) * 2.0;
+    wave += crease * crease_jitter * 0.025;
+
+    float head_switch = smoothstep(0.94, 0.99, sample_uv.y);
+    wave += head_switch * (VhsNoise(vec2(sample_uv.y * 200.0, t * 40.0)) - 0.5) * 0.05;
+
+    sample_uv.x = clamp(sample_uv.x + wave * vhs, 0.0, 1.0);
+
+    // Radial + crease chromatic aberration.
+    float center_dist = length(uv - 0.5);
+    float ca = material_params.chromatic_aberration * (1.0 + center_dist * 2.0) +
+               crease * 0.006 * vhs;
+    float r = texture(screen_texture, sample_uv + vec2(ca, 0.0)).r;
+    float g = texture(screen_texture, sample_uv).g;
+    float b = texture(screen_texture, sample_uv - vec2(ca, 0.0)).b;
+    vec3 col = SRGBToLinear(vec3(r, g, b));
+
+    // Horizontal phosphor halation bloom.
+    vec3 blur = vec3(0.0);
+    float spread = 0.005;
+    blur += SRGBToLinear(texture(screen_texture, sample_uv + vec2(-3.0 * spread, 0.0)).rgb) * 0.07;
+    blur += SRGBToLinear(texture(screen_texture, sample_uv + vec2(-2.0 * spread, 0.0)).rgb) * 0.15;
+    blur += SRGBToLinear(texture(screen_texture, sample_uv + vec2(-1.0 * spread, 0.0)).rgb) * 0.28;
+    blur += SRGBToLinear(texture(screen_texture, sample_uv + vec2( 1.0 * spread, 0.0)).rgb) * 0.28;
+    blur += SRGBToLinear(texture(screen_texture, sample_uv + vec2( 2.0 * spread, 0.0)).rgb) * 0.15;
+    blur += SRGBToLinear(texture(screen_texture, sample_uv + vec2( 3.0 * spread, 0.0)).rgb) * 0.07;
+    col += max(blur - vec3(0.15), vec3(0.0)) * material_params.bloom_amount;
+
+    // Scanlines + RGB aperture-grille phosphor triads.
+    float scan = sin(sample_uv.y * material_params.scanline_count * 3.14159265 + t * 2.0);
+    scan = mix(1.0, 0.5 + 0.5 * scan, material_params.scanline_intensity);
+    col *= scan;
+
+    float triad = fract(sample_uv.x * material_params.scanline_count * 0.75);
+    vec3 mask = vec3(
+      smoothstep(0.0, 0.33, triad) * (1.0 - smoothstep(0.33, 0.66, triad)),
+      smoothstep(0.25, 0.55, triad) * (1.0 - smoothstep(0.55, 0.85, triad)),
+      smoothstep(0.55, 0.88, triad)
+    );
+    col *= mix(vec3(1.0), mask * 1.65 + 0.35, material_params.phosphor_intensity);
+
+    // Subtle tape static + AC hum bar + tube corner vignette.
+    float grain = (Hash12(sample_uv * vec2(320.0, 240.0) + fract(t) * 100.0) - 0.5);
+    col += vec3(grain * (0.04 + crease * 0.22) * vhs);
+
+    float hum = 1.0 - material_params.flicker *
+                      (0.5 + 0.5 * sin(sample_uv.y * 6.28318 - t * 3.5));
+    col *= hum;
+
+    vec2 vig_uv = uv * (1.0 - uv.yx);
+    float vig = clamp(vig_uv.x * vig_uv.y * 16.0, 0.0, 1.0);
+    vig = mix(1.0, pow(vig, material_params.vignette), step(0.001, material_params.vignette));
+    col *= vig * in_bounds;
+
+    // Glossy dark glass surface that reflects bedroom lamps and daylight,
+    // while the phosphor image is emitted from the tube.
+    material.base_color = vec4(0.015, 0.016, 0.02, 1.0);
+    material.metallic = 0.0;
+    material.roughness = material_params.roughness;
+    material.specular = 0.65;
+    material.emissive = col * material_params.brightness;
+  }
+}

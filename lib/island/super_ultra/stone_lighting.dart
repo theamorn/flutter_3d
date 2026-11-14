@@ -24,9 +24,17 @@ enum StoneIndirectMode {
 /// Upper (sky) and lower (ground bounce) indirect radiance, already scaled by
 /// the ambient schedule, plus a multiplier the shader applies on top.
 class StoneLighting {
-  const StoneLighting(this.upper, this.lower, this.multiplier);
+  const StoneLighting(
+    this.upper,
+    this.lower,
+    this.multiplier, {
+    this.weather = 0.0,
+    this.campfireIntensity = 0.0,
+  });
   final Vector3 upper, lower;
   final double multiplier;
+  final double weather;
+  final double campfireIntensity;
 }
 
 // Clear-sky zenith by day and by night, the overcast grey rain blends toward,
@@ -46,10 +54,12 @@ StoneLighting stoneLightingFor({
   required double ambient,
   required double night,
   required double weather,
+  double campfireIntensity = 0.0,
 }) {
   final a = ambient.isNaN ? 0.0 : ambient.clamp(0.0, 4.0);
   final n = _unit(night);
   final w = _unit(weather);
+  final fire = campfireIntensity.isNaN ? 0.0 : campfireIntensity.clamp(0.0, 2.0);
   final clear = _daySky * (1.0 - n) + _nightSky * n;
   // Overcast keeps the sky's brightness but drains its colour.
   final luma = clear.dot(Vector3(0.2126, 0.7152, 0.0722));
@@ -62,7 +72,13 @@ StoneLighting stoneLightingFor({
         sky.z * _groundTint.z,
       ) *
       (_groundBounce * a);
-  return StoneLighting(upper, lower, 1.0);
+  return StoneLighting(
+    upper,
+    lower,
+    1.0,
+    weather: w,
+    campfireIntensity: fire,
+  );
 }
 
 /// The imported campfire model's stone ring and its material.
@@ -79,6 +95,9 @@ class StoneLightingBinding {
 
   final PreprocessedMaterial material;
   final MaterialBindingPolicy<Node, Mesh> _policy = MaterialBindingPolicy();
+  double _baseRoughness = 0.85;
+  double _weather = 0.0;
+  double _campfireIntensity = 0.0;
 
   bool get isBound => _policy.bound.isNotEmpty;
 
@@ -107,9 +126,15 @@ class StoneLightingBinding {
   /// Pushes the island's current indirect light into the stone material.
   void apply(StoneLighting lighting) {
     final u = lighting.upper, l = lighting.lower;
+    _weather = lighting.weather;
+    _campfireIntensity = lighting.campfireIntensity;
     material.parameters
       ..setVec4('sky_upper', Vector4(u.x, u.y, u.z, lighting.multiplier))
-      ..setVec4('sky_lower', Vector4(l.x, l.y, l.z, 0));
+      ..setVec4('sky_lower', Vector4(l.x, l.y, l.z, 0))
+      ..setVec4(
+        'stone',
+        Vector4(_baseRoughness, 0, _weather, _campfireIntensity),
+      );
   }
 
   static void _restore(List<(Node, Mesh)> released) {
@@ -124,9 +149,13 @@ class StoneLightingBinding {
   Material _styled(Material imported) {
     if (imported is PhysicallyBasedMaterial) {
       final c = imported.baseColorFactor;
+      _baseRoughness = imported.roughnessFactor.clamp(0.5, 1.0);
       material.parameters
         ..setVec4('base_color', Vector4(c.x, c.y, c.z, 1))
-        ..setVec4('stone', Vector4(imported.roughnessFactor.clamp(0.5, 1.0), 0, 0, 0));
+        ..setVec4(
+          'stone',
+          Vector4(_baseRoughness, 0, _weather, _campfireIntensity),
+        );
     }
     return material;
   }

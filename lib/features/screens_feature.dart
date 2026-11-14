@@ -1,8 +1,18 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Material;
 import 'package:flutter_scene/scene.dart'
-    show GpuTextureSource, Mesh, Node, UnlitMaterial, WidgetComponent, WidgetInput, WidgetUpdatePolicy;
+    show
+        GpuTextureSource,
+        Material,
+        Mesh,
+        Node,
+        PreprocessedMaterial,
+        UnlitMaterial,
+        WidgetComponent,
+        WidgetInput,
+        WidgetUpdatePolicy,
+        loadFmatMaterial;
 import 'package:vector_math/vector_math.dart' show Vector3;
 import 'package:webview_flutter/webview_flutter.dart';
 import '../hotel/feature.dart';
@@ -15,10 +25,30 @@ import 'player_feature.dart';
 const kTvUrl = 'https://www.youtube.com/@GoogleDevelopers';
 const kPcUrl = 'https://www.facebook.com/GoogleDevelopersThailand';
 
+/// Retro CRT / VHS glass shader adapted from `bdero/flutter_scene`'s
+/// `crt_effect.fmat`.
+const kCrtScreenFmat = 'assets/materials/crt_screen.fmat';
+
 /// The two screens in each room: node name, page, tap label, poster.
 const _kinds = [
-  (name: 'tv_screen', url: kTvUrl, tap: 'Watch TV', icon: Icons.play_arrow_rounded, poster: 'Tap to watch'),
-  (name: 'pc_screen', url: kPcUrl, tap: 'Open PC', icon: Icons.open_in_browser, poster: 'Tap to open'),
+  (
+    name: 'tv_screen',
+    url: kTvUrl,
+    tap: 'Watch TV',
+    icon: Icons.play_arrow_rounded,
+    poster: 'Tap to watch',
+    vhs: 0.38,
+    distortion: 0.14,
+  ),
+  (
+    name: 'pc_screen',
+    url: kPcUrl,
+    tap: 'Open PC',
+    icon: Icons.open_in_browser,
+    poster: 'Tap to open',
+    vhs: 0.14,
+    distortion: 0.06,
+  ),
 ];
 
 /// Poster capture height, logical px (the TV's is 640 × 360).
@@ -46,8 +76,9 @@ class _Focus {
 }
 
 /// Engine rule 7: a WebView is a platform view and can't be a mesh texture.
-/// The screens show a captured poster; a tap glides the camera square onto
-/// the screen and lays the live page over its projected quad.
+/// The screens show a captured poster rendered through a live lit CRT/VHS
+/// glass shader (`crt_screen.fmat`); a tap glides the camera square onto the
+/// screen and lays the live page over its projected quad.
 class ScreensFeature extends HotelFeature {
   @override
   String get id => 'screens';
@@ -65,15 +96,30 @@ class ScreensFeature extends HotelFeature {
 
   final List<_Screen> _screens = [];
   final List<(Node, WidgetComponent)> _posters = [];
+  final List<PreprocessedMaterial> _crtMaterials = [];
   final FocusEase _ease = FocusEase();
   _Screen? _focused;
+  double _time = 0;
 
   @override
   Future<void> mount(HotelContext ctx) async {
+    _time = 0;
     for (final kind in _kinds) {
       final nodes = ctx.nodesNamed(kind.name);
       if (nodes.isEmpty) continue;
-      final material = UnlitMaterial();
+      PreprocessedMaterial? crt;
+      try {
+        crt = await loadFmatMaterial(kCrtScreenFmat);
+        crt.parameters
+          ..setFloat('vhs_intensity', kind.vhs)
+          ..setFloat('distortion', kind.distortion);
+        _crtMaterials.add(crt);
+      } on Object {
+        // Fallback when running in headless tests without compiled shader assets.
+        crt = null;
+      }
+      final fallback = UnlitMaterial();
+      final Material activeMaterial = crt ?? fallback;
       final screens = [
         for (final node in nodes)
           _Screen(
@@ -83,7 +129,7 @@ class ScreensFeature extends HotelFeature {
             node.mesh!,
             // MeshPrimitive.material = x alone doesn't reach a mounted node's
             // render items; assigning a mesh with the same geometry does.
-            node.mesh!.clone()..primitives.single.material = material,
+            node.mesh!.clone()..primitives.single.material = activeMaterial,
           ),
       ];
       _screens.addAll(screens);
@@ -96,7 +142,11 @@ class ScreensFeature extends HotelFeature {
         update: WidgetUpdatePolicy.manual,
         input: WidgetInput.manual, // taps belong to the interactable
         bind: (texture) {
-          material.baseColorTexture = GpuTextureSource(texture);
+          if (crt != null) {
+            crt.parameters.setTexture('screen_texture', texture);
+          } else {
+            fallback.baseColorTexture = GpuTextureSource(texture);
+          }
           // Swapped in on the first capture, so the screen stays the room's
           // black instead of flashing the unlit white placeholder.
           for (final s in screens) {
@@ -137,6 +187,12 @@ class ScreensFeature extends HotelFeature {
 
   @override
   void tick(HotelContext ctx, double dt) {
+    if (dt > 0) {
+      _time += dt;
+      for (final crt in _crtMaterials) {
+        crt.parameters.setFloat('time', _time);
+      }
+    }
     final was = _ease.phase;
     final pose = _ease.step(dt);
     if (pose == null) return;
@@ -184,6 +240,7 @@ class ScreensFeature extends HotelFeature {
       node.removeComponent(poster);
     }
     _posters.clear();
+    _crtMaterials.clear();
     for (final s in _screens) {
       final tap = s.tap;
       if (tap != null) ctx.interactions.unregister(tap);
@@ -213,24 +270,62 @@ class ScreensFeature extends HotelFeature {
       });
 }
 
-/// The still frame a screen shows until it's tapped: black, with a label.
-/// Opaque everywhere, so no dark fringes on the capture (traps.md 39).
+/// The frame a screen shows until it's tapped: a glowing broadcast card with
+/// subtle SMPTE color accents so `crt_screen.fmat`'s scanlines, phosphor
+/// triads, and VHS tracking wave read clearly. Opaque everywhere (traps.md 39).
 class _PosterCard extends StatelessWidget {
   const _PosterCard({required this.icon, required this.label});
   final IconData icon;
   final String label;
 
   @override
-  Widget build(BuildContext context) => ColoredBox(
-        color: Colors.black,
-        child: Center(
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, color: Colors.white, size: 72),
-            const SizedBox(width: 12),
-            Text(label,
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 44, decoration: TextDecoration.none)),
-          ]),
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            radius: 0.95,
+            colors: [Color(0xFF16243A), Color(0xFF05070C)],
+          ),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 18,
+              child: Row(
+                children: const [
+                  Expanded(child: ColoredBox(color: Color(0xFFE53935))),
+                  Expanded(child: ColoredBox(color: Color(0xFFFB8C00))),
+                  Expanded(child: ColoredBox(color: Color(0xFFFDD835))),
+                  Expanded(child: ColoredBox(color: Color(0xFF43A047))),
+                  Expanded(child: ColoredBox(color: Color(0xFF00ACC1))),
+                  Expanded(child: ColoredBox(color: Color(0xFF3949AB))),
+                ],
+              ),
+            ),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xCC0A101D),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFF4FC3F7), width: 2.5),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(icon, color: const Color(0xFF80D8FF), size: 68),
+                  const SizedBox(width: 14),
+                  Text(label,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 42,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.none)),
+                ]),
+              ),
+            ),
+          ],
         ),
       );
 }

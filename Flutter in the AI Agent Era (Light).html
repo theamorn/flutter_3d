@@ -1,0 +1,1289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flutter in the AI Agent Era: Why Build Once When AI Can Build Twice?</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Roboto+Mono:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --gde-navy: #20344b;
+    --gde-white: #ffffff;
+    --gde-blue: #4285f4;
+    --gde-green: #34a853;
+    --gde-yellow: #f9ab00;
+    --gde-red: #ea4335;
+    --gde-h-blue: #57caff;
+    --gde-h-green: #5cdb6d;
+    --gde-h-yellow: #ffd427;
+    --gde-h-pink: #ff7daf;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html {
+    margin: 0;
+    padding: 0;
+    background: #d8e2ec;
+    color: var(--gde-navy);
+    font-family: "Plus Jakarta Sans", "Google Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    scroll-snap-type: y mandatory;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  .deck-slide {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 0;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  .deck-fit {
+    flex: none;
+    position: relative;
+    width: calc(1920px * var(--deck-s, 0.5));
+    height: calc(1080px * var(--deck-s, 0.5));
+    box-shadow: 0 16px 40px rgba(32, 52, 75, 0.18);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--gde-white);
+  }
+  .deck-scaler {
+    width: 1920px;
+    height: 1080px;
+    transform: scale(var(--deck-s, 0.5));
+    transform-origin: 0 0;
+  }
+  .slide-canvas {
+    width: 1920px;
+    height: 1080px;
+    position: relative;
+    background: var(--gde-white);
+    color: var(--gde-navy);
+    padding: 96px 120px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .slide-canvas.navy {
+    background: var(--gde-navy);
+    color: var(--gde-white);
+  }
+  .slide-num {
+    position: absolute;
+    top: 38px;
+    right: 52px;
+    z-index: 10;
+    font-family: "Roboto Mono", monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gde-navy);
+    background: var(--gde-white);
+    padding: 6px 18px;
+    border-radius: 999px;
+    border: 3px solid var(--gde-navy);
+  }
+  .slide-canvas.navy .slide-num {
+    background: var(--gde-navy);
+    color: var(--gde-h-blue);
+    border-color: var(--gde-h-blue);
+  }
+  .gde-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--gde-navy);
+  }
+  .slide-canvas.navy .gde-brand {
+    color: var(--gde-white);
+  }
+  .mono-sub {
+    font-family: "Roboto Mono", monospace;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--gde-blue);
+    letter-spacing: 0.5px;
+  }
+  .slide-canvas.navy .mono-sub {
+    color: var(--gde-h-blue);
+  }
+  .gde-headline {
+    font-size: 74px;
+    font-weight: 700;
+    line-height: 1.06;
+    letter-spacing: -1.8px;
+    margin: 0;
+    color: var(--gde-navy);
+  }
+  .slide-canvas.navy .gde-headline {
+    color: var(--gde-white);
+  }
+  .bullet-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .bullet-list li {
+    white-space: nowrap;
+    font-size: 38px;
+    font-weight: 500;
+    line-height: 1.25;
+  }
+  .bullet-list li strong {
+    font-weight: 800;
+  }
+  .gde-pill-blue {
+    background: var(--gde-h-blue);
+    color: var(--gde-navy);
+    border: 3px solid var(--gde-navy);
+    border-radius: 28px;
+  }
+  .gde-pill-navy {
+    background: var(--gde-navy);
+    color: var(--gde-h-blue);
+    border: 3px solid var(--gde-navy);
+    border-radius: 28px;
+  }
+  .gde-pill-green {
+    background: var(--gde-h-green);
+    color: var(--gde-navy);
+    border: 3px solid var(--gde-navy);
+    border-radius: 28px;
+  }
+  .gde-pill-yellow {
+    background: var(--gde-h-yellow);
+    color: var(--gde-navy);
+    border: 3px solid var(--gde-navy);
+    border-radius: 28px;
+  }
+  .gde-pill-pink {
+    background: var(--gde-h-pink);
+    color: var(--gde-navy);
+    border: 3px solid var(--gde-navy);
+    border-radius: 28px;
+  }
+  .dash-badge {
+    width: 112px;
+    height: 112px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 16px rgba(32, 52, 75, 0.18));
+  }
+  .deck-nav {
+    position: fixed;
+    bottom: 20px;
+    right: 24px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--gde-navy);
+    color: var(--gde-white);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-family: "Roboto Mono", monospace;
+    font-size: 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  }
+  .deck-nav button {
+    background: #334e6f;
+    color: var(--gde-white);
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: "Roboto Mono", monospace;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .deck-nav button:hover {
+    background: var(--gde-blue);
+  }
+  @page { size: 1920px 1080px; margin: 0; }
+  @media print {
+    html, body { background: #ffffff; }
+    .deck-slide { min-height: auto; padding: 0; break-after: page; page-break-after: always; }
+    .deck-fit { width: 1920px; height: 1080px; box-shadow: none; border-radius: 0; }
+    .deck-scaler { transform: none; }
+    .deck-nav { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<!-- =========================================================================
+     SLIDE 01: GDE CHAPTER HERO (Template page_14 / page_18 + page_69 Pills)
+     ========================================================================= -->
+<section class="deck-slide" id="1" aria-roledescription="slide" aria-label="Slide 1 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas navy">
+    <div class="slide-num">01 / 23</div>
+    <div style="display:grid;grid-template-columns:1.1fr 0.9fr;gap:64px;align-items:center;height:100%;">
+      <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
+        <!-- GDE Logo Header -->
+        <div class="gde-brand">
+          <svg width="64" height="44" viewBox="0 0 64 44" fill="none">
+            <path d="M22 6L8 18L22 30" stroke="#ea4335" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M8 22L22 34" stroke="#4285f4" stroke-width="8" stroke-linecap="round"/>
+            <path d="M42 6L56 18L42 30" stroke="#34a853" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M56 22L42 34" stroke="#f9ab00" stroke-width="8" stroke-linecap="round"/>
+          </svg>
+          <span>Google Developer Group · DevFest 2026</span>
+        </div>
+
+        <!-- Main Chapter Title -->
+        <div>
+          <div class="mono-sub" style="margin-bottom:20px;">FLUTTER IN THE AI AGENT ERA</div>
+          <h1 style="font-size:102px;font-weight:400;line-height:1.04;letter-spacing:-2.5px;margin:0;color:#ffffff;">
+            Why Build <strong style="font-weight:800;color:var(--gde-h-blue);">Once</strong><br>
+            When AI Can<br>
+            Build <strong style="font-weight:800;color:var(--gde-h-pink);">Twice?</strong>
+          </h1>
+        </div>
+
+        <!-- Speaker Overlapping Pills (Template page_69) -->
+        <div style="display:flex;align-items:center;gap:28px;">
+          <div style="display:flex;flex-direction:column;">
+            <div style="background:var(--gde-h-blue);color:var(--gde-navy);border:3px solid var(--gde-navy);border-radius:20px;padding:12px 28px;font-size:28px;font-weight:800;align-self:flex-start;">
+              Amorn Apichattanakul
+            </div>
+            <div style="background:#152333;color:var(--gde-h-blue);border:2px solid var(--gde-h-blue);border-radius:18px;padding:10px 26px;font-family:'Roboto Mono', monospace;font-size:20px;margin-top:-6px;">
+              Senior Innovation Engineer @KBTG
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Image Frame with Green Outline (Template page_14 / page_18) -->
+      <div style="position:relative;height:860px;border-radius:48px;border:4px solid var(--gde-h-green);overflow:hidden;background:#152333;">
+        <img src="deck-images/cover-zen.png" alt="Cover visual" style="width:100%;height:100%;object-fit:cover;">
+      </div>
+    </div>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 02: QUOTE SLIDE (Template page_73 Giant Quote Marks + page_69 Pills)
+     ========================================================================= -->
+<section class="deck-slide" id="2" aria-roledescription="slide" aria-label="Slide 2 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas">
+    <div class="slide-num">02 / 23</div>
+    <div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 120px;">
+      <!-- Top-Left Giant Red Quote Mark (Template page_73) -->
+      <svg width="180" height="140" viewBox="0 0 180 140" style="position:absolute;top:10px;left:10px;">
+        <path d="M42 12L14 64C8 76 6 88 10 102C16 120 34 130 52 126C70 122 82 104 78 86C74 68 58 58 42 60L64 22L42 12ZM130 12L102 64C96 76 94 88 98 102C104 120 122 130 140 126C158 122 170 104 166 86C162 68 146 58 130 60L152 22L130 12Z" fill="#ea4335" stroke="#20344b" stroke-width="5"/>
+      </svg>
+
+      <blockquote style="font-size:80px;font-weight:500;line-height:1.14;color:var(--gde-navy);margin:0;max-width:1420px;">
+        Building the same feature in Swift and Kotlin <strong style="font-weight:800;">no longer carries the cost it used to.</strong>
+      </blockquote>
+
+      <div style="margin-top:44px;display:inline-flex;flex-direction:column;align-items:center;">
+        <div class="gde-pill-blue" style="padding:12px 36px;font-size:28px;font-weight:700;">
+          — Mustafa Ali, Shopify Engineering
+        </div>
+      </div>
+
+      <!-- Bottom-Right Giant Pink Quote Mark (Template page_73) -->
+      <svg width="180" height="140" viewBox="0 0 180 140" style="position:absolute;bottom:10px;right:10px;transform:rotate(180deg);">
+        <path d="M42 12L14 64C8 76 6 88 10 102C16 120 34 130 52 126C70 122 82 104 78 86C74 68 58 58 42 60L64 22L42 12ZM130 12L102 64C96 76 94 88 98 102C104 120 122 130 140 126C158 122 170 104 166 86C162 68 146 58 130 60L152 22L130 12Z" fill="#ff7daf" stroke="#20344b" stroke-width="5"/>
+      </svg>
+    </div>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 03: 3-COLUMN SUBHEAD GRID ON NAVY (Template page_39)
+     ========================================================================= -->
+<section class="deck-slide" id="3" aria-roledescription="slide" aria-label="Slide 3 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas navy">
+    <div class="slide-num">03 / 23</div>
+    <!-- Top Header + 3 Outlined Red Circles (Template page_39) -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:40px;margin-top:24px;">
+      <div>
+        <div class="mono-sub" style="color:var(--gde-h-pink);margin-bottom:14px;">SHOPIFY’S SHIFT · 2020 → 2026</div>
+        <h2 class="gde-headline" style="color:var(--gde-h-pink);max-width:1180px;">
+          Shopify Left React Native for AI-Assisted Native.
+        </h2>
+      </div>
+      <!-- 3 Red Outlined Circles from Template page_39 -->
+      <div style="display:flex;gap:22px;margin-top:16px;margin-right:40px;">
+        <div style="width:92px;height:92px;border-radius:50%;border:5px solid var(--gde-red);"></div>
+        <div style="width:92px;height:92px;border-radius:50%;border:5px solid var(--gde-red);"></div>
+        <div style="width:92px;height:92px;border-radius:50%;border:5px solid var(--gde-red);"></div>
+      </div>
+    </div>
+
+    <!-- 3 Horizontal Columns (Template page_39) -->
+    <ul class="bullet-list" style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:28px;width:100%;margin-bottom:36px;">
+      <li style="background:#172638;border:3px solid var(--gde-h-blue);border-radius:32px;padding:36px 28px;min-width:0;display:flex;flex-direction:column;gap:18px;">
+        <span style="font-family:'Roboto Mono', monospace;font-size:22px;color:var(--gde-h-blue);">01 · 2020 BET</span>
+        <span style="font-size:42px;font-weight:800;color:#ffffff;">Cross-Platform</span>
+        <span style="font-size:23px;color:#cbd5e1;">• <strong style="color:#ffffff;">Adopted React Native</strong> in 2020</span>
+      </li>
+      <li style="background:#172638;border:3px solid var(--gde-h-yellow);border-radius:32px;padding:36px 28px;min-width:0;display:flex;flex-direction:column;gap:18px;">
+        <span style="font-family:'Roboto Mono', monospace;font-size:22px;color:var(--gde-h-yellow);">02 · 2026 REBUILD</span>
+        <span style="font-size:42px;font-weight:800;color:#ffffff;">Swift + Kotlin</span>
+        <span style="font-size:23px;color:#cbd5e1;">• <strong style="color:#ffffff;">Rebuilt 300+ screens</strong> in 12 weeks</span>
+      </li>
+      <li style="background:#172638;border:3px solid var(--gde-h-pink);border-radius:32px;padding:36px 28px;min-width:0;display:flex;flex-direction:column;gap:18px;">
+        <span style="font-family:'Roboto Mono', monospace;font-size:22px;color:var(--gde-h-pink);">03 · ECOSYSTEM</span>
+        <span style="font-size:42px;font-weight:800;color:#ffffff;">Sunsetting RN</span>
+        <span style="font-size:23px;color:#cbd5e1;">• <strong style="color:#ffffff;">Wound down</strong> React Native open source</span>
+      </li>
+    </ul>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 04: QUOTE SLIDE + WORRIED DASH ILLUSTRATION (Template page_73 + Visual)
+     ========================================================================= -->
+<section class="deck-slide" id="4" aria-roledescription="slide" aria-label="Slide 4 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas">
+    <div class="slide-num">04 / 23</div>
+    <div style="display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:center;height:100%;">
+      <!-- Left: Quote with Template page_73 Giant Quote Marks -->
+      <div style="position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;padding:40px 20px;">
+        <svg width="140" height="110" viewBox="0 0 180 140" style="margin-bottom:24px;">
+          <path d="M42 12L14 64C8 76 6 88 10 102C16 120 34 130 52 126C70 122 82 104 78 86C74 68 58 58 42 60L64 22L42 12ZM130 12L102 64C96 76 94 88 98 102C104 120 122 130 140 126C158 122 170 104 166 86C162 68 146 58 130 60L152 22L130 12Z" fill="#57caff" stroke="#20344b" stroke-width="5"/>
+        </svg>
+
+        <blockquote style="font-size:66px;font-weight:500;line-height:1.15;color:var(--gde-navy);margin:0;">
+          If AI can write <strong style="font-weight:800;color:var(--gde-red);">Swift and Kotlin</strong> for you, why use cross-platform at all—<strong style="font-weight:800;color:var(--gde-blue);">including Flutter?</strong>
+        </blockquote>
+
+        <svg width="140" height="110" viewBox="0 0 180 140" style="margin-top:24px;align-self:flex-end;transform:rotate(180deg);">
+          <path d="M42 12L14 64C8 76 6 88 10 102C16 120 34 130 52 126C70 122 82 104 78 86C74 68 58 58 42 60L64 22L42 12ZM130 12L102 64C96 76 94 88 98 102C104 120 122 130 140 126C158 122 170 104 166 86C162 68 146 58 130 60L152 22L130 12Z" fill="#ffd427" stroke="#20344b" stroke-width="5"/>
+        </svg>
+      </div>
+
+      <!-- Right: Worried Dash Illustration (No Words) -->
+      <div style="height:820px;border-radius:48px;border:4px solid var(--gde-navy);overflow:hidden;background:#f8fafc;">
+        <img src="deck-images/dash-worried.png" alt="Worried Dash surrounded by AI robotic arms" style="width:100%;height:100%;object-fit:cover;">
+      </div>
+    </div>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 05: SPLIT GEOMETRIC CHEVRONS & CATERPILLAR PILL (Template page_35)
+     ========================================================================= -->
+<section class="deck-slide" id="5" aria-roledescription="slide" aria-label="Slide 5 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas">
+    <div class="slide-num">05 / 23</div>
+    <div>
+      <div class="mono-sub" style="margin-bottom:12px;">CORE THESIS</div>
+      <h2 class="gde-headline">Flutter Owns the Pixels in One Codebase.</h2>
+    </div>
+
+    <!-- Template page_35 Asymmetric 2-Column Layout with Geometric Badges -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;flex:1;margin-top:28px;">
+      <!-- Left Column: Subhead + 2 Bullets + Green Triple-Circle Union + Asterisk -->
+      <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;padding:20px 0;">
+        <div>
+          <div style="font-size:44px;font-weight:800;color:var(--gde-navy);margin-bottom:24px;">01 · GPU Pixel Ownership</div>
+          <ul class="bullet-list" style="gap:20px;">
+            <li style="background:#f1f7fe;border:3px solid var(--gde-navy);border-radius:22px;padding:22px 32px;">• <strong>Renders custom pixels</strong> on the GPU</li>
+            <li style="background:#f1f7fe;border:3px solid var(--gde-navy);border-radius:22px;padding:22px 32px;">• <strong>Ships core visuals</strong> inside one SDK</li>
+          </ul>
+        </div>
+        <!-- Green Triple-Circle Union & Asterisk from Template page_35 -->
+        <div style="display:flex;align-items:center;gap:48px;margin-top:24px;">
+          <svg width="360" height="128" viewBox="0 0 360 128">
+            <path d="M64 12A52 52 0 1 0 64 116A52 52 0 0 0 110 88A52 52 0 0 0 202 88A52 52 0 0 0 248 116A52 52 0 1 0 248 12A52 52 0 0 0 202 40A52 52 0 0 0 110 40A52 52 0 0 0 64 12Z" fill="#5cdb6d" stroke="#20344b" stroke-width="5"/>
+          </svg>
+          <svg width="120" height="120" viewBox="0 0 120 120" stroke="#20344b" stroke-width="4">
+            <line x1="60" y1="6" x2="60" y2="114"/>
+            <line x1="6" y1="60" x2="114" y2="60"/>
+            <line x1="20" y1="20" x2="100" y2="100"/>
+            <line x1="100" y1="20" x2="20" y2="100"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Right Column: Geometric > < : # Symbols + Subhead + 1 Bullet -->
+      <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;padding:20px 0;">
+        <!-- Geometric > < : # from Template page_35 -->
+        <div style="display:flex;align-items:center;gap:36px;">
+          <svg width="260" height="130" viewBox="0 0 260 130" fill="none" stroke="#20344b" stroke-width="5">
+            <path d="M18 28A20 20 0 0 1 46 14L110 52A16 16 0 0 1 110 78L46 116A20 20 0 0 1 18 102L68 65L18 28Z"/>
+            <path d="M242 28A20 20 0 0 0 214 14L150 52A16 16 0 0 0 150 78L214 116A20 20 0 0 0 242 102L192 65L242 28Z"/>
+          </svg>
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div style="width:52px;height:52px;border-radius:50%;background:#34a853;border:4px solid #20344b;"></div>
+            <div style="width:52px;height:52px;border-radius:50%;background:#34a853;border:4px solid #20344b;"></div>
+          </div>
+          <svg width="110" height="120" viewBox="0 0 110 120" stroke="#20344b" stroke-width="4">
+            <line x1="38" y1="8" x2="22" y2="112"/>
+            <line x1="84" y1="8" x2="68" y2="112"/>
+            <line x1="10" y1="42" x2="102" y2="42"/>
+            <line x1="6" y1="78" x2="98" y2="78"/>
+          </svg>
+        </div>
+
+        <div class="gde-pill-blue" style="padding:40px;">
+          <div style="font-size:44px;font-weight:800;color:var(--gde-navy);margin-bottom:20px;">02 · Zero-Drift Workflow</div>
+          <ul class="bullet-list">
+            <li style="background:#ffffff;border:3px solid var(--gde-navy);border-radius:20px;padding:22px 32px;">• <strong>Prevents platform drift</strong> with one codebase</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 06: GROUP CHART / TREE ARCHITECTURE (Template page_91)
+     ========================================================================= -->
+<section class="deck-slide" id="6" aria-roledescription="slide" aria-label="Slide 6 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas">
+    <div class="slide-num">06 / 23</div>
+    <div>
+      <div class="mono-sub" style="margin-bottom:10px;">ENGINE &amp; DEPENDENCIES</div>
+      <h2 class="gde-headline">Flutter Ships Heavy Visuals in the SDK.</h2>
+    </div>
+
+    <!-- Group Chart from Template page_91 -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:18px;margin:16px 0;">
+      <!-- Top Row of 4 Halftone Blue Cards -->
+      <div style="display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:28px;width:100%;">
+        <div class="gde-pill-blue" style="padding:28px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;">
+          <div style="width:68px;height:68px;border-radius:50%;background:var(--gde-blue);border:3px solid var(--gde-navy);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Roboto Mono',monospace;font-size:26px;font-weight:700;">01</div>
+          <div style="font-family:'Roboto Mono',monospace;font-size:26px;font-weight:700;">SliverList</div>
+        </div>
+        <div class="gde-pill-blue" style="padding:28px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;">
+          <div style="width:68px;height:68px;border-radius:50%;background:var(--gde-blue);border:3px solid var(--gde-navy);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Roboto Mono',monospace;font-size:26px;font-weight:700;">02</div>
+          <div style="font-family:'Roboto Mono',monospace;font-size:26px;font-weight:700;">Animations</div>
+        </div>
+        <div class="gde-pill-blue" style="padding:28px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;">
+          <div style="width:68px;height:68px;border-radius:50%;background:var(--gde-blue);border:3px solid var(--gde-navy);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Roboto Mono',monospace;font-size:26px;font-weight:700;">03</div>
+          <div style="font-family:'Roboto Mono',monospace;font-size:26px;font-weight:700;">Impeller GLSL</div>
+        </div>
+        <div class="gde-pill-green" style="padding:28px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;">
+          <div style="width:68px;height:68px;border-radius:50%;background:var(--gde-green);border:3px solid var(--gde-navy);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Roboto Mono',monospace;font-size:26px;font-weight:700;">3D</div>
+          <div style="font-family:'Roboto Mono',monospace;font-size:26px;font-weight:700;">Flutter GPU + Stac</div>
+        </div>
+      </div>
+
+      <!-- Bracket Connector Line (Template page_91) -->
+      <div style="width:86%;height:32px;border-left:4px solid var(--gde-navy);border-right:4px solid var(--gde-navy);border-bottom:4px solid var(--gde-navy);"></div>
+      <div style="width:4px;height:28px;background:var(--gde-navy);margin-top:-18px;"></div>
+
+      <!-- Bottom Root Node + 3 Concise Points -->
+      <ul class="bullet-list" style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:24px;width:100%;">
+        <li class="gde-pill-pink" style="padding:20px 18px;font-size:22px;text-align:center;min-width:0;">• <strong>React Native needs</strong> external UI packages</li>
+        <li class="gde-pill-blue" style="padding:20px 18px;font-size:22px;text-align:center;min-width:0;">• <strong>Flutter SDK bundles</strong> lists, animations, shaders</li>
+        <li class="gde-pill-green" style="padding:20px 18px;font-size:22px;text-align:center;min-width:0;">• <strong>One SDK upgrade</strong> advances every visual</li>
+      </ul>
+    </div>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 07: CLEAN HORIZONTAL FRAME-BUDGET BAR CHART (No Text Inside Bars, No 3D Ultra)
+     ========================================================================= -->
+<section class="deck-slide" id="7" aria-roledescription="slide" aria-label="Slide 7 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas">
+    <div class="slide-num">07 / 23</div>
+    <div>
+      <div class="mono-sub" style="margin-bottom:10px;">PERFORMANCE VS. EFFORT · 120 FPS = 8.3 MS</div>
+      <h2 class="gde-headline" style="font-size:66px;">Extra Native Headroom Beyond 120fps Is Invisible.</h2>
+    </div>
+
+    <!-- Clean Frame-Budget Bar Chart (Zero text inside bars) -->
+    <div style="background:#f8fafc;border:4px solid var(--gde-navy);border-radius:36px;padding:48px 56px;display:flex;flex-direction:column;gap:38px;">
+      <!-- Bar 1: Flutter -->
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="font-size:36px;font-weight:800;color:var(--gde-navy);">Flutter (1 Codebase)</span>
+          <span style="font-family:'Roboto Mono',monospace;font-size:26px;font-weight:700;color:var(--gde-green);">120 FPS (8.3 ms)</span>
+        </div>
+        <div style="height:64px;width:100%;background:#e2e8f0;border:4px solid var(--gde-navy);border-radius:999px;overflow:hidden;display:flex;">
+          <div style="width:86%;background:var(--gde-h-green);border-right:4px solid var(--gde-navy);height:100%;"></div>
+        </div>
+      </div>
+
+      <!-- Bar 2: Pure Native -->
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="font-size:36px;font-weight:800;color:var(--gde-navy);">Pure Native (2 Codebases)</span>
+          <span style="font-family:'Roboto Mono',monospace;font-size:26px;font-weight:700;color:var(--gde-red);">120 FPS + Unseen Headroom</span>
+        </div>
+        <div style="height:64px;width:100%;background:#e2e8f0;border:4px solid var(--gde-navy);border-radius:999px;overflow:hidden;display:flex;">
+          <div style="width:86%;background:var(--gde-h-blue);border-right:4px dashed var(--gde-navy);height:100%;"></div>
+          <div style="width:14%;background:var(--gde-h-yellow);height:100%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 Concise Bullets -->
+    <ul class="bullet-list" style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:28px;width:100%;">
+      <li class="gde-pill-green" style="padding:22px 24px;font-size:26px;text-align:center;min-width:0;">• <strong>Impeller hits 120fps</strong> within 8.3ms frames</li>
+      <li class="gde-pill-yellow" style="padding:22px 24px;font-size:26px;text-align:center;min-width:0;">• <strong>Unused CPU headroom</strong> is invisible onscreen</li>
+    </ul>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 08: THE SKEPTICS' CLAIM (~40% PRE-AI VS ~10%? AI-NATIVE CLAIM)
+     ========================================================================= -->
+<section class="deck-slide" id="8" aria-roledescription="slide" aria-label="Slide 8 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas navy">
+    <div class="slide-num">08 / 23</div>
+    <div>
+      <div class="mono-sub" style="color:var(--gde-h-pink);margin-bottom:12px;">THE VIBE-CODER MYTH · “AI WRITES CODE FAST”</div>
+      <h2 class="gde-headline" style="font-size:66px;">If AI Generates Native Fast, Why Use Flutter?</h2>
+    </div>
+
+    <!-- 2-Card Comparison: Pre-AI Baseline vs The AI Native Claim -->
+    <ul class="bullet-list" style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:40px;width:100%;flex:1;margin-top:28px;">
+      <!-- Card 1: Pre-AI Baseline -->
+      <li style="background:#172638;border:4px solid var(--gde-h-blue);border-radius:36px;padding:44px 40px;min-width:0;display:flex;flex-direction:column;justify-content:space-between;">
+        <div style="font-family:'Roboto Mono',monospace;font-size:24px;font-weight:700;color:var(--gde-h-blue);">01 · PRE-AI FLUTTER</div>
+        <div style="font-size:120px;font-weight:800;color:var(--gde-h-blue);line-height:1;">~40%</div>
+        <div style="height:28px;width:100%;background:#0f1a28;border-radius:999px;overflow:hidden;border:3px solid var(--gde-h-blue);">
+          <div style="width:40%;height:100%;background:var(--gde-h-blue);"></div>
+        </div>
+        <div style="font-size:28px;color:#ffffff;">• <strong style="color:var(--gde-h-blue);">Saved ~40% effort</strong> vs. 2 manual apps</div>
+      </li>
+
+      <!-- Card 2: The AI Native Claim -->
+      <li style="background:#172638;border:4px dashed var(--gde-h-pink);border-radius:36px;padding:44px 40px;min-width:0;display:flex;flex-direction:column;justify-content:space-between;">
+        <div style="font-family:'Roboto Mono',monospace;font-size:24px;font-weight:700;color:var(--gde-h-pink);">02 · AI + 2 NATIVE CLAIM</div>
+        <div style="font-size:112px;font-weight:800;color:var(--gde-h-pink);line-height:1;">50–70%</div>
+        <div style="height:28px;width:100%;background:#0f1a28;border-radius:999px;overflow:hidden;border:3px solid var(--gde-h-pink);">
+          <div style="width:65%;height:100%;background:var(--gde-h-pink);"></div>
+        </div>
+        <div style="font-size:28px;color:#ffffff;">• <strong style="color:var(--gde-h-pink);">Claims AI saves</strong> 50–70% across 2 apps</div>
+      </li>
+    </ul>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 09: THE 2026 REALITY (FLUTTER USES AI TOO -> 1/2 PRs)
+     ========================================================================= -->
+<section class="deck-slide" id="9" aria-roledescription="slide" aria-label="Slide 9 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas navy">
+    <div class="slide-num">09 / 23</div>
+    <div>
+      <div class="mono-sub" style="color:var(--gde-h-green);margin-bottom:12px;">THE FLAWED ASSUMPTION · 2026 REALITY</div>
+      <h2 class="gde-headline" style="font-size:64px;">That Claim Only Works If Flutter Can’t Use AI.</h2>
+    </div>
+
+    <!-- 2-Column Comparison: Flawed Assumption vs 2026 Reality -->
+    <div style="display:grid;grid-template-columns:0.88fr 1.12fr;gap:40px;flex:1;margin:24px 0;">
+      <!-- Left: Flawed Assumption (If Flutter Can't Use AI) -->
+      <div style="background:#172638;border:4px dashed var(--gde-h-pink);border-radius:36px;padding:38px 36px;display:flex;flex-direction:column;justify-content:space-between;opacity:0.85;">
+        <div style="font-family:'Roboto Mono',monospace;font-size:22px;font-weight:700;color:var(--gde-h-pink);">IF FLUTTER CAN’T USE AI</div>
+        <div style="font-size:84px;font-weight:800;color:var(--gde-h-pink);line-height:1;text-decoration:line-through;">50–70%</div>
+        <div style="font-family:'Roboto Mono',monospace;font-size:24px;color:#cbd5e1;background:#0f1a28;padding:18px 24px;border-radius:20px;border:2px solid var(--gde-h-pink);">
+          AI Native vs. Manual Flutter
+        </div>
+      </div>
+
+      <!-- Right: 2026 Reality (Flutter + AI) -->
+      <div style="background:var(--gde-h-green);color:var(--gde-navy);border:4px solid #ffffff;border-radius:36px;padding:38px 42px;display:flex;flex-direction:column;justify-content:space-between;">
+        <div style="font-family:'Roboto Mono',monospace;font-size:24px;font-weight:700;color:var(--gde-navy);">2026 REALITY · FLUTTER + AI</div>
+        <div style="font-size:128px;font-weight:800;color:var(--gde-navy);line-height:1;">½ PRs</div>
+        <div style="height:28px;width:100%;background:#ffffff;border-radius:999px;overflow:hidden;border:4px solid var(--gde-navy);">
+          <div style="width:50%;height:100%;background:var(--gde-navy);"></div>
+        </div>
+        <div style="font-family:'Roboto Mono',monospace;font-size:24px;font-weight:700;color:var(--gde-navy);">
+          AI Multiplier × 1 Shared Codebase
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 Concise Takeaways -->
+    <ul class="bullet-list" style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:24px;width:100%;">
+      <li style="background:#172638;border:3px solid var(--gde-h-pink);border-radius:20px;padding:18px 18px;font-size:22px;text-align:center;min-width:0;color:#ffffff;">• <strong style="color:var(--gde-h-pink);">Skeptics assume Flutter</strong> cannot use AI</li>
+      <li style="background:#172638;border:3px solid var(--gde-h-blue);border-radius:20px;padding:18px 18px;font-size:22px;text-align:center;min-width:0;color:#ffffff;">• <strong style="color:var(--gde-h-blue);">AI speeds up</strong> Dart and Flutter too</li>
+      <li style="background:#172638;border:3px solid var(--gde-h-green);border-radius:20px;padding:18px 18px;font-size:22px;text-align:center;min-width:0;color:#ffffff;">• <strong style="color:var(--gde-h-green);">Flutter with AI</strong> halves total PRs</li>
+    </ul>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 10: 20% CODING VS 80% REST OF SDLC SPLIT CHART (Aligned Top Bar + Phase Boxes)
+     ========================================================================= -->
+<section class="deck-slide" id="10" aria-roledescription="slide" aria-label="Slide 10 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas">
+    <div class="slide-num">10 / 23</div>
+    <div>
+      <div class="mono-sub" style="margin-bottom:10px;">FULL SDLC · SOURCES: IEEE TSE · IDC · BROOKS · DORA</div>
+      <h2 class="gde-headline" style="font-size:64px;">AI Speeds Up Coding—Not the Other 80% of SDLC.</h2>
+    </div>
+
+    <!-- Perfectly Aligned 4-Column Grid for Both Top Bar Segments and Bottom Phase Cards -->
+    <div style="display:grid;grid-template-columns:20fr 25fr 25fr 30fr;grid-template-rows:auto auto 1fr;column-gap:20px;row-gap:16px;flex:1;margin:14px 0;">
+      <!-- Row 1: Top Split Status Banners (Col 1 vs Cols 2-4) -->
+      <div style="grid-column:1 / 2;background:var(--gde-h-green);color:var(--gde-navy);border:3px solid var(--gde-navy);border-radius:16px;padding:12px 12px;font-family:'Roboto Mono',monospace;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;">
+        FASTER WITH AI (BOTH)
+      </div>
+      <div style="grid-column:2 / 5;background:var(--gde-red);color:#ffffff;border:3px solid var(--gde-navy);border-radius:16px;padding:12px 18px;font-family:'Roboto Mono',monospace;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;">
+        80% BEYOND CODING · NOT FASTER WITH AI (DOUBLED ON 2 NATIVE APPS)
+      </div>
+
+      <!-- Row 2: Top Proportional Bar Segments (Aligned 1:1 with Each Phase Card Below) -->
+      <div style="background:var(--gde-h-yellow);border:4px solid var(--gde-navy);border-radius:999px;height:60px;display:flex;align-items:center;justify-content:center;font-family:'Roboto Mono',monospace;font-size:21px;font-weight:700;color:var(--gde-navy);">
+        20% Coding
+      </div>
+      <div style="background:var(--gde-h-blue);border:4px solid var(--gde-navy);border-radius:999px;height:60px;display:flex;align-items:center;justify-content:center;font-family:'Roboto Mono',monospace;font-size:21px;font-weight:700;color:var(--gde-navy);">
+        25% Auto Tests
+      </div>
+      <div style="background:var(--gde-h-pink);border:4px solid var(--gde-navy);border-radius:999px;height:60px;display:flex;align-items:center;justify-content:center;font-family:'Roboto Mono',monospace;font-size:21px;font-weight:700;color:var(--gde-navy);">
+        25% QA &amp; Parity
+      </div>
+      <div style="background:var(--gde-navy);border:4px solid var(--gde-navy);border-radius:999px;height:60px;display:flex;align-items:center;justify-content:center;font-family:'Roboto Mono',monospace;font-size:21px;font-weight:700;color:var(--gde-h-green);">
+        30% Ownership
+      </div>
+
+      <!-- Row 3: 4 Phase Cards (Aligned 1:1 with Top Bar Segments) -->
+      <div class="gde-pill-yellow" style="padding:28px 24px;display:flex;flex-direction:column;justify-content:space-between;">
+        <div style="font-family:'Roboto Mono',monospace;font-size:19px;font-weight:700;">PHASE 1</div>
+        <div style="font-size:78px;font-weight:800;line-height:1;">~20%</div>
+        <div>
+          <div style="font-size:28px;font-weight:800;">Coding</div>
+          <div style="font-family:'Roboto Mono',monospace;font-size:16px;font-weight:700;margin-top:6px;">Native + AI &amp; Flutter + AI</div>
+        </div>
+      </div>
+
+      <div class="gde-pill-blue" style="padding:28px 24px;display:flex;flex-direction:column;justify-content:space-between;">
+        <div style="font-family:'Roboto Mono',monospace;font-size:19px;font-weight:700;">PHASE 2</div>
+        <div style="font-size:78px;font-weight:800;line-height:1;">~25%</div>
+        <div>
+          <div style="font-size:28px;font-weight:800;">Automated Tests</div>
+          <div style="font-family:'Roboto Mono',monospace;font-size:16px;font-weight:700;margin-top:6px;">2× Test Suites on Native</div>
+        </div>
+      </div>
+
+      <div class="gde-pill-pink" style="padding:28px 24px;display:flex;flex-direction:column;justify-content:space-between;">
+        <div style="font-family:'Roboto Mono',monospace;font-size:19px;font-weight:700;">PHASE 3</div>
+        <div style="font-size:78px;font-weight:800;line-height:1;">~25%</div>
+        <div>
+          <div style="font-size:28px;font-weight:800;">Release QA &amp; Parity</div>
+          <div style="font-family:'Roboto Mono',monospace;font-size:16px;font-weight:700;margin-top:6px;">2× Logic &amp; UI Verification</div>
+        </div>
+      </div>
+
+      <div class="gde-pill-navy" style="padding:28px 24px;display:flex;flex-direction:column;justify-content:space-between;">
+        <div style="font-family:'Roboto Mono',monospace;font-size:19px;font-weight:700;color:var(--gde-h-green);">PHASE 4</div>
+        <div style="font-size:78px;font-weight:800;line-height:1;color:#ffffff;">~30%</div>
+        <div>
+          <div style="font-size:28px;font-weight:800;color:var(--gde-h-green);">Long-Term Ownership</div>
+          <div style="font-family:'Roboto Mono',monospace;font-size:16px;font-weight:700;color:#cbd5e1;margin-top:6px;">2× Repos, PRs &amp; Maintenance</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 Concise Bullets -->
+    <ul class="bullet-list" style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:24px;width:100%;">
+      <li style="background:#f8fafc;border:3px solid var(--gde-navy);border-radius:20px;padding:18px 18px;font-size:22px;text-align:center;min-width:0;">• <strong>AI only accelerates</strong> 20% coding phase</li>
+      <li style="background:#f8fafc;border:3px solid var(--gde-navy);border-radius:20px;padding:18px 18px;font-size:22px;text-align:center;min-width:0;">• <strong>Flutter gets</strong> faster coding with AI</li>
+      <li style="background:#f8fafc;border:3px solid var(--gde-navy);border-radius:20px;padding:18px 18px;font-size:22px;text-align:center;min-width:0;">• <strong>80% SDLC effort</strong> still doubles natively</li>
+    </ul>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 11: FLOW STYLE CHART (Template page_90)
+     ========================================================================= -->
+<section class="deck-slide" id="11" aria-roledescription="slide" aria-label="Slide 11 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas">
+    <div class="slide-num">11 / 23</div>
+    <div>
+      <div class="mono-sub" style="color:var(--gde-red);margin-bottom:10px;">SHOPIFY’S REBUILD TAX · 4 CUSTOM TOOLS FOR 30 ENGINEERS</div>
+      <h2 class="gde-headline" style="font-size:66px;">AI Native Migrations Require Heavy Verification Harnesses.</h2>
+    </div>
+
+    <!-- Flow Style Chart from Template page_90 -->
+    <div style="display:flex;flex-direction:column;gap:22px;background:#f8fafc;border:3px solid var(--gde-navy);border-radius:36px;padding:40px 48px;">
+      <!-- Bridge Caption Pills Row (Template page_90) -->
+      <div style="display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:28px;">
+        <div style="background:var(--gde-navy);color:#fff;border-radius:999px;padding:12px 24px;font-family:'Roboto Mono',monospace;font-size:20px;font-weight:700;text-align:center;">01 · No One-Shot</div>
+        <div style="background:var(--gde-navy);color:#fff;border-radius:999px;padding:12px 24px;font-family:'Roboto Mono',monospace;font-size:20px;font-weight:700;text-align:center;">02 · Match Running App</div>
+        <div style="background:var(--gde-navy);color:#fff;border-radius:999px;padding:12px 24px;font-family:'Roboto Mono',monospace;font-size:20px;font-weight:700;text-align:center;">03 · Adversarial Audit</div>
+        <div style="background:var(--gde-navy);color:#fff;border-radius:999px;padding:12px 24px;font-family:'Roboto Mono',monospace;font-size:20px;font-weight:700;text-align:center;">04 · Mandatory Gate</div>
+      </div>
+
+      <!-- Flow Nodes Row (Template page_90) -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+        <div style="background:#ffffff;border:4px solid var(--gde-navy);border-radius:999px;padding:38px 40px;font-size:30px;font-weight:800;text-align:center;flex:1;">
+          Helix<br>Checkpoints
+        </div>
+        <div style="font-size:44px;font-weight:800;color:var(--gde-navy);">→</div>
+        <div style="background:var(--gde-green);color:#fff;border:4px solid var(--gde-navy);border-radius:999px;padding:38px 40px;font-size:30px;font-weight:800;text-align:center;flex:1;">
+          Visual UI<br>Review
+        </div>
+        <div style="font-size:44px;font-weight:800;color:var(--gde-navy);">→</div>
+        <div style="background:var(--gde-blue);color:#fff;border:4px solid var(--gde-navy);border-radius:999px;padding:38px 40px;font-size:30px;font-weight:800;text-align:center;flex:1;">
+          2 AI Critics<br>Review
+        </div>
+        <div style="font-size:44px;font-weight:800;color:var(--gde-navy);">→</div>
+        <div style="background:var(--gde-h-green);color:var(--gde-navy);border:4px solid var(--gde-navy);border-radius:999px;padding:38px 40px;font-size:30px;font-weight:800;text-align:center;flex:1;">
+          “A Human’s<br>Nod”
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 Concise Takeaways -->
+    <ul class="bullet-list" style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:24px;width:100%;">
+      <li class="gde-pill-pink" style="padding:18px 18px;font-size:22px;text-align:center;min-width:0;">• <strong>Weeks spent upfront</strong> on manual screens</li>
+      <li class="gde-pill-blue" style="padding:18px 18px;font-size:22px;text-align:center;min-width:0;">• <strong>Built Helix, Reflex</strong> &amp; cloud fleets</li>
+      <li class="gde-pill-yellow" style="padding:18px 18px;font-size:22px;text-align:center;min-width:0;">• <strong>Human approval gates</strong> every migration step</li>
+    </ul>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 12: SHOPIFY'S NEWEST BLOG · REFLEX ARCHITECTURE (Clean 2-Card Stat Style like Slide 08)
+     ========================================================================= -->
+<section class="deck-slide" id="12" aria-roledescription="slide" aria-label="Slide 12 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas navy">
+    <div class="slide-num">12 / 23</div>
+    <div>
+      <div class="mono-sub" style="color:var(--gde-h-pink);margin-bottom:12px;">SHOPIFY ENGINEERING · REFLEX ARCHITECTURE</div>
+      <h2 class="gde-headline" style="font-size:66px;">Shopify Built Reflex to Bypass Slow Simulators.</h2>
+    </div>
+
+    <!-- 2-Card Clean Stat Comparison (Matches Slide 08 Style) -->
+    <ul class="bullet-list" style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:40px;width:100%;flex:1;margin-top:28px;">
+      <!-- Card 1: Native Simulator Bottleneck -->
+      <li style="background:#172638;border:4px dashed var(--gde-h-pink);border-radius:36px;padding:44px 40px;min-width:0;display:flex;flex-direction:column;justify-content:space-between;">
+        <div style="font-family:'Roboto Mono',monospace;font-size:24px;font-weight:700;color:var(--gde-h-pink);">01 · NATIVE SIMULATOR WAIT</div>
+        <div style="font-size:116px;font-weight:800;color:var(--gde-h-pink);line-height:1;">Minutes</div>
+        <div style="height:28px;width:100%;background:#0f1a28;border-radius:999px;overflow:hidden;border:3px solid var(--gde-h-pink);">
+          <div style="width:92%;height:100%;background:var(--gde-h-pink);"></div>
+        </div>
+        <div style="font-size:28px;color:#ffffff;">• <strong style="color:var(--gde-h-pink);">Emulator boots</strong> bottleneck AI agents</div>
+      </li>
+
+      <!-- Card 2: Shopify Reflex CLI -->
+      <li style="background:#172638;border:4px solid var(--gde-h-yellow);border-radius:36px;padding:44px 40px;min-width:0;display:flex;flex-direction:column;justify-content:space-between;">
+        <div style="font-family:'Roboto Mono',monospace;font-size:24px;font-weight:700;color:var(--gde-h-yellow);">02 · SHOPIFY REFLEX CLI (1,700+ SPECS)</div>
+        <div style="font-size:116px;font-weight:800;color:var(--gde-h-yellow);line-height:1;">~4 Mins</div>
+        <div style="height:28px;width:100%;background:#0f1a28;border-radius:999px;overflow:hidden;border:3px solid var(--gde-h-yellow);">
+          <div style="width:28%;height:100%;background:var(--gde-h-yellow);"></div>
+        </div>
+        <div style="font-size:28px;color:#ffffff;">• <strong style="color:var(--gde-h-yellow);">Strips out UI</strong> to test ViewModels via CLI</div>
+      </li>
+    </ul>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 13: REFLEX VS. FLUTTER HARNESS (Clean 2-Bar Chart Style like Slide 07)
+     ========================================================================= -->
+<section class="deck-slide" id="13" aria-roledescription="slide" aria-label="Slide 13 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas">
+    <div class="slide-num">13 / 23</div>
+    <div>
+      <div class="mono-sub" style="margin-bottom:10px;">A BETTER HARNESS BEATS A BETTER PROMPT</div>
+      <h2 class="gde-headline" style="font-size:66px;">Reflex Skips the UI; Flutter Tests Widgets Too.</h2>
+    </div>
+
+    <!-- Clean 2-Bar Verification Coverage Chart (Matches Slide 07 Style) -->
+    <div style="background:#f8fafc;border:4px solid var(--gde-navy);border-radius:36px;padding:48px 56px;display:flex;flex-direction:column;gap:38px;">
+      <!-- Bar 1: Shopify Reflex -->
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="font-size:36px;font-weight:800;color:var(--gde-navy);">Shopify Reflex (2 Codebases)</span>
+          <span style="font-family:'Roboto Mono',monospace;font-size:26px;font-weight:700;color:var(--gde-red);">Headless State Only (0% UI)</span>
+        </div>
+        <div style="height:64px;width:100%;background:#ffeef4;border:4px solid var(--gde-navy);border-radius:999px;overflow:hidden;display:flex;">
+          <div style="width:48%;background:var(--gde-h-yellow);border-right:4px dashed var(--gde-navy);height:100%;"></div>
+        </div>
+      </div>
+
+      <!-- Bar 2: Flutter Built-in Harness -->
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="font-size:36px;font-weight:800;color:var(--gde-navy);">Flutter Test + MCP (1 Codebase)</span>
+          <span style="font-family:'Roboto Mono',monospace;font-size:26px;font-weight:700;color:var(--gde-green);">100% Logic + Widgets (ms)</span>
+        </div>
+        <div style="height:64px;width:100%;background:#e2e8f0;border:4px solid var(--gde-navy);border-radius:999px;overflow:hidden;display:flex;">
+          <div style="width:100%;background:var(--gde-h-green);height:100%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 Concise Bullets (Matches Slide 07 Style) -->
+    <ul class="bullet-list" style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:28px;width:100%;">
+      <li class="gde-pill-pink" style="padding:22px 24px;font-size:26px;text-align:center;min-width:0;">• <strong>Reflex skips SwiftUI</strong> and Compose UI</li>
+      <li class="gde-pill-green" style="padding:22px 24px;font-size:26px;text-align:center;min-width:0;">• <strong>Flutter tests logic</strong> and widgets in ms</li>
+    </ul>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 14: PROBABILISTIC DRIFT VS. DETERMINISTIC FLUTTER CHART + PRISM (Template page_64)
+     ========================================================================= -->
+<section class="deck-slide" id="14" aria-roledescription="slide" aria-label="Slide 14 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas navy">
+    <div class="slide-num">14 / 23</div>
+    <div style="display:grid;grid-template-columns:1.12fr 0.88fr;gap:48px;align-items:center;height:100%;">
+      <!-- Left: Green Outlined Recommendation Box + Segmented QA Split Bars -->
+      <div style="border:4px solid var(--gde-h-green);border-radius:48px;padding:44px;height:860px;display:flex;flex-direction:column;justify-content:space-between;">
+        <div>
+          <div class="mono-sub" style="color:var(--gde-h-green);margin-bottom:10px;">THE CORE MATH · “ARGUE ONCE, BUILD ONCE”</div>
+          <h2 class="gde-headline" style="font-size:56px;color:var(--gde-h-green);">
+            One Deterministic Codebase Eliminates Cross-Platform Drift.
+          </h2>
+        </div>
+
+        <!-- Custom Comparison Bars: 2x Native Drift vs 1x Flutter Shared QA -->
+        <div style="display:flex;flex-direction:column;gap:20px;background:#152333;border:2px solid #334e6f;border-radius:28px;padding:26px 32px;">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-family:'Roboto Mono',monospace;font-size:20px;font-weight:700;color:var(--gde-h-pink);margin-bottom:8px;">
+              <span>2× NATIVE (PROBABILISTIC AI)</span>
+              <span>Full iOS QA + Full Android QA</span>
+            </div>
+            <div style="height:44px;width:100%;border-radius:999px;overflow:hidden;display:flex;border:3px solid #ffffff;">
+              <div style="width:82%;background:#334e6f;color:#ffffff;display:flex;align-items:center;padding-left:20px;font-family:'Roboto Mono',monospace;font-size:19px;font-weight:700;">~95% Match</div>
+              <div style="width:18%;background:var(--gde-red);color:#ffffff;display:flex;align-items:center;justify-content:center;font-family:'Roboto Mono',monospace;font-size:18px;font-weight:700;">~5% Drift</div>
+            </div>
+          </div>
+
+          <div>
+            <div style="display:flex;justify-content:space-between;font-family:'Roboto Mono',monospace;font-size:20px;font-weight:700;color:var(--gde-h-green);margin-bottom:8px;">
+              <span>1× FLUTTER (DETERMINISTIC)</span>
+              <span>Zero Logic/UI Drift</span>
+            </div>
+            <div style="height:44px;width:100%;border-radius:999px;overflow:hidden;display:flex;border:3px solid #ffffff;">
+              <div style="width:85%;background:var(--gde-h-green);color:var(--gde-navy);display:flex;align-items:center;padding-left:20px;font-family:'Roboto Mono',monospace;font-size:19px;font-weight:700;">~80–90% Shared Logic &amp; UI Tests</div>
+              <div style="width:15%;background:var(--gde-h-blue);color:var(--gde-navy);display:flex;align-items:center;justify-content:center;font-family:'Roboto Mono',monospace;font-size:18px;font-weight:700;">OS QA</div>
+            </div>
+          </div>
+        </div>
+
+        <ul class="bullet-list" style="gap:16px;">
+          <li style="font-size:32px;color:#ffffff;">• <strong style="color:var(--gde-h-pink);">Two AI apps need</strong> CI divergence checks</li>
+          <li style="font-size:32px;color:#ffffff;">• <strong style="color:var(--gde-h-blue);">One Dart codebase</strong> locks visual parity</li>
+          <li style="font-size:32px;color:#ffffff;">• <strong style="color:var(--gde-h-green);">Teams QA integration</strong> instead of logic</li>
+        </ul>
+      </div>
+
+      <!-- Right: Dash Deterministic Prism Illustration -->
+      <img src="deck-images/dash-deterministic-sync.png" alt="Dash with 1 Dart Codebase prism" style="width:100%;height:860px;object-fit:cover;border-radius:48px;border:4px solid var(--gde-h-blue);">
+    </div>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 15: VERIFICATION IS THE NEW BOTTLENECK (CODE REVIEW + TEST RUNS)
+     ========================================================================= -->
+<section class="deck-slide" id="15" aria-roledescription="slide" aria-label="Slide 15 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas navy">
+    <div class="slide-num">15 / 23</div>
+    <!-- Top Notched Folder/Tab Callout Box (Template page_84) -->
+    <div style="position:relative;border:4px solid var(--gde-blue);border-radius:36px;padding:34px 48px;background:#18283b;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span class="mono-sub" style="color:var(--gde-h-blue);">THE NEW AI BOTTLENECK · VERIFYING &gt; CODING</span>
+        <span style="font-family:'Roboto Mono',monospace;font-size:22px;color:var(--gde-h-green);">← &lt;200ms Hot Reload · Millisecond $ flutter test</span>
+      </div>
+      <h2 class="gde-headline" style="font-size:60px;">Verification—Not Coding—Is Now the Bottleneck.</h2>
+    </div>
+
+    <!-- Bottom: Curly Braces { ... } Callout (Template page_84) + Dash Headless Loop Image -->
+    <div style="display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:center;flex:1;margin-top:32px;">
+      <div style="display:flex;align-items:center;gap:24px;height:100%;">
+        <!-- Left Curly Brace from Template page_84 -->
+        <div style="font-family:'Roboto Mono',monospace;font-size:220px;font-weight:300;color:var(--gde-blue);line-height:1;">{</div>
+        <ul class="bullet-list" style="gap:28px;flex:1;">
+          <li style="font-size:32px;color:#ffffff;">• <strong style="color:var(--gde-h-pink);">Reviewing and testing</strong> now bottleneck AI</li>
+          <li style="font-size:32px;color:#ffffff;">• <strong style="color:var(--gde-h-green);">Flutter reviews once</strong> with millisecond tests</li>
+          <li style="font-size:32px;color:#ffffff;">• <strong style="color:var(--gde-h-blue);">Flutter MCP verifies</strong> live widget trees</li>
+        </ul>
+        <div style="font-family:'Roboto Mono',monospace;font-size:220px;font-weight:300;color:var(--gde-blue);line-height:1;">}</div>
+      </div>
+
+      <img src="deck-images/dash-headless-loop.png" alt="Dash zooming on millisecond headless loop" style="width:100%;height:560px;object-fit:cover;border-radius:36px;border:4px solid var(--gde-h-green);">
+    </div>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 16: GIANT CENTERED STATISTIC + SPLIT BAR CHART (Original Slide 13 + Template page_45)
+     ========================================================================= -->
+<section class="deck-slide" id="16" aria-roledescription="slide" aria-label="Slide 16 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas">
+    <div class="slide-num">16 / 23</div>
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:space-between;height:100%;text-align:center;">
+      <div>
+        <div class="mono-sub" style="margin-bottom:10px;">WHERE CROSS-PLATFORM BEAT NATIVE</div>
+        <h2 class="gde-headline" style="font-size:66px;">Shared Engines Win When Visuals Define Products.</h2>
+      </div>
+
+      <!-- Massive 70%+ Stat (Template page_45) -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:40px;">
+        <div style="font-size:196px;font-weight:800;line-height:0.9;color:var(--gde-navy);letter-spacing:-8px;">70%+</div>
+      </div>
+
+      <!-- Custom 72% vs 28% Split Progress Bar from Original Slide 13 -->
+      <div style="width:1360px;height:64px;border-radius:999px;overflow:hidden;display:flex;border:4px solid var(--gde-navy);">
+        <div style="width:72%;background:var(--gde-green);color:#ffffff;display:flex;align-items:center;padding-left:36px;font-family:'Roboto Mono',monospace;font-size:25px;font-weight:700;border-right:4px solid var(--gde-navy);">
+          Unity Cross-Platform Engine (70%+ Top 1,000 Mobile Games)
+        </div>
+        <div style="width:28%;background:var(--gde-h-yellow);color:var(--gde-navy);display:flex;align-items:center;justify-content:flex-end;padding-right:36px;font-family:'Roboto Mono',monospace;font-size:24px;font-weight:700;">
+          Native / Others
+        </div>
+      </div>
+
+      <!-- Halftone Blue Caption Box (Template page_45) containing the 3 Bullets -->
+      <div class="gde-pill-blue" style="width:100%;padding:28px 32px;border-radius:36px;">
+        <ul class="bullet-list" style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:20px;width:100%;">
+          <li style="font-size:23px;text-align:center;min-width:0;">• <strong>Unity powers 70%+</strong> of top games</li>
+          <li style="font-size:23px;text-align:center;min-width:0;">• <strong>Studios avoid maintaining</strong> two 3D engines</li>
+          <li style="font-size:23px;text-align:center;min-width:0;">• <strong>One shared engine</strong> beats building twice</li>
+        </ul>
+      </div>
+    </div>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 17: HEADLINE + { } BRACKETS + MOBILE SHOWCASE (Template page_27 + page_106)
+     ========================================================================= -->
+<section class="deck-slide" id="17" aria-roledescription="slide" aria-label="Slide 17 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas">
+    <div class="slide-num">17 / 23</div>
+    <div style="display:grid;grid-template-columns:1.08fr 0.92fr;gap:56px;align-items:center;height:100%;">
+      <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
+        <div>
+          <div class="mono-sub" style="margin-bottom:12px;">VISUALIZATION AS THE PRODUCT</div>
+          <h2 class="gde-headline" style="font-size:66px;">Brand Experiences Demand One Shared GPU Canvas.</h2>
+        </div>
+
+        <ul class="bullet-list" style="gap:22px;">
+          <li style="background:#ffeef4;border:3px solid var(--gde-navy);border-radius:20px;padding:22px 32px;font-size:32px;">• <strong>RealityKit and Filament</strong> feel visibly different</li>
+          <li style="background:#f1f7fe;border:3px solid var(--gde-navy);border-radius:20px;padding:22px 32px;font-size:32px;">• <strong>Shaders and physics</strong> must match exactly</li>
+          <li style="background:#e8f8ec;border:3px solid var(--gde-navy);border-radius:20px;padding:22px 32px;font-size:32px;">• <strong>Shared C++ engines</strong> recreate cross-platform tradeoffs</li>
+        </ul>
+
+        <!-- Blue { } Code Brackets from Template page_27 -->
+        <div style="display:flex;align-items:center;gap:28px;">
+          <div style="background:var(--gde-blue);color:#fff;border:3px solid var(--gde-navy);border-radius:20px;padding:12px 28px;font-family:'Roboto Mono',monospace;font-size:36px;font-weight:800;">{ GLSL + 3D }</div>
+        </div>
+      </div>
+
+      <!-- Mobile Showcase with Floating Callout Badge (Template page_106) -->
+      <div style="position:relative;height:840px;">
+        <img src="deck-images/ios-vs-android-animation.png" alt="iOS vs Android visual parity" style="width:100%;height:100%;object-fit:cover;border-radius:40px;border:4px solid var(--gde-navy);">
+        <div class="gde-pill-pink" style="position:absolute;bottom:24px;left:24px;padding:12px 28px;font-family:'Roboto Mono',monospace;font-size:22px;font-weight:700;">
+          Swift/RealityKit ≠ Kotlin/Filament
+        </div>
+      </div>
+    </div>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 18: DEMO TRANSITION WITH SCALLOPED WAVES ON NAVY (Template page_18 / page_78)
+     ========================================================================= -->
+<section class="deck-slide" id="18" aria-roledescription="slide" aria-label="Slide 18 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas navy">
+    <div class="slide-num">18 / 23</div>
+    <div style="display:grid;grid-template-columns:1.08fr 0.92fr;gap:56px;align-items:center;height:100%;">
+      <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
+        <!-- Top Scalloped Green Arches (Template page_18) -->
+        <svg width="680" height="64" viewBox="0 0 680 64" fill="none" stroke="#34a853" stroke-width="5">
+          <path d="M4 60A66 60 0 0 1 138 60A66 60 0 0 1 272 60A66 60 0 0 1 406 60A66 60 0 0 1 540 60A66 60 0 0 1 674 60"/>
+        </svg>
+
+        <div>
+          <div class="mono-sub" style="color:var(--gde-h-green);margin-bottom:12px;">“UNITY FOR APPS” · LIVE DEMOS NEXT</div>
+          <h2 class="gde-headline" style="font-size:66px;">Flutter Embeds Multiple 3D Canvases Inside Native.</h2>
+        </div>
+
+        <ul class="bullet-list" style="gap:22px;">
+          <li style="font-size:35px;color:#ffffff;">• <strong style="color:var(--gde-h-blue);">Flutter GPU renders</strong> real-time 3D scenes</li>
+          <li style="font-size:35px;color:#ffffff;">• <strong style="color:var(--gde-h-green);">FlutterEngineGroup adds</strong> views at 180kB each</li>
+          <li style="font-size:35px;color:#ffffff;">• <strong style="color:var(--gde-h-yellow);">Stac streams live</strong> server-driven 3D UI</li>
+        </ul>
+
+        <!-- Bottom Scalloped Green Arches (Template page_18) -->
+        <svg width="680" height="64" viewBox="0 0 680 64" fill="none" stroke="#34a853" stroke-width="5">
+          <path d="M4 4A66 60 0 0 0 138 4A66 60 0 0 0 272 4A66 60 0 0 0 406 4A66 60 0 0 0 540 4A66 60 0 0 0 674 4"/>
+        </svg>
+      </div>
+
+      <img src="deck-images/dash-multi-surface-3d.png" alt="Exploded smartphone view with 3 floating 3D Flutter canvases and Dash" style="width:100%;height:840px;object-fit:cover;border-radius:48px;border:4px solid var(--gde-h-green);">
+    </div>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 19: QUOTE SLIDE (Template page_73 Giant Quote Marks)
+     ========================================================================= -->
+<section class="deck-slide" id="19" aria-roledescription="slide" aria-label="Slide 19 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas">
+    <div class="slide-num">19 / 23</div>
+    <div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 120px;">
+      <!-- Top-Left Giant Red Quote Mark (Template page_73) -->
+      <svg width="180" height="140" viewBox="0 0 180 140" style="position:absolute;top:10px;left:10px;">
+        <path d="M42 12L14 64C8 76 6 88 10 102C16 120 34 130 52 126C70 122 82 104 78 86C74 68 58 58 42 60L64 22L42 12ZM130 12L102 64C96 76 94 88 98 102C104 120 122 130 140 126C158 122 170 104 166 86C162 68 146 58 130 60L152 22L130 12Z" fill="#ea4335" stroke="#20344b" stroke-width="5"/>
+      </svg>
+
+      <blockquote style="font-size:84px;font-weight:500;line-height:1.14;color:var(--gde-navy);margin:0;max-width:1400px;">
+        Is Flutter the right choice for <strong style="font-weight:800;color:var(--gde-red);">everything?</strong><br>
+        <strong style="font-weight:800;color:var(--gde-green);">No. Here is where Native wins.</strong>
+      </blockquote>
+
+      <!-- Bottom-Right Giant Pink Quote Mark (Template page_73) -->
+      <svg width="180" height="140" viewBox="0 0 180 140" style="position:absolute;bottom:10px;right:10px;transform:rotate(180deg);">
+        <path d="M42 12L14 64C8 76 6 88 10 102C16 120 34 130 52 126C70 122 82 104 78 86C74 68 58 58 42 60L64 22L42 12ZM130 12L102 64C96 76 94 88 98 102C104 120 122 130 140 126C158 122 170 104 166 86C162 68 146 58 130 60L152 22L130 12Z" fill="#ff7daf" stroke="#20344b" stroke-width="5"/>
+      </svg>
+    </div>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 20: NAVY WITH YELLOW HEADLINE + # GRID (Template page_31)
+     ========================================================================= -->
+<section class="deck-slide" id="20" aria-roledescription="slide" aria-label="Slide 20 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas navy">
+    <div class="slide-num">20 / 23</div>
+    <div>
+      <div class="mono-sub" style="color:var(--gde-h-yellow);margin-bottom:14px;">WHERE NATIVE WINS · 01 · SOURCES: FLUTTER DOCS · SPRINGER EMSE</div>
+      <!-- Yellow Headline from Template page_31 -->
+      <h2 class="gde-headline" style="color:var(--gde-yellow);font-size:70px;">
+        Choose Native for Minimal RAM, Size, and Day-1 OS.
+      </h2>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:64px;align-items:center;flex:1;margin-top:24px;">
+      <ul class="bullet-list" style="gap:28px;">
+        <li style="background:#172638;border:3px solid var(--gde-yellow);border-radius:24px;padding:28px 36px;font-size:34px;">• <strong style="color:var(--gde-h-yellow);">Saves ~15–20MB RAM</strong> and ~4–10MB binary size</li>
+        <li style="background:#172638;border:3px solid var(--gde-h-blue);border-radius:24px;padding:28px 36px;font-size:34px;">• <strong style="color:var(--gde-h-blue);">Uses ~6–15% less</strong> energy on budget phones</li>
+        <li style="background:#172638;border:3px solid var(--gde-h-green);border-radius:24px;padding:28px 36px;font-size:34px;">• <strong style="color:var(--gde-h-green);">Unlocks Day-1 OS</strong> system controls and materials</li>
+      </ul>
+
+      <!-- Outlined Yellow # Symbol + 3 Yellow Circles from Template page_31 -->
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:40px;">
+        <div style="position:relative;display:flex;align-items:center;justify-content:center;">
+          <svg width="320" height="280" viewBox="0 0 320 280" fill="none" stroke="#f9ab00" stroke-width="5">
+            <path d="M88 16H144V72H176V16H232V72H296V128H232V152H296V208H232V264H176V208H144V264H88V208H24V152H88V128H24V72H88V16ZM144 128V152H176V128H144Z"/>
+          </svg>
+        </div>
+        <div style="display:flex;gap:24px;">
+          <div style="width:84px;height:84px;border-radius:50%;border:5px solid var(--gde-h-yellow);"></div>
+          <div style="width:84px;height:84px;border-radius:50%;border:5px solid var(--gde-h-yellow);"></div>
+          <div style="width:84px;height:84px;border-radius:50%;border:5px solid var(--gde-h-yellow);"></div>
+        </div>
+      </div>
+    </div>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 21: 2-AXIS HORIZONTAL VS. VERTICAL PILL MATRIX (Original Matrix + GDE Style)
+     ========================================================================= -->
+<section class="deck-slide" id="21" aria-roledescription="slide" aria-label="Slide 21 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas">
+    <div class="slide-num">21 / 23</div>
+    <div>
+      <div class="mono-sub" style="color:var(--gde-blue);margin-bottom:10px;">WHERE NATIVE WINS · 02 · TWO ORTHOGONAL AXES</div>
+      <h2 class="gde-headline" style="font-size:66px;">Flutter Scales Horizontally; Native Owns OS Surfaces.</h2>
+    </div>
+
+    <!-- Custom 2-Column Horizontal vs Vertical Pill Matrix from Original Slide 18 -->
+    <div style="display:grid;grid-template-columns:1fr 1.15fr;gap:36px;flex:1;margin:20px 0;">
+      <!-- Left: Flutter Horizontal Cross-OS -->
+      <div class="gde-pill-blue" style="padding:36px 40px;display:flex;flex-direction:column;justify-content:space-between;">
+        <div>
+          <div style="font-family:'Roboto Mono',monospace;font-size:22px;font-weight:700;">FLUTTER · HORIZONTAL CROSS-OS ↔</div>
+          <div style="font-size:42px;font-weight:800;margin:10px 0 24px 0;">6 Operating Systems</div>
+          <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:14px;">
+            <span style="padding:14px 20px;border-radius:16px;background:#fff;border:3px solid var(--gde-navy);font-family:'Roboto Mono',monospace;font-size:24px;font-weight:700;text-align:center;">iOS</span>
+            <span style="padding:14px 20px;border-radius:16px;background:#fff;border:3px solid var(--gde-navy);font-family:'Roboto Mono',monospace;font-size:24px;font-weight:700;text-align:center;">Android</span>
+            <span style="padding:14px 20px;border-radius:16px;background:#fff;border:3px solid var(--gde-navy);font-family:'Roboto Mono',monospace;font-size:24px;font-weight:700;text-align:center;">Web</span>
+            <span style="padding:14px 20px;border-radius:16px;background:#fff;border:3px solid var(--gde-navy);font-family:'Roboto Mono',monospace;font-size:24px;font-weight:700;text-align:center;">macOS</span>
+            <span style="padding:14px 20px;border-radius:16px;background:#fff;border:3px solid var(--gde-navy);font-family:'Roboto Mono',monospace;font-size:24px;font-weight:700;text-align:center;">Windows</span>
+            <span style="padding:14px 20px;border-radius:16px;background:#fff;border:3px solid var(--gde-navy);font-family:'Roboto Mono',monospace;font-size:24px;font-weight:700;text-align:center;">Linux</span>
+          </div>
+        </div>
+        <div style="font-family:'Roboto Mono',monospace;font-size:22px;font-weight:700;background:#ffffff;border:3px solid var(--gde-navy);border-radius:16px;padding:14px 20px;text-align:center;">
+          Shared App UI, Business Logic &amp; 3D Canvas
+        </div>
+      </div>
+
+      <!-- Right: Native Vertical Cross-Device Ecosystem Surfaces -->
+      <div class="gde-pill-yellow" style="padding:36px 40px;display:flex;flex-direction:column;justify-content:space-between;">
+        <div>
+          <div style="font-family:'Roboto Mono',monospace;font-size:22px;font-weight:700;">NATIVE · VERTICAL OS SURFACES ↕</div>
+          <div style="font-size:42px;font-weight:800;margin:10px 0 20px 0;">Deep System Surfaces</div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;gap:12px;">
+              <span style="flex:1;padding:12px 18px;border-radius:14px;background:#fff;border:3px solid var(--gde-navy);font-family:'Roboto Mono',monospace;font-size:20px;font-weight:700;">Apple Watch · Wear OS Tiles</span>
+              <span style="flex:1;padding:12px 18px;border-radius:14px;background:#fff;border:3px solid var(--gde-navy);font-family:'Roboto Mono',monospace;font-size:20px;font-weight:700;">VisionOS · Android XR</span>
+            </div>
+            <div style="display:flex;gap:12px;">
+              <span style="flex:1;padding:12px 18px;border-radius:14px;background:var(--gde-h-pink);border:3px solid var(--gde-navy);font-family:'Roboto Mono',monospace;font-size:20px;font-weight:700;">WidgetKit · Glance · Live Activities</span>
+            </div>
+            <div style="display:flex;gap:12px;">
+              <span style="flex:1;padding:12px 18px;border-radius:14px;background:#fff;border:3px solid var(--gde-navy);font-family:'Roboto Mono',monospace;font-size:20px;font-weight:700;">CarPlay · Android Auto · App Intents · tvOS</span>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Roboto Mono',monospace;font-size:22px;font-weight:700;background:var(--gde-navy);color:var(--gde-h-yellow);border-radius:16px;padding:14px 20px;text-align:center;">
+          Requires SwiftUI / WidgetKit &amp; Jetpack Glance
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 Concise Bullets -->
+    <ul class="bullet-list" style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:24px;width:100%;">
+      <li style="background:#f8fafc;border:3px solid var(--gde-navy);border-radius:20px;padding:16px 18px;font-size:22px;text-align:center;min-width:0;">• <strong>Flutter spans</strong> mobile, web, and desktop</li>
+      <li style="background:#f8fafc;border:3px solid var(--gde-navy);border-radius:20px;padding:16px 18px;font-size:22px;text-align:center;min-width:0;">• <strong>Native owns</strong> Watch, TV, and spatial</li>
+      <li style="background:#f8fafc;border:3px solid var(--gde-navy);border-radius:20px;padding:16px 18px;font-size:22px;text-align:center;min-width:0;">• <strong>System widgets require</strong> SwiftUI or Glance</li>
+    </ul>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 22: DARK QUOTE SLIDE (Template page_73 Dark Variant)
+     ========================================================================= -->
+<section class="deck-slide" id="22" aria-roledescription="slide" aria-label="Slide 22 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas navy">
+    <div class="slide-num">22 / 23</div>
+    <div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 120px;">
+      <!-- Top-Left Giant Green Quote Mark -->
+      <svg width="180" height="140" viewBox="0 0 180 140" style="position:absolute;top:10px;left:10px;">
+        <path d="M42 12L14 64C8 76 6 88 10 102C16 120 34 130 52 126C70 122 82 104 78 86C74 68 58 58 42 60L64 22L42 12ZM130 12L102 64C96 76 94 88 98 102C104 120 122 130 140 126C158 122 170 104 166 86C162 68 146 58 130 60L152 22L130 12Z" fill="#5cdb6d" stroke="#ffffff" stroke-width="4"/>
+      </svg>
+
+      <blockquote style="font-size:80px;font-weight:500;line-height:1.15;color:#ffffff;margin:0;max-width:1440px;">
+        The question is no longer whether AI can <span style="text-decoration:line-through;color:#94a3b8;">build it twice</span>.<br>
+        <strong style="font-weight:800;color:var(--gde-h-blue);">Why do we want to own it twice?</strong>
+      </blockquote>
+
+      <!-- Bottom-Right Giant Halftone Blue Quote Mark -->
+      <svg width="180" height="140" viewBox="0 0 180 140" style="position:absolute;bottom:10px;right:10px;transform:rotate(180deg);">
+        <path d="M42 12L14 64C8 76 6 88 10 102C16 120 34 130 52 126C70 122 82 104 78 86C74 68 58 58 42 60L64 22L42 12ZM130 12L102 64C96 76 94 88 98 102C104 120 122 130 140 126C158 122 170 104 166 86C162 68 146 58 130 60L152 22L130 12Z" fill="#57caff" stroke="#ffffff" stroke-width="4"/>
+      </svg>
+    </div>
+  </div></div></div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 23: CLOSING GDG / DEVFEST SLIDE + QR (Template page_69 + page_79)
+     ========================================================================= -->
+<section class="deck-slide" id="23" aria-roledescription="slide" aria-label="Slide 23 of 23">
+  <div class="deck-fit"><div class="deck-scaler"><div class="slide-canvas">
+    <div class="slide-num">23 / 23</div>
+    <div style="display:grid;grid-template-columns:1.12fr 0.88fr;gap:64px;align-items:center;height:100%;">
+      <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
+        <!-- GDE / GDG Logo Header -->
+        <div class="gde-brand">
+          <svg width="64" height="44" viewBox="0 0 64 44" fill="none">
+            <path d="M22 6L8 18L22 30" stroke="#ea4335" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M8 22L22 34" stroke="#4285f4" stroke-width="8" stroke-linecap="round"/>
+            <path d="M42 6L56 18L42 30" stroke="#34a853" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M56 22L42 34" stroke="#f9ab00" stroke-width="8" stroke-linecap="round"/>
+          </svg>
+          <span>Thank You · Open-Source Demos &amp; Agent Skills</span>
+        </div>
+
+        <h2 class="gde-headline" style="font-size:68px;">Build Once with AI and Deterministic Flutter.</h2>
+
+        <ul class="bullet-list" style="gap:20px;">
+          <li class="gde-pill-blue" style="padding:20px 30px;font-size:33px;">• <strong>Explore 3D demos</strong> in flutter_3d repo</li>
+          <li class="gde-pill-green" style="padding:20px 30px;font-size:33px;">• <strong>Try native embedding</strong> in flutter-inapp-ios</li>
+          <li class="gde-pill-yellow" style="padding:20px 30px;font-size:33px;">• <strong>Reuse agent skills</strong> for Stac workflows</li>
+        </ul>
+
+        <!-- Speaker Overlapping Badges (Template page_69) -->
+        <div style="display:flex;align-items:center;gap:28px;">
+          <div style="display:flex;flex-direction:column;">
+            <div class="gde-pill-blue" style="padding:12px 28px;font-size:28px;font-weight:800;border-radius:20px;align-self:flex-start;">
+              Amorn Apichattanakul
+            </div>
+            <div class="gde-pill-navy" style="padding:10px 28px;font-family:'Roboto Mono',monospace;font-size:20px;border-radius:18px;margin-top:-6px;">
+              Senior Innovation Engineer @KBTG
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right QR Card in GDE Rounded Frame -->
+      <div class="gde-pill-blue" style="height:820px;border-radius:48px;padding:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;">
+        <img src="deck-images/qr-repo.png" alt="Repository QR Code" style="width:520px;height:520px;object-fit:contain;border-radius:32px;background:#ffffff;padding:24px;border:4px solid var(--gde-navy);">
+        <div style="font-family:'Roboto Mono',monospace;font-size:28px;font-weight:700;color:var(--gde-navy);">
+          Scan for Slides, Demos &amp; Skills
+        </div>
+      </div>
+    </div>
+  </div></div></div>
+</section>
+
+</main>
+
+<nav class="deck-nav" aria-label="Slide navigation">
+  <button type="button" id="prev-btn" aria-label="Previous slide">◀ Prev</button>
+  <span id="slide-indicator">01 / 23</span>
+  <button type="button" id="next-btn" aria-label="Next slide">Next ▶</button>
+</nav>
+
+<script>
+  (function () {
+    const slides = Array.from(document.querySelectorAll('.deck-slide'));
+    const indicator = document.getElementById('slide-indicator');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+
+    function updateScale() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const scale = Math.min((vw - 48) / 1920, (vh - 48) / 1080);
+      document.documentElement.style.setProperty('--deck-s', Math.max(0.2, scale).toFixed(4));
+    }
+
+    function currentSlideIndex() {
+      const scrollY = window.scrollY + window.innerHeight / 2;
+      let idx = 0;
+      slides.forEach((s, i) => {
+        if (s.offsetTop <= scrollY) idx = i;
+      });
+      return idx;
+    }
+
+    function goToSlide(idx) {
+      const clamped = Math.max(0, Math.min(slides.length - 1, idx));
+      slides[clamped].scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function updateIndicator() {
+      const idx = currentSlideIndex();
+      const num = String(idx + 1).padStart(2, '0');
+      const total = String(slides.length).padStart(2, '0');
+      indicator.textContent = num + ' / ' + total;
+    }
+
+    window.addEventListener('resize', updateScale);
+    window.addEventListener('scroll', updateIndicator, { passive: true });
+    prevBtn.addEventListener('click', () => goToSlide(currentSlideIndex() - 1));
+    nextBtn.addEventListener('click', () => goToSlide(currentSlideIndex() + 1));
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        goToSlide(currentSlideIndex() + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        goToSlide(currentSlideIndex() + 1 === 0 ? 0 : currentSlideIndex() - 1);
+      }
+    });
+
+    updateScale();
+    updateIndicator();
+  })();
+</script>
+</body>
+</html>

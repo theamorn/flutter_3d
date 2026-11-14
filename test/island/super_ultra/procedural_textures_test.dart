@@ -69,6 +69,32 @@ void main() {
     expect(dot.pixels[centre], greaterThan(150));
   });
 
+  test('the smoke atlas is a 4x4 eroding billow-noise flipbook', () {
+    final atlas = generateSmokeAtlas(cell: 32);
+    expect(kSmokeAtlasColumns, 4);
+    expect(kSmokeAtlasRows, 4);
+    expect(atlas.width, 32 * kSmokeAtlasColumns);
+    expect(atlas.height, 32 * kSmokeAtlasRows);
+    for (var x = 0; x < atlas.width; x++) {
+      expect(atlas.pixels[x * 4 + 3], 0);
+    }
+    int frameCoverage(int frame) {
+      final ox = (frame % kSmokeAtlasColumns) * 32;
+      final oy = (frame ~/ kSmokeAtlasColumns) * 32;
+      var sum = 0;
+      for (var y = 0; y < 32; y++) {
+        for (var x = 0; x < 32; x++) {
+          sum += atlas.pixels[((oy + y) * atlas.width + ox + x) * 4 + 3];
+        }
+      }
+      return sum;
+    }
+
+    // Early frames are billowy and dense; late frames erode into thinner wisps.
+    expect(frameCoverage(0), greaterThan(frameCoverage(15)));
+    expect(frameCoverage(15), greaterThan(0));
+  });
+
   test('ground maps tile without a seam', () {
     expectTileable(generateGroundDetail(size: 64), channel: 3);
     expectTileable(generateGroundDetail(size: 64), channel: 0);

@@ -33,6 +33,10 @@ class TreeSway {
   final MaterialBindingPolicy<Node, (Mesh, bool)> _meshes = MaterialBindingPolicy();
   final Map<Node, (List<InstancedMeshComponent>, List<InstancedMeshComponent>, bool)> _batches = {};
 
+  /// The underlying sway material pool so callers can include them in a
+  /// [MaterialGroup] for shared lighting uniforms.
+  List<PreprocessedMaterial> get materials => _pool;
+
   bool get isBound => _meshes.bound.isNotEmpty || _batches.isNotEmpty;
 
   /// Sways every tree under [roots]. [styleFor] picks the sway for an

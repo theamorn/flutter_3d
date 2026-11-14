@@ -217,6 +217,16 @@ enum SuperUltraEffect {
     'Final colour touches',
     SuperUltraEffectGroup.post,
   ),
+  depthOfField(
+    'Depth of field',
+    'Bokeh blur in close-up and over-the-shoulder views; off in wide orbit views',
+    SuperUltraEffectGroup.post,
+  ),
+  autoExposure(
+    'Auto-exposure',
+    'Smooth eye adaptation between bright noon sun, golden dusk and night',
+    SuperUltraEffectGroup.post,
+  ),
   sea(
     'Full sea',
     'Refraction, depth-tinted water and the reflection. Off swaps in a '
@@ -249,6 +259,11 @@ enum SuperUltraEffect {
   fireVfx(
     'Campfire VFX',
     'Flame, ember, spark and smoke particles, coal bed, heat haze',
+    SuperUltraEffectGroup.scene,
+  ),
+  fireflies(
+    'Nocturnal fireflies',
+    'Curl-noise glowing fireflies drifting above the lawn on clear nights',
     SuperUltraEffectGroup.scene,
   ),
   decals(

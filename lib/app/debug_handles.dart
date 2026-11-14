@@ -128,6 +128,14 @@ void debugIslandView(String? channel) => debugIsland!.scene.debug.view = channel
     ? DebugView.none
     : DebugView(channel: SurfaceDebugChannel.values.byName(channel));
 
+/// Shows the hotel's surfaces (including custom `.fmat` materials like
+/// `cloth_hooks.fmat`, `mirror.fmat`, `page_curl.fmat`, `rain_glass.fmat`)
+/// through the debug channel named [channel] (a [SurfaceDebugChannel]), or the
+/// lit scene again for null.
+void debugHotelView(String? channel) => debugHotel!.scene.debug.view = channel == null
+    ? DebugView.none
+    : DebugView(channel: SurfaceDebugChannel.values.byName(channel));
+
 /// Experiments on the first node named [name] in the island scene:
 /// `reattach` (detach and re-add to its parent) or `pbr` (swap every
 /// primitive to a plain red PBR material, as the bindings swap meshes).

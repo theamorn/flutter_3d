@@ -63,21 +63,30 @@ RenderFrameStats? lastOnScreenFrame(Scene scene) {
   return null;
 }
 
-/// The on-screen view's draws in the last rendered frame, and how many
-/// offscreen views (planar captures, probes) rendered with it.
-({int draws, int instances, int offscreenViews})? onScreenDraws(RenderFrameStats? frame) {
+/// The on-screen view's draws, instances, and frustum-culled count in the last
+/// rendered frame, and how many offscreen views (planar captures, probes)
+/// rendered with it.
+({int draws, int instances, int culled, int offscreenViews})? onScreenDraws(
+  RenderFrameStats? frame,
+) {
   if (frame == null) return null;
-  var draws = -1, instances = 0, offscreen = 0;
+  var draws = -1, instances = 0, culled = 0, offscreen = 0;
   for (final v in frame.views) {
     if (v.offscreen) {
       offscreen++;
     } else if (draws < 0) {
       draws = v.counters.draws;
       instances = v.counters.instances;
+      culled = v.counters.culled;
     }
   }
   if (draws < 0) return null;
-  return (draws: draws, instances: instances, offscreenViews: offscreen);
+  return (
+    draws: draws,
+    instances: instances,
+    culled: culled,
+    offscreenViews: offscreen,
+  );
 }
 
 /// Scene fps (from `renderStats.frameCount`) and Flutter fps, UI/raster ms

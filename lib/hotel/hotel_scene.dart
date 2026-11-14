@@ -14,6 +14,7 @@ class HotelScene {
   final Scene scene = Scene();
   late final HotelContext ctx;
   late final FeatureRegistry registry;
+  DebugTour? _tour;
 
   Future<void> start() async {
     // Geometry and materials touch the shader bundle, so features may only
@@ -23,9 +24,18 @@ class HotelScene {
     await Scene.preload(physicalMaterials: true, smaa: true);
     ctx.applyLook();
     await registry.mountDefaults();
-    await maybeStartDebugTour(this);
+    _tour = await maybeStartDebugTour(this);
     unawaited(maybeRunPerfProbe(this));
   }
 
   void tick(double dt) => registry.tick(dt);
+
+  /// Releases cross-frame render targets, shadow caches, punctual light
+  /// textures, planar reflection captures, and TAA/SSGI history immediately
+  /// (`Scene.dispose()` in 0.24.2+).
+  void dispose() {
+    _tour?.dispose();
+    _tour = null;
+    scene.dispose();
+  }
 }

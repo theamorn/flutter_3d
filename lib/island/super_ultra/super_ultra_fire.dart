@@ -214,19 +214,17 @@ class SuperUltraFire {
       name: 'su_smoke',
       at: base + vm.Vector3(0, 0.75, 0),
       system: ParticleSystem(
-        maxParticles: 28,
-        shape: const ConeEmitterShape(angle: 0.18, radius: 0.12),
-        spawner: Spawner(rate: 8),
+        maxParticles: 36,
+        shape: const ConeEmitterShape(angle: 0.18, radius: 0.14),
+        spawner: Spawner(rate: 9),
         modules: <ParticleModule>[
           const FlipbookModule(
             frameCount: kSmokeAtlasColumns * kSmokeAtlasRows,
-            framesPerSecond: 0.01,
-            randomStartFrame: true,
           ),
           TurbulenceModule(
-            strength: 0.55,
-            frequency: 0.55,
-            scroll: vm.Vector3(0, 0.6, 0),
+            strength: 0.65,
+            frequency: 0.48,
+            scroll: vm.Vector3(0, 0.45, 0),
             seed: 79,
           ),
           LinearDragModule(0.35),
@@ -235,32 +233,34 @@ class SuperUltraFire {
             GradientColor(
               ColorGradient(<ColorStop>[
                 ColorStop(0.0, vm.Vector4(0.68, 0.42, 0.24, 0.0)),
-                ColorStop(0.12, vm.Vector4(0.46, 0.39, 0.34, 0.36)),
-                ColorStop(0.55, vm.Vector4(0.34, 0.34, 0.36, 0.22)),
-                ColorStop(1.0, vm.Vector4(0.3, 0.3, 0.33, 0.0)),
+                ColorStop(0.14, vm.Vector4(0.46, 0.39, 0.34, 0.34)),
+                ColorStop(0.55, vm.Vector4(0.32, 0.32, 0.35, 0.22)),
+                ColorStop(1.0, vm.Vector4(0.24, 0.24, 0.27, 0.0)),
               ]),
             ),
           ),
           SizeOverLifeModule(
-            CurveFloat(ParticleCurve.linear(from: 0.8, to: 3.4)),
+            CurveFloat(ParticleCurve.linear(from: 0.75, to: 3.2)),
           ),
         ],
-        lifetime: const UniformFloat(2.2, 3.4),
-        startSpeed: const UniformFloat(0.35, 0.6),
-        startSize: const UniformFloat(0.34, 0.52),
+        lifetime: const UniformFloat(2.6, 3.9),
+        startSpeed: const UniformFloat(0.32, 0.56),
+        startSize: const UniformFloat(0.38, 0.58),
         startRotation: const UniformFloat(-3.14, 3.14),
-        startAngularVelocity: const UniformFloat(-0.4, 0.4),
-        gravity: vm.Vector3(0, 0.4, 0),
-        prewarm: 3.0,
+        startAngularVelocity: const UniformFloat(-0.35, 0.35),
+        gravity: vm.Vector3(0, 0.32, 0),
+        prewarm: 3.5,
         seed: 13,
       ),
       material: SpriteMaterial(colorTexture: textures.smoke)
         ..blendMode = SpriteBlendMode.alpha
-        ..softDepthFade = 0.35
+        ..softDepthFade = 0.55
         ..cameraNearFade = 1.2,
       configure: (emitter) => emitter
         ..flipbookColumns = kSmokeAtlasColumns
-        ..flipbookRows = kSmokeAtlasRows,
+        ..flipbookRows = kSmokeAtlasRows
+        ..flipbookBlend = true
+        ..randomFlipX = true,
     );
 
     emberMaterial.parameters
@@ -277,6 +277,7 @@ class SuperUltraFire {
       ..shadowCastingMode = ShadowCastingMode.off;
     root.add(emberBed);
 
+    hazeMaterial.depthLayer = 1;
     _hazeNode = Node(
       name: 'su_heat_haze',
       mesh: Mesh(_hazeQuad(width: 1.1, height: 1.9), hazeMaterial),

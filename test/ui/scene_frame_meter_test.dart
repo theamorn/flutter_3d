@@ -1,4 +1,6 @@
+import 'package:flutter_3d/ui/hud.dart';
 import 'package:flutter_3d/ui/scene_frame_meter.dart';
+import 'package:flutter_scene/scene.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Feeds [seconds] of samples at [hz] Flutter frames per second, the scene
@@ -60,5 +62,34 @@ void main() {
     feed(m, startMicros: 0, seconds: 1, hz: 60, sceneHz: 60, counters: [0, 0]);
     m.clear();
     expect(m.sceneFps, 0);
+  });
+
+  test('onScreenDraws extracts draws, instances, culled, and offscreen views', () {
+    final frame = RenderFrameStats(frameIndex: 1, timestampMicros: 1000);
+    final planarCapture = RenderViewStats(
+      viewIndex: -1,
+      width: 512,
+      height: 512,
+      offscreen: true,
+    )
+      ..counters.draws = 25
+      ..counters.culled = 10;
+    final mainView = RenderViewStats(
+      viewIndex: 0,
+      width: 1080,
+      height: 2400,
+      offscreen: false,
+    )
+      ..counters.draws = 40
+      ..counters.instances = 120
+      ..counters.culled = 7;
+    frame.views.addAll([planarCapture, mainView]);
+
+    final stats = onScreenDraws(frame);
+    expect(stats, isNotNull);
+    expect(stats!.draws, 40);
+    expect(stats.instances, 120);
+    expect(stats.culled, 7);
+    expect(stats.offscreenViews, 1);
   });
 }

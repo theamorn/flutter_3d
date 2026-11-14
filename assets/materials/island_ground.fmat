@@ -248,6 +248,11 @@ fragment {
       material.emissive = albedo * caustic * chroma * depth_fade * under *
                           material_params.caustic_light.rgb *
                           material_params.water.y;
+    } else if (swash_film > 0.0 && material_params.caustic_light.w > 0.35) {
+      float bio_night = smoothstep(0.35, 0.90, material_params.caustic_light.w);
+      float bio_swash = swash_film * sand * (1.0 - rock) * bio_night *
+                        (0.4 + 0.6 * grain.b);
+      material.emissive = vec3(0.03, 0.44, 0.82) * bio_swash * 0.18;
     }
   }
 }

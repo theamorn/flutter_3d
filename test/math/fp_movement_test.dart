@@ -54,4 +54,20 @@ void main() {
     final turned = applyLook(s, const Offset(10, 0));
     expect(cam.worldToScreen(eye + forwardOf(turned.yaw, 0) * 3, vp)!.dx, greaterThan(200));
   });
+
+  test('desiredStep matches Camera.horizontalForward and Camera.horizontalRight under pitch', () {
+    const yaw = 0.65;
+    const pitch = 0.95;
+    final cam = PerspectiveCamera(
+      position: Vector3.zero(),
+      target: forwardOf(yaw, pitch),
+    );
+    final s = FpState(Vector2.zero(), yaw, pitch);
+    final fwdStep = desiredStep(s, const Offset(0, 1), 1.0);
+    final rightStep = desiredStep(s, const Offset(1, 0), 1.0);
+    expect(fwdStep.x, closeTo(cam.horizontalForward.x * kWalkSpeed, 1e-6));
+    expect(fwdStep.y, closeTo(cam.horizontalForward.z * kWalkSpeed, 1e-6));
+    expect(rightStep.x, closeTo(cam.horizontalRight.x * kWalkSpeed, 1e-6));
+    expect(rightStep.y, closeTo(cam.horizontalRight.z * kWalkSpeed, 1e-6));
+  });
 }

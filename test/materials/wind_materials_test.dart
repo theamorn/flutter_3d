@@ -49,6 +49,58 @@ void main() {
       for (final edge in ['1.0 / 6.0', '2.0 / 6.0', '4.0 / 6.0', '5.0 / 6.0']) {
         expect(body, contains(edge), reason: edge);
       }
+      // Backlit subsurface cloth transmission + grazing sheen rim.
+      expect(body, contains('LightTerms Light(MaterialInputs material, LightContext light)'));
+      expect(body, contains('back_trans'));
+      expect(body, contains('sheen_rim'));
+    });
+  });
+
+  group('grass.fmat', () {
+    final c = _compile('assets/materials/grass.fmat');
+
+    test('uses 2D simplex noise macro meadow patches and campfire subsurface glow', () {
+      expect(c.material.shadingModel, FmatShadingModel.lit);
+      expect(_params(c)['campfire'], FmatType.vec4);
+      expect(c.material.vertexSource, contains('snoise('));
+      expect(c.material.vertexSource, contains('v_macro = macro'));
+      expect(c.material.fragmentSource, contains('precision highp float;'));
+      expect(c.material.fragmentSource, contains('fire_trans'));
+    });
+  });
+
+  group('crt_screen.fmat', () {
+    final c = _compile('assets/materials/crt_screen.fmat');
+
+    test('is a lit glass tube shader with scanlines, phosphor mask, and VHS tracking', () {
+      expect(c.material.shadingModel, FmatShadingModel.lit);
+      expect(_params(c)['screen_texture'], FmatType.sampler2d);
+      expect(_params(c)['vhs_intensity'], FmatType.float_);
+      expect(_params(c)['scanline_count'], FmatType.float_);
+      expect(c.material.fragmentSource, contains('precision highp float;'));
+      expect(c.material.fragmentSource, contains('CrtCurve('));
+      expect(c.material.fragmentSource, contains('material.emissive ='));
+    });
+  });
+
+  group('materialize_wireframe.fmat', () {
+    final c = _compile('assets/materials/materialize_wireframe.fmat');
+
+    test('is a transparent unlit wireframe laser-scan shader with 3D simplex noise', () {
+      expect(c.material.shadingModel, FmatShadingModel.unlit);
+      expect(_params(c)['sweep'], FmatType.vec4);
+      expect(_params(c)['wire_color'], FmatType.vec4);
+      expect(_params(c)['glow_color'], FmatType.vec4);
+      // LineSegmentsGeometry uses the engine's fixed LineSegmentsVertex shader
+      // (which writes only standardVaryings locn0..locn6), so this material
+      // must not declare custom varyings or a vertex block (which would cause
+      // Metal pipeline creation to fail at draw time).
+      expect(c.material.varyings, isEmpty);
+      expect(c.material.vertexSource, isNull);
+      expect(c.vertexGlsl, isEmpty);
+      expect(c.material.fragmentSource, contains('precision highp float;'));
+      expect(c.material.fragmentSource, contains('GetWorldPosition()'));
+      expect(c.material.fragmentSource, contains('NoiseSimplex3('));
     });
   });
 
@@ -60,10 +112,14 @@ void main() {
       expect(_params(c)['wind'], FmatType.vec4);
       expect(_params(c)['sway'], FmatType.vec4);
       expect(_params(c)['base_color'], FmatType.vec4);
+      expect(_params(c)['sun_dir'], FmatType.vec4);
+      expect(_params(c)['sun_color'], FmatType.vec4);
       final vertex = c.material.vertexSource!;
       expect(vertex, contains('vertex.model_transform'));
       expect(vertex, contains('height * height'));
+      expect(vertex, contains('v_height = height'));
       expect(c.material.fragmentSource, contains('precision highp float;'));
+      expect(c.material.fragmentSource, contains('forward_scatter'));
     });
   });
 

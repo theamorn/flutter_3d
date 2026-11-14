@@ -20,8 +20,9 @@ material {
     // x = roughness, y = normal-map strength, z = specular weight,
     // w = rim (pile) strength.
     { type: vec4, name: cloth, default: [0.8, 1.0, 0.5, 0.35] },
-    // x = diffuse IBL scale, y = specular IBL scale.
-    { type: vec4, name: ambient_scale, default: [1.0, 0.35, 0.0, 0.0] },
+    // x = diffuse IBL scale, y = specular IBL scale, z = backlit subsurface
+    // transmission weight.
+    { type: vec4, name: ambient_scale, default: [1.0, 0.35, 0.28, 0.0] },
     { type: sampler2D, name: base_color_texture, hint: default_white },
     { type: sampler2D, name: normal_texture, hint: default_normal },
   ],
@@ -58,7 +59,14 @@ fragment {
     // Wrapped Lambert, energy-normalised so a head-on light matches plain
     // Lambert.
     float wrapped = max((n_dot_l + kClothWrap) / (1.0 + kClothWrap), 0.0);
-    terms.diffuse = material.base_color.rgb * (1.0 / kPi) * light.radiance * wrapped;
+    // Backlit subsurface transmission (from bdero's cloth_fabric.fmat):
+    // thin woven fabric glows warmly when light hits the reverse side or
+    // scatters forward toward the eye.
+    float back_diffuse = max(-n_dot_l, 0.0) * 0.55;
+    float forward_lobe = pow(max(dot(-v, l), 0.0), 4.0) * 0.45;
+    float transmit = (back_diffuse + forward_lobe) * material_params.ambient_scale.z;
+    terms.diffuse = material.base_color.rgb * (1.0 / kPi) * light.radiance *
+                    (wrapped + transmit);
 
     terms.specular = vec3(0.0);
     float lit = max(n_dot_l, 0.0);

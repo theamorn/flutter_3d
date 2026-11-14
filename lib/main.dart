@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'app/app_shell.dart';
+import 'stac/stac_gpu_parsers.dart';
 
-void main() => runApp(const MaterialApp(
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ensureStacInitialized();
+  runApp(
+    const MaterialApp(
       debugShowCheckedModeBanner: false,
       home: AppShell(),
-    ));
+    ),
+  );
+}

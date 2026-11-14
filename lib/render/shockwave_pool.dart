@@ -78,8 +78,19 @@ class ShockwaveSample {
 }
 
 class _Pulse {
-  _Pulse(this.centerX, this.centerY);
+  _Pulse(
+    this.centerX,
+    this.centerY, {
+    required this.peakStrength,
+    required this.pulseThickness,
+    required this.pulseChromaticAberration,
+    required this.pulseLifetime,
+  });
   final double centerX, centerY;
+  final double peakStrength;
+  final double pulseThickness;
+  final double pulseChromaticAberration;
+  final double pulseLifetime;
   double age = 0;
 }
 
@@ -107,11 +118,42 @@ class ShockwavePool {
   }
 
   /// One centred ripple for a visual check, outside the strike ids.
-  void preview() => _start(0.5, 0.5);
+  void preview({
+    double centerX = 0.5,
+    double centerY = 0.5,
+    double peakStrength = strength,
+    double pulseThickness = thickness,
+    double pulseChromaticAberration = chromaticAberration,
+    double pulseLifetime = lifetime,
+  }) =>
+      _start(
+        centerX,
+        centerY,
+        peakStrength: peakStrength,
+        pulseThickness: pulseThickness,
+        pulseChromaticAberration: pulseChromaticAberration,
+        pulseLifetime: pulseLifetime,
+      );
 
-  void _start(double x, double y) {
+  void _start(
+    double x,
+    double y, {
+    double peakStrength = strength,
+    double pulseThickness = thickness,
+    double pulseChromaticAberration = chromaticAberration,
+    double pulseLifetime = lifetime,
+  }) {
     if (_pulses.length >= capacity) _pulses.removeAt(0);
-    _pulses.add(_Pulse(x, y));
+    _pulses.add(
+      _Pulse(
+        x,
+        y,
+        peakStrength: peakStrength,
+        pulseThickness: pulseThickness,
+        pulseChromaticAberration: pulseChromaticAberration,
+        pulseLifetime: pulseLifetime,
+      ),
+    );
   }
 
   /// Ages every ripple by [dt] seconds and drops the finished ones. A
@@ -121,7 +163,7 @@ class ShockwavePool {
     for (final p in _pulses) {
       p.age += dt;
     }
-    _pulses.removeWhere((p) => p.age >= lifetime);
+    _pulses.removeWhere((p) => p.age >= p.pulseLifetime);
   }
 
   /// Drops every ripple and forgets the watermark (the storm stopped, the
@@ -134,18 +176,18 @@ class ShockwavePool {
   bool get isEmpty => _pulses.isEmpty;
 
   /// The live ripples, oldest first: radius grows linearly to [maxRadius]
-  /// and strength falls as (1 - t)^2 over the [lifetime].
+  /// and strength falls as (1 - t)^2 over the pulse's lifetime.
   List<ShockwaveSample> get samples => [
         for (final p in _pulses)
           () {
-            final t = (p.age / lifetime).clamp(0.0, 1.0);
+            final t = (p.age / p.pulseLifetime).clamp(0.0, 1.0);
             return ShockwaveSample(
               centerX: p.centerX,
               centerY: p.centerY,
               radius: maxRadius * t,
-              thickness: thickness,
-              strength: strength * math.pow(1 - t, 2),
-              chromaticAberration: chromaticAberration,
+              thickness: p.pulseThickness,
+              strength: p.peakStrength * math.pow(1 - t, 2),
+              chromaticAberration: p.pulseChromaticAberration,
             );
           }(),
       ];

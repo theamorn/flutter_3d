@@ -5,6 +5,7 @@ import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
 import '../math/schedulers.dart';
 import 'interaction_registry.dart';
+import 'sky_feature.dart' show sunDirectionAt;
 
 class CurtainsFeature extends HotelFeature {
   @override
@@ -59,6 +60,25 @@ class CurtainsFeature extends HotelFeature {
 
   @override
   void tick(HotelContext ctx, double dt) {
+    final hasMeshes =
+        _rooms.any((r) => r.panels.any((p) => p.node.mesh != null));
+    double sunStrength = 0;
+    Vector3 sunColor = Vector3.zero();
+    if (hasMeshes) {
+      // Backlit transmission through the window curtains when the sun is above
+      // the horizon outside the +Z balcony window.
+      final toSun = sunDirectionAt(ctx.timeOfDay.value);
+      final elevation = toSun.y.clamp(0.0, 1.0);
+      final towardWindow = toSun.z.clamp(0.0, 1.0);
+      final sunIntensity = ctx.look.sunLight?.intensity ?? 1.0;
+      sunStrength = (elevation *
+              (0.35 + 0.65 * towardWindow) *
+              sunIntensity *
+              (1.0 - 0.6 * ctx.weather))
+          .clamp(0.0, 1.5);
+      sunColor = ctx.look.sunLight?.color ?? Vector3(1.0, 0.92, 0.78);
+    }
+
     for (final curtains in _rooms) {
       // Normalize the travel so the complete 0.25..1 range takes 0.8 s.
       curtains.closed = approach(
@@ -67,8 +87,11 @@ class CurtainsFeature extends HotelFeature {
         dt,
         fadeSeconds: .8,
       );
+      // Thicker folds when bunched open, thinner sheer sheet when drawn closed.
+      final translucency = (0.12 + 0.22 * curtains.closed) * sunStrength;
       for (final panel in curtains.panels) {
         panel.apply(.25 + .75 * curtains.closed);
+        if (hasMeshes) panel.setBacklight(sunColor, translucency);
       }
     }
   }
@@ -81,6 +104,7 @@ class CurtainsFeature extends HotelFeature {
       }
       for (final panel in curtains.panels) {
         panel.node.localTransform = panel.original;
+        panel.setBacklight(Vector3.zero(), 0);
       }
     }
     _rooms.clear();
@@ -118,5 +142,21 @@ class _Panel {
       initialPosition.y,
       initialPosition.z,
     );
+  }
+
+  void setBacklight(Vector3 sunColor, double translucency) {
+    final mesh = node.mesh;
+    if (mesh == null) return;
+    for (final primitive in mesh.primitives) {
+      final mat = primitive.material;
+      if (mat is PhysicallyBasedMaterial) {
+        mat.emissiveFactor = Vector4(
+          0.80 * sunColor.x * translucency,
+          0.66 * sunColor.y * translucency,
+          0.46 * sunColor.z * translucency,
+          1.0,
+        );
+      }
+    }
   }
 }

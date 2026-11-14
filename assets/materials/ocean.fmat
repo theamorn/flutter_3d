@@ -249,6 +249,11 @@ fragment {
     // Keep dielectric specular active for analytic lights (sun, moon,
     // campfire) so their micro-glints sparkle across the wave slopes.
     material.specular = mix(1.0, 0.42, planar.a) * (1.0 - foam);
-    material.emissive = max(water - body * 0.22, vec3(0.0)) * (1.0 - foam);
+    // Nocturnal dinoflagellate bioluminescence along the breaking surf lace.
+    float bio_night = smoothstep(0.35, 0.90, material_params.foam.w);
+    float bio_pulse = 0.65 + 0.35 * sin(time * 2.1 + p.x * 0.7 + p.z * 0.5);
+    vec3 bio_glow = vec3(0.04, 0.52, 0.92) * foam * bio_night * bio_pulse * 0.42;
+    material.emissive =
+        max(water - body * 0.22, vec3(0.0)) * (1.0 - foam) + bio_glow;
   }
 }

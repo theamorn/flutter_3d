@@ -362,11 +362,14 @@ class BallPhysicsWorld {
   }
 
   /// Interacts when the character walks into a ball (dribbling/kicking).
-  void handleCharacterKick({
+  ///
+  /// Returns the number of balls kicked.
+  int handleCharacterKick({
     required vm.Vector3 characterPosition,
     required double characterRadius,
     required double characterSpeed,
   }) {
+    var kicked = 0;
     for (final ball in balls) {
       final dx = ball.position.x - characterPosition.x;
       final dz = ball.position.z - characterPosition.z;
@@ -386,8 +389,10 @@ class BallPhysicsWorld {
         ball.velocity.x = nx * kickSpeed;
         ball.velocity.z = nz * kickSpeed;
         ball.velocity.y = math.max(ball.velocity.y, 1.4);
+        kicked++;
       }
     }
+    return kicked;
   }
 
   /// Launches any ball in front of the character when punched.
