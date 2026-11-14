@@ -81,6 +81,13 @@ void main() {
       expect(body, contains('ambient.radiance = '));
       expect(body, isNot(contains('ambient.irradiance *=')));
     });
+
+    test('adds procedural stone grain, base stain, rain slickness and ember bounce', () {
+      final body = _body(_stone);
+      expect(body, contains('StoneGrain'));
+      expect(body, contains('base_stain'));
+      expect(body, contains('ember_bounce'));
+    });
   });
 
   group('both hooked materials', () {

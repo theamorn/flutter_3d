@@ -13,8 +13,13 @@ void main() {
     final e = composeLook(s);
     expect(e.bloomEnabled, true);
     expect(e.lensFlareEnabled, true);
+    expect(e.lensFlareGhostCount, 5);
+    expect(e.lensFlareChromaticAberration, closeTo(0.012, 1e-9));
     expect(e.ambientOcclusionEnabled, true);
     expect(e.ambientOcclusionMethod, AmbientOcclusionMethod.groundTruth);
+    expect(e.ambientOcclusionBentNormals, true);
+    expect(e.ambientOcclusionSpecularMode, SpecularAmbientOcclusionMode.bentCone);
+    expect(e.ambientOcclusionMultiBounce, closeTo(0.65, 1e-9));
     expect(e.fogEnabled, true);
     expect(e.toneMapping, ToneMappingMode.linear);
   });

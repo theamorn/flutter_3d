@@ -22,9 +22,11 @@ import 'package:flutter_3d/island/super_ultra/rain_collision.dart';
 import 'package:flutter_3d/island/super_ultra/stone_lighting.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_decals.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_fire.dart';
+import 'package:flutter_3d/island/super_ultra/super_ultra_fireflies.dart';
 import 'package:flutter_3d/island/super_ultra/super_ultra_rain.dart';
 import 'package:flutter_3d/island/water_bump.dart';
 import 'package:flutter_3d/render/flagpole.dart';
+import 'package:flutter_3d/render/materialize_scan.dart';
 import 'package:flutter_3d/render/tree_sway.dart';
 import 'package:flutter_3d/render/wind.dart';
 import 'package:flutter_scene/gpu.dart' show SamplerAddressMode;
@@ -73,7 +75,17 @@ class SuperUltraRig {
   late final Node simpleSeaNode;
   late final Node grassNode;
   late final SuperUltraFire fire;
+  late final SuperUltraFireflies fireflies;
   late final SuperUltraDecals decals;
+  late final MaterializeScanRig materializeScan = MaterializeScanRig(
+    minY: seaY,
+    maxY: 1.8,
+    durationSeconds: 2.2,
+    edgeWidth: 0.42,
+    fadeLag: 0.35,
+    fadeWidth: 0.75,
+    lineWidth: 0.012,
+  );
   /// The sky drawn on screen. [_lightingSky] is the same shader graded for
   /// the lighting bake, so the visible sky can read clearer than the light
   /// it gives.
@@ -87,6 +99,7 @@ class SuperUltraRig {
   late final PreprocessedMaterial _ocean;
   late final PreprocessedMaterial _simpleSea;
   late final PreprocessedMaterial _grass;
+  late final MaterialGroup _foliageGroup;
 
   /// The level the lawn thins to, read per draw. The island points it at
   /// the scene's effective quality tier ([qualityLevelFor]).
@@ -222,6 +235,8 @@ class SuperUltraRig {
     flag = await Flagpole.build(name: 'su_flag');
     flag.root.position = vm.Vector3(-1.0, terrain.height(-1.0, 8.6), 8.6);
     trees = await TreeSway.load(4);
+    _foliageGroup =
+        MaterialGroup(<PreprocessedMaterial>[_grass, ...trees.materials]);
     final terrainData = await terrainFuture;
     terrainNode = Node(
       name: 'su_terrain',
@@ -296,9 +311,19 @@ class SuperUltraRig {
       base: campfireBase,
     );
 
+    fireflies = SuperUltraFireflies(
+      dot: _dot,
+      layerMask: kSuperUltraNoReflectLayer,
+    );
+
     decals = await SuperUltraDecals.build(
       campfireX: campfireBase.x,
       campfireZ: campfireBase.z,
+    );
+
+    await materializeScan.attachToNodes(
+      <Node>[terrainNode],
+      layerMask: kSuperUltraNoReflectLayer,
     );
 
     root
@@ -306,6 +331,7 @@ class SuperUltraRig {
       ..add(oceanNode)
       ..add(grassNode)
       ..add(fire.root)
+      ..add(fireflies.root)
       ..add(decals.root)
       ..addComponent(_SuperUltraTick(this));
     _built = true;
@@ -342,10 +368,12 @@ class SuperUltraRig {
   void mount(Scene scene) {
     if (root.parent == null) {
       scene.add(root);
+      materializeScan.triggerSweep();
     }
   }
 
   void unmount() {
+    materializeScan.setLooping(false);
     if (root.parent != null) {
       root.detach();
     }
@@ -481,8 +509,8 @@ class SuperUltraRig {
       ..setVec4('grade', vm.Vector4(0.4, 3.0, weather, 0.0));
 
     final key = keyDirection.normalized();
-    _grass.parameters
-      // w: how wet the blades are.
+    _foliageGroup
+      // w: how wet the blades and fronds are.
       ..setVec4('sun_dir', vm.Vector4(key.x, key.y, key.z, weather))
       ..setVec4(
         'sun_color',
@@ -492,22 +520,37 @@ class SuperUltraRig {
     // Light that reaches the water body and scatters back out of it: a share
     // of the key light plus the sky's ambient.
     final elevation = math.max(key.y, 0.0);
-    final skyTint = vm.Vector3(0.55, 0.66, 0.78) * (ambient * 0.9);
-    final water = keyRadiance * (0.12 + 0.2 * elevation) + skyTint;
+    final golden = _smoothstep(-0.04, 0.07, sun.y) *
+        (1.0 - _smoothstep(0.14, 0.29, sun.y)) *
+        (1.0 - weather);
+    final skyTint = (vm.Vector3(0.55, 0.66, 0.78) * (1.0 - 0.35 * golden) +
+            vm.Vector3(0.82, 0.58, 0.38) * (0.35 * golden)) *
+        (ambient * 0.9);
+    final water = keyRadiance * (0.14 + 0.22 * elevation) + skyTint;
     _ocean.parameters
       ..setVec4('water_light', vm.Vector4(water.x, water.y, water.z, 1.0))
       // w: raindrop rings across the whole sea; rain also roughens the
       // mirror.
-      ..setVec4('ripple', vm.Vector4(0.34, 0.06, 0.018 * (1.0 + weather), weather));
+      ..setVec4('ripple', vm.Vector4(0.34, 0.06, 0.018 * (1.0 + weather), weather))
+      // w: night blend for nocturnal dinoflagellate bioluminescence in surf.
+      ..setVec4('foam', vm.Vector4(0.55, 0.13, 1.0, night));
     _simpleSea.parameters
         .setVec4('water_light', vm.Vector4(water.x, water.y, water.z, 1.0));
     // Moonlight is far too weak to throw visible caustics.
-    final caustic = keyRadiance * (0.35 + 0.65 * elevation) * (1.0 - 0.85 * night);
+    final caustic = keyRadiance * (0.38 + 0.65 * elevation) * (1.0 - 0.85 * night);
     _ground.parameters
-      ..setVec4('caustic_light', vm.Vector4(caustic.x, caustic.y, caustic.z, 1.0))
+      ..setVec4('caustic_light', vm.Vector4(caustic.x, caustic.y, caustic.z, night))
       // w: wetness (darker, shinier ground, puddles).
-      ..setVec4('water', vm.Vector4(seaY, 0.5 * (1.0 - 0.7 * weather), 1.0, weather));
-    stones.apply(stoneLightingFor(ambient: ambient, night: night, weather: weather));
+      ..setVec4('water', vm.Vector4(seaY, 0.65 * (1.0 - 0.7 * weather), 1.0, weather));
+    stones.apply(
+      stoneLightingFor(
+        ambient: ambient,
+        night: night,
+        weather: weather,
+        campfireIntensity: campfireIntensity(),
+      ),
+    );
+    fireflies.update(night: night, weather: weather);
   }
 
   void _tick(double deltaSeconds) {
@@ -520,14 +563,25 @@ class SuperUltraRig {
     _simpleSea.parameters.setFloat('time', oceanTime);
     _ground.parameters.setFloat('time', _time);
     final player = playerPosition();
+    final fireIntensity = campfireIntensity();
     _grass.parameters
       ..setFloat('time', _time)
       ..setVec4('player', vm.Vector4(player.x, player.y, player.z, 0.85))
-      ..setVec4('wind', grassWindVector(weather));
+      ..setVec4('wind', grassWindVector(weather))
+      ..setVec4(
+        'campfire',
+        vm.Vector4(
+          campfireBase.x,
+          campfireBase.y + 0.35,
+          campfireBase.z,
+          fireIntensity,
+        ),
+      );
     final wind = windFor(weather: weather, time: _time);
     flag.apply(wind);
     trees.apply(wind);
-    fire.update(intensity: campfireIntensity(), time: _time);
+    fire.update(intensity: fireIntensity, time: _time);
+    materializeScan.tick(deltaSeconds);
     sky.parameters.setVec4('extras', vm.Vector4(_time, 2.2, 1.0, 1.0));
   }
 

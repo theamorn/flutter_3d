@@ -32,18 +32,34 @@ void main() {
     for (var x = 0; x < atlas.width; x++) {
       expect(atlas.pixels[x * 4 + 3], 0);
     }
-    // Every frame has some flame in it.
+    // Every frame has some flame in it, and lit pixels carry a warm blackbody
+    // gradient (R >= G >= B, with R strictly hotter than B on non-core sheath
+    // pixels).
+    var warmSheathPixels = 0;
     for (var frame = 0; frame < kFlameAtlasColumns * kFlameAtlasRows; frame++) {
       final ox = (frame % kFlameAtlasColumns) * 32;
       final oy = (frame ~/ kFlameAtlasColumns) * 32;
       var coverage = 0;
       for (var y = 0; y < 32; y++) {
         for (var x = 0; x < 32; x++) {
-          coverage += atlas.pixels[((oy + y) * atlas.width + ox + x) * 4 + 3];
+          final i = ((oy + y) * atlas.width + ox + x) * 4;
+          final r = atlas.pixels[i];
+          final g = atlas.pixels[i + 1];
+          final b = atlas.pixels[i + 2];
+          final a = atlas.pixels[i + 3];
+          coverage += a;
+          if (a > 20) {
+            expect(r, greaterThanOrEqualTo(g));
+            expect(g, greaterThanOrEqualTo(b));
+            if (r > b + 15) {
+              warmSheathPixels++;
+            }
+          }
         }
       }
       expect(coverage, greaterThan(0), reason: 'frame $frame is empty');
     }
+    expect(warmSheathPixels, greaterThan(100));
   });
 
   test('the soft dot fades to nothing at its edge', () {
@@ -51,6 +67,32 @@ void main() {
     expect(dot.pixels[3], 0);
     final centre = (8 * 16 + 8) * 4 + 3;
     expect(dot.pixels[centre], greaterThan(150));
+  });
+
+  test('the smoke atlas is a 4x4 eroding billow-noise flipbook', () {
+    final atlas = generateSmokeAtlas(cell: 32);
+    expect(kSmokeAtlasColumns, 4);
+    expect(kSmokeAtlasRows, 4);
+    expect(atlas.width, 32 * kSmokeAtlasColumns);
+    expect(atlas.height, 32 * kSmokeAtlasRows);
+    for (var x = 0; x < atlas.width; x++) {
+      expect(atlas.pixels[x * 4 + 3], 0);
+    }
+    int frameCoverage(int frame) {
+      final ox = (frame % kSmokeAtlasColumns) * 32;
+      final oy = (frame ~/ kSmokeAtlasColumns) * 32;
+      var sum = 0;
+      for (var y = 0; y < 32; y++) {
+        for (var x = 0; x < 32; x++) {
+          sum += atlas.pixels[((oy + y) * atlas.width + ox + x) * 4 + 3];
+        }
+      }
+      return sum;
+    }
+
+    // Early frames are billowy and dense; late frames erode into thinner wisps.
+    expect(frameCoverage(0), greaterThan(frameCoverage(15)));
+    expect(frameCoverage(15), greaterThan(0));
   });
 
   test('ground maps tile without a seam', () {

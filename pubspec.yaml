@@ -32,10 +32,15 @@ dependencies:
     sdk: flutter
   flutter_gpu:
     sdk: flutter
-  flutter_scene: ^0.24.0
+  flutter_scene: ^0.24.3
   vector_math: ^2.1.4
   webview_flutter: ^4.9.0
   http: ^1.2.0
+  stac: ^1.6.0
+  stac_framework: ^1.0.0
+  flutter_deck: ^0.29.0
+  flame: ^1.38.2
+  google_fonts: ^9.0.0
 
 dev_dependencies:
   flutter_test:
@@ -47,6 +52,15 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  # Build-time only: hook/build.dart converts assets/ sources via flutter_scene.
+  hooks: ^2.2.0
+
+hooks:
+  user_defines:
+    flutter_scene:
+      debug_views: true
+    flutter_3d:
+      flutter_scene_debug_views: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -61,6 +75,8 @@ flutter:
     - flutter_scene_generated/
     - assets/materials/
     - assets/textures/
+    - assets/environments/
+    - deck-images/
     - path: flutter_scene_generated/metal_ios/
       platforms:
         - ios
@@ -78,6 +94,7 @@ flutter:
   shaders:
     - shaders/water.glsl
     - shaders/sky.glsl
+    - shaders/holo_foil.glsl
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:

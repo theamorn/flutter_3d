@@ -13,19 +13,22 @@ class SuperUltraDecals {
   final FootprintTrail trail;
 
   static const String _material = 'assets/materials/decal_ground.fmat';
+  static const int _noReflectLayer = 1 << 1;
 
   static Future<SuperUltraDecals> build({
     required double campfireX,
     required double campfireZ,
   }) async {
-    final root = Node(name: 'super_ultra_decals');
+    final root = Node(name: 'super_ultra_decals')..layers = _noReflectLayer;
     final scorch = DecalNode(
       material: await loadFmatMaterial(_material),
       name: 'scorch',
-    )..project(
+    )
+      ..layers = _noReflectLayer
+      ..project(
         point: vm.Vector3(campfireX, 0, campfireZ),
         normal: vm.Vector3(0, 1, 0),
-        size: 2.4,
+        size: 2.5,
       );
     root.add(scorch);
     final trail = FootprintTrail();
@@ -34,8 +37,10 @@ class SuperUltraDecals {
       final m = await loadFmatMaterial(_material);
       m.parameters
         ..setFloat('kind', 1.0)
-        ..setVec4('tint', vm.Vector4(0.05, 0.04, 0.03, 0.55));
-      final d = DecalNode(material: m, name: 'footprint_$i')..visible = false;
+        ..setVec4('tint', vm.Vector4(0.04, 0.03, 0.02, 0.72));
+      final d = DecalNode(material: m, name: 'footprint_$i')
+        ..layers = _noReflectLayer
+        ..visible = false;
       prints.add(d);
       root.add(d);
     }
@@ -46,6 +51,9 @@ class SuperUltraDecals {
   int get visiblePrints => _prints.where((n) => n.visible).length;
 
   void tick(double dt, double playerX, double playerZ, double heading) {
+    if (!root.visible) {
+      return;
+    }
     trail.update(dt, playerX, playerZ, heading);
     final shown = trail.prints;
     for (var i = 0; i < _prints.length; i++) {
@@ -61,7 +69,7 @@ class SuperUltraDecals {
         ..project(
           point: vm.Vector3(p.x, 0, p.z),
           normal: vm.Vector3(0, 1, 0),
-          size: 0.32,
+          size: 0.38,
           rotation: p.heading,
         )
         ..fade = p.fade;

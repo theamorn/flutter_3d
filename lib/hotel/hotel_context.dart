@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_scene/kit.dart' show CameraShake;
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
 
 import '../features/interaction_registry.dart';
 import '../features/placeholder_rooms.dart' show BeddingMaterialTarget;
+import '../features/player_feature.dart' show PlayerFeature;
 import '../math/mirror_capture_layout.dart';
 import '../render/shadow_channels.dart' show kFixtureExcludedCasterMask;
 import '../render/shockwave_pool.dart';
@@ -65,6 +67,9 @@ class HotelContext {
   /// feature is mounted. The lightning feature fills and drives the pool.
   final ShockwavePool shockwaves = ShockwavePool();
   bool lightningRipple = false;
+
+  /// Subtle thunderclap camera tremor triggered by lightning strikes.
+  CameraShake get cameraShake => PlayerFeature.cameraShake;
 
   /// The shadow casters of every fixture light (lamps, reading lights, bath
   /// lights): all but the shades that wrap their own bulbs. The

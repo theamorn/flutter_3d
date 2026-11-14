@@ -8,6 +8,7 @@ import '../features/player_feature.dart';
 import '../features/rain_feature.dart';
 import '../features/screens_feature.dart';
 import '../hotel/hotel_scene.dart';
+import '../render/prewarm.dart';
 import '../render/shockwave_apply.dart';
 import 'effects_sheet.dart';
 import 'hud.dart';
@@ -29,11 +30,19 @@ class _HotelPageState extends State<HotelPage> {
   }
 
   @override
+  void dispose() {
+    if (identical(debugHotel, hotel)) debugHotel = null;
+    hotel.dispose();
+    super.dispose();
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // A hidden tab's tickers stop: no ripple waits, frozen, for its return.
     if (!TickerMode.valuesOf(context).enabled) {
       clearSceneShockwaves(hotel.scene, hotel.ctx.shockwaves);
+      releaseSceneTargets();
     }
   }
 
@@ -62,6 +71,7 @@ class _HotelPageState extends State<HotelPage> {
                 child: SceneView(
                   hotel.scene,
                   warmUp: true,
+                  warmUpAllShadingTiers: true,
                   camera: hotel.ctx.camera,
                   onTick: (_, dt) => hotel.tick(dt),
                 ),
@@ -82,12 +92,20 @@ class _HotelPageState extends State<HotelPage> {
               onPressed: () => showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
+                  barrierColor: Colors.transparent,
                   builder: (_) => EffectsSheet(
                         registry: hotel.registry,
                         previews: {
                           'lightning_ripple': (
                             'Preview lightning ripple',
-                            hotel.ctx.shockwaves.preview,
+                            () => hotel.ctx.shockwaves.preview(
+                                  centerX: 0.5,
+                                  centerY: 0.25,
+                                  peakStrength: 0.038,
+                                  pulseThickness: 0.095,
+                                  pulseChromaticAberration: 0.6,
+                                  pulseLifetime: 1.2,
+                                ),
                           ),
                         },
                       )),

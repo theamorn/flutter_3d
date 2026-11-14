@@ -1,5 +1,5 @@
-import 'package:flutter/widgets.dart';
-import 'package:flutter_scene/kit.dart' show VirtualJoystick;
+import 'package:flutter/widgets.dart' hide Matrix4;
+import 'package:flutter_scene/kit.dart' show CameraShake, VirtualJoystick;
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
 import '../hotel/feature.dart';
@@ -35,11 +35,20 @@ FpState stepPlayer(FpState s,
       moveCircle(looked.xz, want, kPlayerRadius, colliders), looked.yaw, looked.pitch);
 }
 
-/// Puts the camera at eye height, looking along the player's facing.
-void aimCamera(PerspectiveCamera camera, FpState s) {
+/// Puts the camera at eye height, looking along the player's facing, with an
+/// optional trauma-based [shakeOffset] matrix (`CameraShake.update`).
+void aimCamera(PerspectiveCamera camera, FpState s, {Matrix4? shakeOffset}) {
   final eye = Vector3(s.xz.x, FloorPlan.eyeHeight, s.xz.y);
-  camera.position = eye;
-  camera.target = eye + forwardOf(s.yaw, s.pitch);
+  final fwd = forwardOf(s.yaw, s.pitch);
+  if (shakeOffset == null) {
+    camera.position = eye;
+    camera.target = eye + fwd;
+    return;
+  }
+  final shakenEye = eye + shakeOffset.getTranslation();
+  final shakenFwd = shakeOffset.transformed3(fwd.clone());
+  camera.position = shakenEye;
+  camera.target = shakenEye + shakenFwd;
 }
 
 class PlayerFeature extends HotelFeature {
@@ -57,6 +66,14 @@ class PlayerFeature extends HotelFeature {
 
   /// Look-pad drag accumulated since the last frame, logical pixels.
   static Offset pendingLook = Offset.zero;
+
+  /// Subtle thunderclap camera tremor triggered by lightning strikes.
+  static final CameraShake cameraShake = CameraShake(
+    decayRate: 2.0,
+    frequency: 20.0,
+    maxTranslation: Vector3(0.055, 0.055, 0.03),
+    maxRotation: Vector3(0.014, 0.014, 0.010),
+  );
 
   /// True while another feature owns the camera (a focused screen, Task 24).
   /// The walk ignores the joystick and look pad; locking and unlocking both
@@ -92,7 +109,10 @@ class PlayerFeature extends HotelFeature {
     ctx.playerXZ = s.xz;
     ctx.playerYaw = s.yaw;
     _pitch = s.pitch;
-    aimCamera(ctx.camera, s);
+    final shakeOffset = cameraShake.trauma > 0.0
+        ? cameraShake.update(dt).toMatrix4()
+        : null;
+    aimCamera(ctx.camera, s, shakeOffset: shakeOffset);
   }
 
   /// Joystick bottom-left, look pad on the right half (above the time bar).

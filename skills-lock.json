@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "stac-custom-extensions": {
+      "source": "StacDev/stac",
+      "sourceType": "github",
+      "skillPath": "skills/stac-custom-extensions/SKILL.md",
+      "computedHash": "f1d2a00990772e204246e84b861bdeb0e445320ab45aa64ab22ab37a319655ad"
+    },
+    "stac-quickstart": {
+      "source": "StacDev/stac",
+      "sourceType": "github",
+      "skillPath": "skills/stac-quickstart/SKILL.md",
+      "computedHash": "c111da90add10af3e1635e0589ad924e8c7138d3bdbbd0747ad5d4453da11140"
+    },
+    "stac-screen-builder": {
+      "source": "StacDev/stac",
+      "sourceType": "github",
+      "skillPath": "skills/stac-screen-builder/SKILL.md",
+      "computedHash": "2c66f85fbd9df5e69ec8fc17a7606019018a22b3801be70ffb1708273276d28f"
+    },
+    "stac-troubleshooter": {
+      "source": "StacDev/stac",
+      "sourceType": "github",
+      "skillPath": "skills/stac-troubleshooter/SKILL.md",
+      "computedHash": "cfeb9de1689efc24b9662e2ca5bf7695623daa38920d0a7e80632a072a058f6a"
+    }
+  }
+}

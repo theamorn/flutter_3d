@@ -183,26 +183,26 @@ class LightningFeature extends HotelFeature {
     ctx.scene.add(flash);
   }
 
+  bool _wasStorming = false;
+
   @override
   void tick(HotelContext ctx, double dt) {
-    if (_scheduler.tick(dt, enabled: ctx.weather > 0.7)) {
+    final storming = ctx.weather > 0.7;
+    if (_scheduler.tick(dt, enabled: storming)) {
       final pulses = _scheduler.pulsesForStrike();
       _strike = _Strike(pulses);
       final points = buildStrikeBolt(_rng);
       _boltGeometry?.updatePath(PolylinePath(points));
       debugPrint('lightning strike');
+      ctx.cameraShake.addTrauma(0.38);
       _ripple(ctx, points);
     }
-    if (ctx.lightningRipple && !ctx.shockwaves.isEmpty) {
-      ctx.shockwaves.update(dt);
-      applyShockwaves(ctx.scene, ctx.shockwaves);
-    } else if (ctx.scene.screenDistortion.enabled) {
-      applyShockwaves(ctx.scene, ctx.shockwaves);
-    }
-    // The storm is over: no ripple outlives it.
-    if (ctx.weather <= 0.7 && !ctx.shockwaves.isEmpty) {
+    // Clear live strike ripples when the storm ends, without wiping out
+    // manual preview ripples triggered while the weather is calm.
+    if (_wasStorming && !storming && !ctx.shockwaves.isEmpty) {
       clearSceneShockwaves(ctx.scene, ctx.shockwaves);
     }
+    _wasStorming = storming;
 
     final strike = _strike;
     final darkness = darknessForExposure(ctx.look.exposure);
@@ -253,6 +253,8 @@ class LightningFeature extends HotelFeature {
   @override
   void unmount(HotelContext ctx) {
     clearSceneShockwaves(ctx.scene, ctx.shockwaves);
+    ctx.cameraShake.trauma = 0.0;
+    _wasStorming = false;
     final bolt = _boltNode;
     if (bolt != null) ctx.scene.remove(bolt);
     final flash = _flashNode;
@@ -285,6 +287,16 @@ class LightningRippleFeature extends HotelFeature {
 
   @override
   Future<void> mount(HotelContext ctx) async => ctx.lightningRipple = true;
+
+  @override
+  void tick(HotelContext ctx, double dt) {
+    if (ctx.lightningRipple && !ctx.shockwaves.isEmpty) {
+      ctx.shockwaves.update(dt);
+      applyShockwaves(ctx.scene, ctx.shockwaves);
+    } else if (ctx.scene.screenDistortion.enabled) {
+      applyShockwaves(ctx.scene, ctx.shockwaves);
+    }
+  }
 
   @override
   void unmount(HotelContext ctx) {

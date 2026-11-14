@@ -32,7 +32,9 @@ class EffectsSheet extends StatelessWidget {
       listenable: registry,
       builder: (context, _) => DraggableScrollableSheet(
         expand: false,
-        initialChildSize: 0.6,
+        initialChildSize: 0.5,
+        minChildSize: 0.25,
+        maxChildSize: 0.52,
         builder: (context, scroll) => ListView(controller: scroll, children: [
           presetRow ?? _presetChips(),
           for (final tier in CostTier.values) ...[

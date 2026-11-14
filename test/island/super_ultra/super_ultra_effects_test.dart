@@ -76,4 +76,21 @@ void main() {
     expect(SuperUltraGpuPacing.values.map((p) => p.frames), [1, 2]);
     expect(SuperUltraGpuPacing.initial, SuperUltraGpuPacing.one);
   });
+
+  test('ground decals (scorch and footprints) are scene content, on by default', () {
+    expect(SuperUltraEffect.decals.group, SuperUltraEffectGroup.scene);
+    expect(SuperUltraEffect.decals.cost, contains('scorch'));
+  });
+
+  test('depth of field and auto-exposure are post effects, on by default', () {
+    expect(SuperUltraEffect.depthOfField.group, SuperUltraEffectGroup.post);
+    expect(SuperUltraEffect.depthOfField.cost, contains('Bokeh'));
+    expect(SuperUltraEffect.autoExposure.group, SuperUltraEffectGroup.post);
+    expect(SuperUltraEffect.autoExposure.cost, contains('adaptation'));
+  });
+
+  test('nocturnal fireflies are scene content, on by default', () {
+    expect(SuperUltraEffect.fireflies.group, SuperUltraEffectGroup.scene);
+    expect(SuperUltraEffect.fireflies.cost, contains('fireflies'));
+  });
 }

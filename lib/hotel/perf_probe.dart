@@ -54,10 +54,8 @@ final List<TourStop> perfStops = [...DebugTour.stops, ..._occlusionStops];
   );
 }
 
-double _pitchOf(PerspectiveCamera camera) {
-  final f = (camera.target - camera.position)..normalize();
-  return math.asin(f.y.clamp(-1.0, 1.0));
-}
+double _pitchOf(PerspectiveCamera camera) =>
+    math.asin(camera.forward.y.clamp(-1.0, 1.0));
 
 /// Profile-build frame-time probe: `flutter run --profile
 /// --enable-flutter-gpu --dart-define=HOTEL_PERF=true`, optionally with

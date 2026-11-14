@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/booking.dart';
+import '../stac/stac_host_bridge.dart';
+import '../stac/stac_live_section.dart';
 import '../ui/booking_page.dart';
 import 'shader_backdrop.dart';
 
@@ -123,6 +125,18 @@ class HomePage extends StatelessWidget {
           SliverPadding(
             padding: const EdgeInsets.all(16),
             sliver: SliverToBoxAdapter(child: _banner(context, theme)),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            sliver: SliverToBoxAdapter(
+              child: Text('Live Promo (Stac + 3D)', style: theme.textTheme.titleLarge),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.only(bottom: 24),
+            sliver: SliverToBoxAdapter(
+              child: StacLiveSection(backdrop: backdrop),
+            ),
           ),
         ],
       ),
@@ -385,9 +399,32 @@ class _RoomCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    '${formatThb(room.nightlyThb)} / night',
-                    style: theme.textTheme.titleMedium,
+                  child: ValueListenableBuilder<StacHostSelection?>(
+                    valueListenable: StacHostBridge.instance,
+                    builder: (context, selection, _) {
+                      final discounted = selection?.applyDiscountThb(
+                        room.nightlyThb,
+                      );
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${formatThb(room.nightlyThb)} / night',
+                            style: theme.textTheme.titleMedium,
+                          ),
+                          if (selection != null &&
+                              selection.discountPercent > 0 &&
+                              discounted != null)
+                            Text(
+                              'Stac ${selection.promoCode}: ${formatThb(discounted)} / night (-${selection.discountPercent}%)',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                 ),
                 FilledButton.tonal(

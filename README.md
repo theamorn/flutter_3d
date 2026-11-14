@@ -12,7 +12,7 @@ Scenes load when their tab is first opened, keep their state between visits, and
 
 ## Requirements
 
-- Flutter **3.47.2**, pinned in [.fvmrc](.fvmrc), with Dart **3.13.2** or a compatible version satisfying `pubspec.yaml`.
+- Flutter **3.47.7**, pinned in [.fvmrc](.fvmrc), with Dart **3.13.2** or a compatible version satisfying `pubspec.yaml`.
 - `flutter_scene` **0.24.0** (declared in [pubspec.yaml](pubspec.yaml), resolved in [pubspec.lock](pubspec.lock)), with Flutter GPU and Impeller enabled for the chosen native target.
 - A native Flutter target with Flutter GPU and Impeller support. The project includes iOS, Android, and desktop runner directories; a browser is not the target for these GPU scenes.
 - The platform toolchain for your chosen device, such as Xcode for iOS or macOS, or the Android SDK for Android.

@@ -216,4 +216,25 @@ void main() {
     await tester.scrollUntilVisible(find.byKey(const Key('book-banner')), 200);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Stac Firebase section renders 3D card and updates host promo readout', (
+    tester,
+  ) async {
+    await _pumpHome(tester);
+    final stacSection = find.byKey(const Key('stac-live-section'));
+    await tester.scrollUntilVisible(stacSection, 200);
+    await tester.ensureVisible(stacSection);
+    await tester.pumpAndSettle();
+    expect(stacSection, findsOneWidget);
+    expect(find.byKey(const Key('stac-3d-turntable')), findsOneWidget);
+
+    final applyBtn = find.text('Apply Stac 3D Offer (-20%)');
+    await tester.ensureVisible(applyBtn);
+    await tester.pumpAndSettle();
+    await tester.tap(applyBtn);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('stac-host-readout')), findsOneWidget);
+    expect(find.textContaining('STAC20'), findsWidgets);
+  });
 }

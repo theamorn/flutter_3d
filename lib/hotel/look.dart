@@ -83,10 +83,15 @@ EnvironmentSettings composeLook(LookState s) {
       // and rain further scales it by weatherExposureScale).
       bloomThreshold: 1.0 / exposure,
       lensFlareEnabled: s.bloom,
-      lensFlareHaloIntensity: 0.3,
+      lensFlareIntensity: 0.45,
+      lensFlareGhostCount: 5,
+      lensFlareHaloIntensity: 0.25,
+      lensFlareChromaticAberration: 0.012,
       ambientOcclusionEnabled: s.ao,
       ambientOcclusionMethod: AmbientOcclusionMethod.groundTruth, // GTAO
       ambientOcclusionBentNormals: true,
+      ambientOcclusionSpecularMode: SpecularAmbientOcclusionMode.bentCone,
+      ambientOcclusionMultiBounce: 0.65,
       ambientOcclusionHalfResolution: true,
       fogEnabled: s.fog || volumetric,
       fogDensity: volumetric ? kVolumetricFogDensity * s.volumetricFogThickness : s.fogDensity,

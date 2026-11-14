@@ -62,8 +62,8 @@ const int kFlameAtlasColumns = 4;
 const int kFlameAtlasRows = 4;
 
 /// Flipbook grid of [SuperUltraTextureSet.smokeAtlas].
-const int kSmokeAtlasColumns = 2;
-const int kSmokeAtlasRows = 2;
+const int kSmokeAtlasColumns = 4;
+const int kSmokeAtlasRows = 4;
 
 /// Bakes the full set. Top-level with one argument so it can be handed to
 /// `compute`.
@@ -139,11 +139,20 @@ PixelImage generateFlameAtlas({int cell = 128, int seed = 7}) {
         final brightness =
             (0.55 * density + 0.65 * core * density * (1.0 - s * 0.6))
                 .clamp(0.0, 1.0);
+        // Blackbody temperature across the tongue: incandescent white-gold in
+        // the dense lower core, amber-orange in the body, and deep crimson at
+        // the eroded outer sheath and tip.
+        final coreHeat =
+            (core * (1.0 - (s * 0.55).clamp(0.0, 0.85))).clamp(0.0, 1.0);
+        final r = (brightness * (0.90 + 0.10 * coreHeat)).clamp(0.0, 1.0);
+        final g =
+            (brightness * (0.48 + 0.52 * coreHeat)).clamp(0.0, 1.0);
+        final b = (brightness * (0.22 + 0.78 * coreHeat * coreHeat))
+            .clamp(0.0, 1.0);
         final index = ((oy + py) * width + ox + px) * 4;
-        final grey = (brightness * 255.0).round();
-        pixels[index] = grey;
-        pixels[index + 1] = grey;
-        pixels[index + 2] = grey;
+        pixels[index] = (r * 255.0).round();
+        pixels[index + 1] = (g * 255.0).round();
+        pixels[index + 2] = (b * 255.0).round();
         pixels[index + 3] = (density.clamp(0.0, 1.0) * 255.0).round();
       }
     }
@@ -164,32 +173,60 @@ double _flameHalfWidth(double s) {
   return maxHalfWidth * math.pow(1.0 - s, 0.62);
 }
 
-/// Four soft, lumpy smoke puffs in a [kSmokeAtlasColumns]×[kSmokeAtlasRows]
-/// grid. Light grey in rgb so the particle colour decides how dark the smoke
-/// reads.
-PixelImage generateSmokeAtlas({int cell = 128, int seed = 13}) {
+/// 4×4 eroding smoke flipbook (played once over life, adapted from
+/// `bdero/flutter_scene`'s `bakeSmokeAtlas` in `vfx_textures.dart`): a
+/// billowy folded-FBM cauliflower puff with baked upper-lobe self-shading
+/// that is progressively eaten by a rising erosion threshold, so old smoke
+/// tears apart into wisps instead of uniformly fading.
+PixelImage generateSmokeAtlas({int cell = 64, int seed = 13}) {
   const columns = kSmokeAtlasColumns;
   const rows = kSmokeAtlasRows;
+  const frames = columns * rows;
   final width = cell * columns;
   final height = cell * rows;
   final pixels = Uint8List(width * height * 4);
-  for (var puff = 0; puff < columns * rows; puff++) {
-    final noise = TileableNoise(seed + puff * 101);
-    final ox = (puff % columns) * cell;
-    final oy = (puff ~/ columns) * cell;
+  final noise = TileableNoise(seed);
+  final warp = TileableNoise(seed + 37);
+
+  for (var frame = 0; frame < frames; frame++) {
+    final t = frame / (frames - 1);
+    final evolve = frame * 0.16;
+    final erosion = 0.16 + 0.52 * _smoothstep(0.2, 1.0, t);
+    final lateFade = 1.0 - 0.42 * _smoothstep(0.55, 1.0, t);
+    final ox = (frame % columns) * cell;
+    final oy = (frame ~/ columns) * cell;
     for (var py = 0; py < cell; py++) {
       final v = (py + 0.5) / cell;
+      final y = v * 2.0 - 1.0;
       for (var px = 0; px < cell; px++) {
         final u = (px + 0.5) / cell;
-        final dx = u - 0.5;
-        final dy = v - 0.5;
-        final n = noise.fbm(u, v, period: 4, octaves: 4);
-        final radius = math.sqrt(dx * dx + dy * dy) * (1.0 + 0.35 * n);
-        final shape = 1.0 - _smoothstep(0.12, 0.47, radius);
-        final density = (shape * (0.62 + 0.38 * (0.5 + 0.5 * n)))
+        final x = u * 2.0 - 1.0;
+        final r2 = x * x + y * y;
+        final base = (1.0 - r2).clamp(0.0, 1.0);
+        // Folded FBM billow noise gives the cauliflower smoke lobes.
+        final wx = warp.fbm(u * 1.4 + evolve * 0.5, v * 1.4, period: 4, octaves: 3);
+        final n = noise.fbm(
+          u * 1.8 + wx * 0.18,
+          v * 1.8 + evolve,
+          period: 4,
+          octaves: 4,
+        );
+        final billow = (1.0 - n.abs()).clamp(0.0, 1.0);
+        final rawDensity = base * (0.35 + 0.65 * billow * billow);
+        // Keep cell borders clean so mips and flipbookBlend never bleed.
+        final border = _smoothstep(0.0, 0.06, u) *
+            _smoothstep(1.0, 0.94, u) *
+            _smoothstep(0.0, 0.06, v) *
+            _smoothstep(1.0, 0.94, v);
+        final density = (((rawDensity - erosion) / 0.42).clamp(0.0, 1.0) *
+                lateFade *
+                border)
             .clamp(0.0, 1.0);
+        // Soft self-shading, brighter toward the puff's upper lobe.
+        final shade =
+            ((0.64 + 0.36 * billow) * (0.86 - 0.14 * y)).clamp(0.0, 1.0);
+        final grey = (shade * 255.0).round().clamp(0, 255);
         final index = ((oy + py) * width + ox + px) * 4;
-        final grey = (200 + 40 * (0.5 + 0.5 * n)).round().clamp(0, 255);
         pixels[index] = grey;
         pixels[index + 1] = grey;
         pixels[index + 2] = grey;

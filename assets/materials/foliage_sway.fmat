@@ -16,12 +16,20 @@ material {
     { type: vec4, name: sway, default: [3.0, 0.35, 0.03, 0.0] },
     // x = roughness.
     { type: vec4, name: surface, default: [0.85, 0.0, 0.0, 0.0] },
+    // xyz = direction toward the key light, w = wetness (rain).
+    { type: vec4, name: sun_dir, default: [0.4, 0.5, 0.6, 0.0] },
+    // rgb = key light colour * intensity (0 when unset).
+    { type: vec4, name: sun_color, default: [0.0, 0.0, 0.0, 0.0] },
+  ],
+  varyings: [
+    { type: float, name: v_height },
   ],
 }
 
 vertex {
   void Vertex(inout VertexInputs vertex) {
     float height = clamp(vertex.position.y / max(material_params.sway.x, 0.01), 0.0, 1.0);
+    v_height = height;
     vec3 root = (vertex.model_transform * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
     float time = material_params.wind.w;
     vec2 wind = material_params.wind.xy;
@@ -48,14 +56,29 @@ fragment {
   precision highp float;
 
   void Surface(inout MaterialInputs material) {
+    float wet = material_params.sun_dir.w;
+    float is_leaf = step(0.001, material_params.sway.z);
     vec3 color = material_params.base_color.rgb;
     if (material_params.sway.w > 0.5) {
       color *= GetVertexColor().rgb;
     }
+    color *= mix(1.0, 0.86 + 0.22 * v_height, is_leaf) * (1.0 - 0.18 * wet);
     material.base_color = vec4(color, 1.0);
     material.metallic = 0.0;
-    material.roughness = material_params.surface.x;
-    material.specular = 0.5;
-    material.occlusion = 1.0;
+    material.roughness = mix(material_params.surface.x, 0.28, wet);
+    material.specular = mix(0.5, 0.78, wet);
+    material.occlusion = mix(0.55, 1.0, v_height);
+    if (is_leaf > 0.5) {
+      vec3 to_light = normalize(material_params.sun_dir.xyz);
+      vec3 n = normalize(GetWorldNormal());
+      vec3 v = GetViewDirection();
+      float back_diffuse = clamp(dot(-n, to_light), 0.0, 1.0);
+      float forward_scatter = pow(clamp(dot(-v, to_light), 0.0, 1.0), 3.0);
+      float transmit = (0.35 * back_diffuse + 0.65 * forward_scatter) *
+                       smoothstep(0.2, 0.95, v_height);
+      vec3 leaf_glow = color * vec3(1.15, 1.25, 0.65);
+      material.emissive =
+          leaf_glow * material_params.sun_color.rgb * transmit * 0.42;
+    }
   }
 }

@@ -6,6 +6,7 @@ import 'package:vector_math/vector_math.dart';
 import '../hotel/feature.dart';
 import '../hotel/hotel_context.dart';
 import '../render/material_binding_policy.dart';
+import '../render/materialize_scan.dart';
 import '../render/prewarm.dart';
 import 'placeholder_rooms.dart';
 
@@ -23,10 +24,9 @@ const String kClothHooksFmat = 'assets/materials/cloth_hooks.fmat';
 
 /// Relights the bed's decorative jacquard pillows and wool throw in both
 /// rooms with [kClothHooksFmat] (wrapped diffuse, broad highlight, a soft
-/// pile rim). Only the tagged primitives change: the bed node gets a new
-/// [Mesh] over the same geometry, and its authored mesh (with every
-/// original material) goes back on when the feature turns off or the rooms
-/// remount.
+/// pile rim, and backlit subsurface transmission) and sweeps a holographic
+/// wireframe laser-scan reveal (`MaterializeScanRig`) across the bed when
+/// bound.
 class ClothLightingFeature extends HotelFeature {
   @override
   String get id => 'cloth_lighting';
@@ -44,6 +44,15 @@ class ClothLightingFeature extends HotelFeature {
   /// both rooms. Loaded once and kept across toggles.
   final Map<BeddingMaterialRole, PreprocessedMaterial> _materials = {};
   final MaterialBindingPolicy<Node, Mesh> _policy = MaterialBindingPolicy();
+  final MaterializeScanRig _scanRig = MaterializeScanRig(
+    minY: 0.35,
+    maxY: 1.15,
+    durationSeconds: 1.8,
+    edgeWidth: 0.14,
+    fadeLag: 0.32,
+    fadeWidth: 0.25,
+    lineWidth: 0.004,
+  );
 
   /// The target list last reconciled; the rooms feature replaces the list on
   /// every mount, so identity tells a remount.
@@ -55,13 +64,16 @@ class ClothLightingFeature extends HotelFeature {
       _materials[role] ??= await loadFmatMaterial(kClothHooksFmat);
     }
     _seen = null;
-    _sync(ctx);
+    await _sync(ctx);
   }
 
   @override
-  void tick(HotelContext ctx, double dt) => _sync(ctx);
+  void tick(HotelContext ctx, double dt) {
+    unawaited(_sync(ctx));
+    _scanRig.tick(dt);
+  }
 
-  void _sync(HotelContext ctx) {
+  Future<void> _sync(HotelContext ctx) async {
     final targets = ctx.beddingTargets;
     if (identical(targets, _seen)) return;
     _seen = targets;
@@ -76,9 +88,17 @@ class ClothLightingFeature extends HotelFeature {
       node.mesh = _dress(own, byNode[node]!);
       _policy.bind(node, own);
     }
-    // The bed is often out of view when this switches on; compile its new
-    // pipeline now rather than on the frame it first turns up.
-    if (changes.bind.isNotEmpty) unawaited(prewarmPipelines(ctx.scene, ctx.camera));
+    if (changes.bind.isNotEmpty) {
+      await _scanRig.attachToNodes(
+        changes.bind,
+        wireColor: Vector3(0.95, 0.78, 0.42),
+        glowColor: Vector3(1.0, 0.92, 0.68),
+      );
+      _scanRig.triggerSweep();
+      // The bed is often out of view when this switches on; compile its new
+      // pipeline now rather than on the frame it first turns up.
+      unawaited(prewarmPipelines(ctx.scene, ctx.camera));
+    }
   }
 
   /// [own] with each bedding slot's material swapped for its cloth material.
@@ -109,7 +129,7 @@ class ClothLightingFeature extends HotelFeature {
     final p = material.parameters
       ..setVec4('base_color_factor', Vector4(finish.r, finish.g, finish.b, finish.alpha))
       ..setVec4('cloth', Vector4(finish.roughness, normal == null ? 0 : 1, 0.5, 0.5 * finish.layer))
-      ..setVec4('ambient_scale', Vector4(1.0, 0.35, 0, 0));
+      ..setVec4('ambient_scale', Vector4(1.0, 0.35, 0.28, 0));
     final colorTexture = color?.sampledTexture;
     if (colorTexture != null) {
       p.setTexture('base_color_texture', colorTexture, sampler: color!.sampledSampler);
@@ -122,6 +142,7 @@ class ClothLightingFeature extends HotelFeature {
 
   @override
   void unmount(HotelContext ctx) {
+    _scanRig.detach();
     for (final (node, own) in _policy.releaseAll()) {
       if (!identical(node.mesh, own)) node.mesh = own;
     }

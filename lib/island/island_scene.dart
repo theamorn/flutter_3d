@@ -235,6 +235,9 @@ class IslandScene {
       _ => DebugView.none,
     };
     if (mode == XrayMode.wireframe) d.overlays.add(DebugOverlay.wireframe);
+    if (_superRig.isBuilt) {
+      _superRig.materializeScan.setLooping(mode == XrayMode.wireframe);
+    }
     d.split = mode == XrayMode.off ? null : xraySplit(0);
   }
 
@@ -308,11 +311,22 @@ class IslandScene {
   }
 
   /// A short screen ripple per lightning strike in view (Super Ultra's
-  /// "Lightning ripple" effect).
+  /// "Lightning ripple" effect), plus trauma-based camera shake.
   final ShockwavePool _shockwaves = ShockwavePool();
+  final CameraShake _cameraShake = CameraShake(
+    decayRate: 1.8,
+    frequency: 22.0,
+    maxTranslation: vm.Vector3(0.09, 0.09, 0.05),
+    maxRotation: vm.Vector3(0.018, 0.018, 0.012),
+  );
+  bool _orbitShakeActive = false;
   ui.Size? _viewport;
 
   void _onStrike(StrikeEvent event) {
+    if (isSuperUltra) {
+      final dist = math.sqrt(event.x * event.x + event.z * event.z);
+      _cameraShake.addTrauma((0.48 - 0.006 * dist).clamp(0.28, 0.48));
+    }
     final viewport = _viewport;
     if (viewport == null ||
         !isSuperUltra ||
@@ -322,10 +336,19 @@ class IslandScene {
     triggerStrike(_shockwaves, event, camera, viewport);
   }
 
-  /// One centred ripple, to check the effect without waiting for a strike.
+  /// One ripple in the uncovered upper half of the screen (above the Effects
+  /// sheet), to check the effect without waiting for a strike.
   void previewShockwave() {
     if (isSuperUltra && isEffectOn(SuperUltraEffect.lightningRipple)) {
-      _shockwaves.preview();
+      _shockwaves.preview(
+        centerX: 0.5,
+        centerY: 0.25,
+        peakStrength: 0.038,
+        pulseThickness: 0.095,
+        pulseChromaticAberration: 0.6,
+        pulseLifetime: 1.2,
+      );
+      _cameraShake.addTrauma(0.35);
     }
   }
 
@@ -406,11 +429,10 @@ class IslandScene {
 
   /// Where the camera is and where it looks, for placing strikes in view.
   CameraPose _cameraPose() {
-    final transform = cameraNode.globalTransform;
-    final forward = transform.getColumn(2).xyz;
+    final forward = cameraNode.forward;
     return (
-      eye: transform.getTranslation(),
-      forward: forward.length2 > 0 ? forward.normalized() : vm.Vector3(0, 0, 1),
+      eye: cameraNode.globalTransform.getTranslation(),
+      forward: forward.length2 > 0 ? forward : vm.Vector3(0, 0, 1),
     );
   }
 
@@ -431,6 +453,7 @@ class IslandScene {
     _superRig.setSkyFlash(lightning.strikeDirection, flash * (0.5 + 0.5 * lightning.strength));
     _superRig.rain?.setLight(_baseRainLight + 0.9 * lit);
     _lastFlash = flash;
+    _applySuperUltraColorGrade(flash: lit);
   }
 
   /// The moving things rain lands on, refreshed every simulation step:
@@ -530,7 +553,7 @@ class IslandScene {
 
   /// Builds the whole scene. Safe to await before the first frame is shown.
   Future<void> load() async {
-    await Scene.initializeStaticResources();
+    await Scene.preload(physicalMaterials: true, smaa: true);
 
     _buildEnvironment();
     _buildTerrain();
@@ -546,6 +569,7 @@ class IslandScene {
 
     final markerMaterial = UnlitMaterial()
       ..alphaMode = AlphaMode.blend
+      ..depthLayer = 1
       ..baseColorFactor = vm.Vector4(1.0, 0.95, 0.55, 0.0);
     final markerNode = Node(
       name: 'tap_marker',
@@ -713,31 +737,47 @@ class IslandScene {
 
     _smokeEmitter = ParticleEmitterComponent(
       system: ParticleSystem(
-        maxParticles: 8,
-        shape: const ConeEmitterShape(angle: 0.2, radius: 0.05),
-        spawner: Spawner(rate: 6),
+        maxParticles: 16,
+        shape: const ConeEmitterShape(angle: 0.18, radius: 0.09),
+        spawner: Spawner(rate: 7),
         modules: <ParticleModule>[
+          TurbulenceModule(
+            strength: 0.55,
+            frequency: 0.48,
+            scroll: vm.Vector3(0, 0.35, 0),
+            seed: 31,
+          ),
+          LinearDragModule(0.3),
+          const RotationModule(),
           ColorOverLifeModule(
             GradientColor(
               ColorGradient(<ColorStop>[
-                ColorStop(0.0, vm.Vector4(0.55, 0.52, 0.48, 0.35)),
-                ColorStop(0.45, vm.Vector4(0.32, 0.32, 0.34, 0.22)),
+                ColorStop(0.0, vm.Vector4(0.58, 0.38, 0.24, 0.0)),
+                ColorStop(0.15, vm.Vector4(0.45, 0.39, 0.34, 0.32)),
+                ColorStop(0.55, vm.Vector4(0.32, 0.32, 0.34, 0.20)),
                 ColorStop(1.0, vm.Vector4(0.18, 0.18, 0.2, 0.0)),
               ]),
             ),
           ),
           SizeOverLifeModule(
-            CurveFloat(ParticleCurve.linear(from: 1.0, to: 2.4)),
+            CurveFloat(ParticleCurve.linear(from: 0.85, to: 2.6)),
           ),
         ],
-        lifetime: const UniformFloat(1.1, 1.9),
+        lifetime: const UniformFloat(1.8, 2.8),
         startSpeed: const UniformFloat(0.32, 0.55),
-        startSize: const UniformFloat(0.2, 0.36),
-        gravity: vm.Vector3(0, 0.38, 0),
-        prewarm: 1.6,
+        startSize: const UniformFloat(0.24, 0.42),
+        startRotation: const UniformFloat(-3.14, 3.14),
+        startAngularVelocity: const UniformFloat(-0.3, 0.3),
+        gravity: vm.Vector3(0, 0.32, 0),
+        prewarm: 2.2,
       ),
-      material: SpriteMaterial()..blendMode = SpriteBlendMode.alpha,
-    )..paused = true;
+      material: SpriteMaterial()
+        ..blendMode = SpriteBlendMode.alpha
+        ..softDepthFade = 0.5
+        ..cameraNearFade = 1.0,
+    )
+      ..randomFlipX = true
+      ..paused = true;
     _smokeEmitterNode = Node(name: 'campfire_smoke')
       ..position = vm.Vector3(
         IslandDimensions.campfireX,
@@ -813,7 +853,10 @@ class IslandScene {
       geometry: SphereGeometry(radius: 0.32, segments: 24, rings: 16),
       material: PhysicallyBasedMaterial()
         ..metallicFactor = 0.05
-        ..roughnessFactor = 0.30,
+        ..roughnessFactor = 0.28
+        ..clearcoat = 0.65
+        ..clearcoatRoughness = 0.08
+        ..ior = 1.48,
     );
     if (_ballRoot == null) {
       _ballRoot = Node(name: 'physics_balls')
@@ -922,9 +965,7 @@ class IslandScene {
       // fire); compile them now, not on the frame each first shows up.
       unawaited(prewarmPipelines(scene, camera));
     }
-    if (_cameraMode == IslandCameraMode.orbit) {
-      _recount();
-    }
+    _recount();
   }
 
   /// Mounts or unmounts the Super Ultra content and swaps what it replaces:
@@ -989,7 +1030,7 @@ class IslandScene {
 
   void _applyCampfireShadow() {
     final casts = campfireCastsShadow(
-      ultraOrAbove: isUltraMode,
+      ultraOrAbove: isSuperUltra,
       effectOn: isEffectOn(SuperUltraEffect.fireShadows),
       godRaysOn: _godRaysOn,
     );
@@ -1016,7 +1057,10 @@ class IslandScene {
       _applySuperUltraLook();
       return;
     }
-    scene.maxGpuFramesInFlight = 1;
+    // Allow 2 GPU frames in flight in Normal and Ultra so Android Impeller
+    // Vulkan's asynchronous fence completion callback does not pace every
+    // other vsync when the frame easily fits the 16.6 ms budget.
+    scene.maxGpuFramesInFlight = 2;
     scene.renderQuality.adaptive = false;
     scene.sceneColorCaptureBatches = null;
     sunLight.shadowCascadeCount = 1;
@@ -1026,7 +1070,7 @@ class IslandScene {
     sunLight.contactShadows = false;
     if (isUltraMode) {
       scene.renderScale = 0.85;
-      scene.antiAliasingMode = AntiAliasingMode.msaa;
+      scene.antiAliasingMode = AntiAliasingMode.fxaa;
       scene.environmentSettings = EnvironmentSettings(
         skybox: _activeSkybox,
         skyEnvironment: _activeSkyEnvironment,
@@ -1055,8 +1099,11 @@ class IslandScene {
         screenSpaceReflectionsResolutionScale: 0.4,
       );
     } else {
+      // Normal mode skips the multi-pass Bloom mip chain (11 command buffers)
+      // and DepthPrepass + SSAO (4 command buffers) so it runs in 3 passes
+      // (ShadowPass, ScenePass, ResolvePass+FXAA) at a steady 60 fps on mobile.
       scene.renderScale = 0.75;
-      scene.antiAliasingMode = AntiAliasingMode.auto;
+      scene.antiAliasingMode = AntiAliasingMode.fxaa;
       scene.environmentSettings = EnvironmentSettings(
         skybox: _activeSkybox,
         skyEnvironment: _activeSkyEnvironment,
@@ -1066,16 +1113,11 @@ class IslandScene {
         contrast: 1.1,
         brightness: 1.05,
         temperature: 0.1,
-        bloomEnabled: true,
-        bloomThreshold: 0.9,
-        bloomIntensity: 0.28,
-        bloomScatter: 0.8,
+        bloomEnabled: false,
         vignetteEnabled: true,
         vignetteIntensity: 0.2,
         exposure: 0.8,
-        ambientOcclusionEnabled: true,
-        ambientOcclusionHalfResolution: true,
-        ambientOcclusionIntensity: 0.8,
+        ambientOcclusionEnabled: false,
       );
     }
   }
@@ -1109,6 +1151,12 @@ class IslandScene {
       skyEnvironment: _activeSkyEnvironment,
       toneMapping: ToneMappingMode.aces,
       exposure: 0.85,
+      autoExposureEnabled: true,
+      autoExposureStrength: 0.42,
+      autoExposureMinEv: -1.6,
+      autoExposureMaxEv: 1.4,
+      autoExposureSpeedUp: 2.4,
+      autoExposureSpeedDown: 1.1,
       colorGradingEnabled: true,
       saturation: 1.18,
       contrast: 1.08,
@@ -1119,7 +1167,9 @@ class IslandScene {
       bloomScatter: 0.72,
       lensFlareEnabled: true,
       lensFlareIntensity: 0.35,
+      lensFlareGhostCount: 5,
       lensFlareHaloIntensity: 0.22,
+      lensFlareChromaticAberration: 0.012,
       vignetteEnabled: true,
       vignetteIntensity: 0.22,
       filmGrainEnabled: true,
@@ -1128,11 +1178,14 @@ class IslandScene {
       ambientOcclusionMethod: AmbientOcclusionMethod.groundTruth,
       ambientOcclusionBentNormals: true,
       ambientOcclusionSpecularMode: SpecularAmbientOcclusionMode.bentCone,
+      ambientOcclusionMultiBounce: 0.6,
       ambientOcclusionHalfResolution: true,
       ambientOcclusionIntensity: 0.9,
       fogEnabled: true,
       fogMode: FogMode.exponential,
       fogDensity: 0.003,
+      fogHeight: IslandDimensions.seaY + 1.8,
+      fogHeightFalloff: 0.28,
       fogSkyColorInfluence: 1.0,
       fogSunInScatter: 0.3,
       fogSunInScatterExponent: 12.0,
@@ -1143,6 +1196,7 @@ class IslandScene {
       godRaysStepCount: 24,
       // Refitted every frame by _fitGodRaysMarch.
       godRaysMaxDistance: 43.0,
+      depthOfFieldBladeCount: 6,
     );
     _applyEffectsMenu();
   }
@@ -1281,6 +1335,10 @@ class IslandScene {
       mount(rig.simpleSeaNode, off(SuperUltraEffect.sea));
       mount(rig.grassNode, !off(SuperUltraEffect.grass));
       mount(rig.fire.root, !off(SuperUltraEffect.fireVfx));
+      rig.fireflies.setEnabled(!off(SuperUltraEffect.fireflies));
+      final decalsOn = !off(SuperUltraEffect.decals);
+      rig.decals.root.visible = decalsOn;
+      mount(rig.decals.root, decalsOn);
       for (final reflector
           in rig.oceanNode.getComponents<PlanarReflectorComponent>()) {
         reflector.enabled = !off(SuperUltraEffect.planarReflection);
@@ -1326,6 +1384,43 @@ class IslandScene {
       post.vignette.enabled = false;
       post.filmGrain.enabled = false;
       post.colorGrading.enabled = false;
+    }
+    if (off(SuperUltraEffect.autoExposure)) {
+      scene.autoExposure.enabled = false;
+    }
+    _syncSuperUltraDof();
+  }
+
+  /// Syncs Depth of Field with the active camera mode and distance, following
+  /// the `flutter_scene-looks` rule: active for hero close-ups and
+  /// over-the-shoulder, off for wide island overviews (>= 25 m).
+  void _syncSuperUltraDof() {
+    if (!isSuperUltra || !isEffectOn(SuperUltraEffect.depthOfField)) {
+      scene.depthOfField.enabled = false;
+      return;
+    }
+    final eye = cameraNode.globalTransform.getTranslation();
+    final ots = _cameraMode == IslandCameraMode.overTheShoulder;
+    final target = ots
+        ? walker.position + vm.Vector3(0, 0.85, 0)
+        : _orbitTarget;
+    final dist = (eye - target).length;
+    final focus = superUltraDofFocus(
+      overTheShoulder: ots,
+      cameraToTargetDistance: dist,
+    );
+    final dof = scene.depthOfField;
+    dof.enabled = focus.enabled;
+    if (focus.enabled) {
+      final tier = scene.effectiveRenderQualityTier;
+      dof
+        ..focusDistance = focus.focalDistance
+        ..fStop = focus.fStop
+        ..maxForegroundBlur = focus.maxBlurRadius
+        ..maxBackgroundBlur = focus.maxBlurRadius * 1.15
+        ..quality = tier == RenderQualityTier.high
+            ? DepthOfFieldQuality.medium
+            : DepthOfFieldQuality.low;
     }
   }
 
@@ -1448,6 +1543,7 @@ class IslandScene {
       setOrbitAngle: (value) => _otsOrbitAngle = value,
       setPitch: (value) => _otsPitch = value,
       groundY: IslandDimensions.groundY,
+      shake: _cameraShake,
     )..enabled = false;
     cameraNode.addComponent(_otsCamera!);
     scene.add(cameraNode);
@@ -1576,6 +1672,8 @@ class IslandScene {
         SuperUltraEffect.lensFlare,
         SuperUltraEffect.fog,
         SuperUltraEffect.filmFinish,
+        SuperUltraEffect.depthOfField,
+        SuperUltraEffect.autoExposure,
       },
     ),
     '+ rain & storm': _ablationStep(),
@@ -1605,6 +1703,9 @@ class IslandScene {
       ..addAll(settings.off);
     _antiAliasing = settings.antiAliasing;
     _renderScale = settings.renderScale;
+    _gpuPacing = SuperUltraGpuPacing.initial;
+    _frameCap = SuperUltraFrameCap.initial;
+    _sceneCopies = SuperUltraSceneCopies.initial;
     _refreshEffects();
   }
 
@@ -1798,7 +1899,8 @@ class IslandScene {
       )
       // Uniform only: a non-uniform scale silently breaks lighting.
       ..scale = vm.Vector3.all(placement.size);
-    instance.shadowStatic = true;
+    // shadowStatic is per mesh-bearing node, not inherited by glTF child nodes.
+    _forEachNode(instance, (node) => node.shadowStatic = true);
     scene.add(instance);
 
     final (heightOffset, radius) = switch (placement.kind) {
@@ -1885,11 +1987,24 @@ class IslandScene {
       );
     }
 
-    final root = Node(name: 'ultra_scatter');
-    root.shadowStatic = true;
+    // Separate swaying trees from static rocks/bushes so TreeSway.bind only
+    // clears shadowStatic on the vertex-displaced tree batches.
+    final staticScatter = Node(name: 'ultra_scatter_static')
+      ..shadowStatic = true;
+    final treeScatter = Node(name: 'ultra_scatter_trees')
+      ..shadowStatic = true;
     for (final entry in byKind.entries) {
-      _addInstancedKind(root, entry.key, entry.value);
+      final isTree = entry.key == 'palm' || entry.key == 'pine';
+      _addInstancedKind(
+        isTree ? treeScatter : staticScatter,
+        entry.key,
+        entry.value,
+      );
     }
+    final root = Node(name: 'ultra_scatter')
+      ..shadowStatic = true
+      ..add(staticScatter)
+      ..add(treeScatter);
     scene.add(root);
     _ultraScatterRoot = root;
 
@@ -2005,9 +2120,10 @@ class IslandScene {
           RainProp('bush', points[i].x, points[i].y, 0.42 + (i % 5) * 0.055),
       ]);
 
-    final root = Node(name: 'ultra_ground_cover');
-    root.shadowStatic = true;
-    root.shadowCastingMode = ShadowCastingMode.off;
+    final root = Node(name: 'ultra_ground_cover')
+      ..layers = kSuperUltraNoReflectLayer
+      ..shadowStatic = true
+      ..shadowCastingMode = ShadowCastingMode.off;
 
     for (final primitive in primitives) {
       final batch = InstancedMesh(
@@ -2046,8 +2162,9 @@ class IslandScene {
       return;
     }
 
-    final dry = _flatMaterial(0.76, 0.61, 0.38, roughness: 0.9);
-    final wet = _flatMaterial(0.48, 0.36, 0.24, roughness: 0.42);
+    final dry = _flatMaterial(0.74, 0.60, 0.40, roughness: 0.84)
+      ..depthLayer = 1;
+    final wet = _flatMaterial(0.42, 0.34, 0.25, roughness: 0.22);
     const collarHeight = 0.42;
 
     final beach = Node(
@@ -2361,6 +2478,7 @@ class IslandScene {
       characterPosition: walker.position,
       characterYaw: walker.yaw,
     );
+    _cameraShake.addTrauma(hits > 0 ? 0.30 : 0.14);
     if (isUltraMode) {
       _spawnPunchDebris();
     }
@@ -2430,7 +2548,9 @@ class IslandScene {
     if (_buoys.isNotEmpty) {
       return;
     }
-    final crateMat = _flatMaterial(0.42, 0.28, 0.14, roughness: 0.86);
+    final crateMat = _flatMaterial(0.42, 0.28, 0.14, roughness: 0.78)
+      ..clearcoat = 0.55
+      ..clearcoatRoughness = 0.16;
     final crateMesh = Mesh(
       CuboidGeometry(vm.Vector3(0.42, 0.32, 0.5)),
       crateMat,
@@ -2678,16 +2798,32 @@ class IslandScene {
     }
 
     physicsWorld.update(deltaSeconds);
-    physicsWorld.handleCharacterKick(
+    final kicked = physicsWorld.handleCharacterKick(
       characterPosition: walker.position,
       characterRadius: 0.42,
       characterSpeed: walker.isMoving ? walker.speed : 0.0,
     );
+    if (kicked > 0) {
+      _cameraShake.addTrauma(0.16);
+    }
     _sitBallsOnWaves();
     _tickRain(deltaSeconds);
     _tickLightning();
+    if (_cameraMode == IslandCameraMode.orbit && _isOrbitAttached) {
+      if (_cameraShake.trauma > 0.0) {
+        orbit.update(0.0);
+        final offset = _cameraShake.update(deltaSeconds);
+        cameraNode.localTransform =
+            cameraNode.localTransform * offset.toMatrix4();
+        _orbitShakeActive = true;
+      } else if (_orbitShakeActive) {
+        orbit.update(0.0);
+        _orbitShakeActive = false;
+      }
+    }
     if (isSuperUltra) {
       _fitGodRaysMarch();
+      _syncSuperUltraDof();
     }
 
     if (_cameraMode == IslandCameraMode.overTheShoulder) {
@@ -2703,6 +2839,12 @@ class IslandScene {
     final eye = cameraNode.globalTransform.getTranslation();
     scene.godRays.maxDistance =
         math.sqrt(eye.x * eye.x + eye.z * eye.z) + IslandDimensions.topRadius;
+  }
+
+  /// Releases cross-frame render targets, shadow caches, punctual light
+  /// textures, and TAA/SSGI history immediately (`Scene.dispose()` in 0.24.2+).
+  void dispose() {
+    scene.dispose();
   }
 
   /// Applies the day/night model's evaluated lighting, with two departures
@@ -2760,8 +2902,18 @@ class IslandScene {
       keyDirection = moonDirection;
       keyRadiance = moonLight.color * sunLight.intensity;
     } else {
+      final golden = goldenHourFactor(sunDirection.y);
+      final warmColor = vm.Vector3(
+        lighting.sunColor.x,
+        lighting.sunColor.y * (1.0 - 0.12 * golden) + 0.64 * (0.12 * golden),
+        lighting.sunColor.z * (1.0 - 0.28 * golden) + 0.24 * (0.28 * golden),
+      );
+      final warmBoost = 1.0 + 0.28 * golden;
+      sunLight
+        ..color = warmColor
+        ..intensity = lighting.sunIntensity * warmBoost;
       keyDirection = sunDirection;
-      keyRadiance = lighting.sunColor * lighting.sunIntensity;
+      keyRadiance = warmColor * sunLight.intensity;
     }
 
     // Rain clouds: a dimmer key light, almost no shafts, thicker grey haze.
@@ -2780,16 +2932,21 @@ class IslandScene {
     // Horizon haze follows the light: blue-grey by day, warm at golden hour,
     // navy at night. The sky-colour influence does most of the work; this is
     // the fallback where the environment is dark.
-    final warm = (1.0 - (sunDirection.y / 0.45).clamp(0.0, 1.0)) * (1.0 - night);
+    final golden = goldenHourFactor(sunDirection.y) * (1.0 - night);
+    final warm = math.max(
+      (1.0 - (sunDirection.y / 0.45).clamp(0.0, 1.0)) * (1.0 - night),
+      golden,
+    );
     final clearFog = vm.Vector3(0.52, 0.62, 0.74) * (1.0 - night) * (1.0 - warm) +
-        vm.Vector3(0.85, 0.55, 0.36) * warm +
+        vm.Vector3(0.88, 0.56, 0.34) * warm +
         vm.Vector3(0.02, 0.035, 0.07) * night;
     final rainFog = vm.Vector3(0.36, 0.39, 0.43) * (1.0 - night) +
         vm.Vector3(0.02, 0.025, 0.035) * night;
     scene.fog
       ..color = clearFog * (1.0 - rain) + rainFog * rain
       ..density = 0.003 + 0.013 * rain
-      ..sunInScatter = 0.3 * (1.0 - rain);
+      ..sunInScatter = (0.3 + 0.18 * golden) * (1.0 - rain);
+    _applySuperUltraColorGrade(flash: _lastFlash);
 
     _superRig.applyLighting(
       sunDirection: sunDirection,
@@ -2804,6 +2961,38 @@ class IslandScene {
     _baseEnvironmentIntensity = scene.environmentIntensity;
     _superRig.rain?.setLight(_baseRainLight);
     _superRig.lightning?.strength = 0.3 + 0.7 * night;
+  }
+
+  void _applySuperUltraColorGrade({required double flash}) {
+    if (!isSuperUltra) {
+      return;
+    }
+    final night = nightBlend;
+    final golden = goldenHourFactor(dayNight.sunDirection.y) * (1.0 - night);
+    final grade = superUltraColorGrade(
+      golden: golden,
+      night: night,
+      rain: _rainLevel,
+      flash: flash,
+    );
+    scene.exposure = 0.85 + grade.exposureBias;
+    if (!isEffectOn(SuperUltraEffect.filmFinish)) {
+      return;
+    }
+    final cg = scene.postProcess.colorGrading;
+    cg
+      ..enabled = true
+      ..contrast = grade.contrast
+      ..saturation = grade.saturation
+      ..temperature = grade.colorTemperature
+      ..tint = grade.colorTint
+      ..lift.setValues(
+        (grade.shadowTint.x - 1.0) * 0.06,
+        (grade.shadowTint.y - 1.0) * 0.06,
+        (grade.shadowTint.z - 1.0) * 0.06,
+      )
+      ..gamma.setFrom(grade.midtoneTint)
+      ..gain.setFrom(grade.highlightTint);
   }
 
   // ------------------------------------------------------------- statistics
@@ -2856,6 +3045,9 @@ class IslandScene {
 
   // ------------------------------------------------------------------ utils
 
+  final Map<UnlitMaterial, PhysicallyBasedMaterial> _relitUnlitCache =
+      <UnlitMaterial, PhysicallyBasedMaterial>{};
+
   /// Rewrites imported materials so they respond to the sun.
   ///
   /// Two problems, both silent: Kenney's glTF exports declare `metallic 1 /
@@ -2871,11 +3063,14 @@ class IslandScene {
           material.metallicFactor = 0.0;
           material.roughnessFactor = math.max(material.roughnessFactor, 0.75);
         } else if (material is UnlitMaterial) {
-          primitive.material = PhysicallyBasedMaterial()
-            ..baseColorTexture = material.baseColorTexture
-            ..baseColorFactor = material.baseColorFactor
-            ..metallicFactor = 0.0
-            ..roughnessFactor = 0.85;
+          primitive.material = _relitUnlitCache.putIfAbsent(
+            material,
+            () => PhysicallyBasedMaterial()
+              ..baseColorTexture = material.baseColorTexture
+              ..baseColorFactor = material.baseColorFactor
+              ..metallicFactor = 0.0
+              ..roughnessFactor = 0.85,
+          );
         }
       }
     }
